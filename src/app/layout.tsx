@@ -4,7 +4,6 @@ import './globals.css';
 import './fonts.css';
 
 // Import components
-import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 
 // Only load IBM Plex Serif through next/font

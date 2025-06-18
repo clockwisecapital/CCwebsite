@@ -6,14 +6,7 @@ import Image from "next/image";
 import { Meteors } from "@/components/ui/meteors";
 import Header from "@/components/layout/Header";
 
-// Custom animation component for text reveal
-function AnimatedText({ text, delay = 0, className = '' }: { text: string, delay?: number, className?: string }) {
-  return (
-    <span className={`inline-block ${className}`} style={{ animationDelay: `${delay}ms` }}>
-      {text}
-    </span>
-  );
-}
+// AnimatedText component removed as unused
 
 export default function Home() {
   // State to track if component is mounted - for animations
@@ -190,7 +183,7 @@ export default function Home() {
               </h2>
               <p className="text-lg md:text-xl text-gray-600 mb-8 font-serif leading-relaxed">
                 Clockwise Capital helps smart investors understand where we are in economic and technology cycles, 
-                positioning your portfolio for what's coming, not just what's happened.
+                positioning your portfolio for what&apos;s coming, not just what&apos;s happened.
               </p>
               <div className="w-24 h-1 bg-gradient-to-r from-[#1A3A5F] to-[#1FAAA3] mx-auto rounded-full"></div>
             </div>
@@ -231,7 +224,7 @@ export default function Home() {
                     </svg>
                   )
                 }
-              ].map((feature, i) => (
+              ].map((feature) => (
                 <div 
                   key={feature.title} 
                   className="group bg-gradient-to-br from-white to-[#F5F7FA] p-8 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 border border-gray-100"
