@@ -48,7 +48,7 @@ export default function Header(): React.JSX.Element {
               href={`/${item.toLowerCase()}`}
               className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
             >
-              {/* Animated underline on hover */}
+              {/* Animated underline on hover only */}
               <span className="absolute bottom-0 left-0 h-0.5 bg-[#E3B23C] w-0 group-hover:w-full transition-all duration-300"></span>
               {item}
             </Link>
