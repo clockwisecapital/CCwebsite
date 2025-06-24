@@ -5,6 +5,14 @@ import Link from 'next/link';
 import Image from "next/image";
 import { Meteors } from "@/components/ui/meteors";
 import Header from "@/components/layout/Header";
+import MissionSection from "@/components/features/home/MissionSection";
+import InvestmentOptions from "@/components/features/home/InvestmentOptions";
+import ClockwiseETF from "@/components/features/home/ClockwiseETF";
+import ClockwisePortfolios from "@/components/features/home/ClockwisePortfolios";
+import ClockwiseHedgeFund from "@/components/features/home/ClockwiseHedgeFund";
+import ClockwiseMedia from "@/components/features/home/ClockwiseMedia";
+import ClockwisePartners from "@/components/features/home/ClockwisePartners";
+import ClockwiseTeam from "@/components/features/home/ClockwiseTeam";
 
 // AnimatedText component removed as unused
 
@@ -120,7 +128,7 @@ export default function Home() {
           {/* Removed scroll indicator as it was disrupting button placement */}
         </div>
       </section>
-
+      
       {/* As Seen On Section with animations */}
       <section className="relative bg-gradient-to-b from-[#F5F7FA] to-white py-16 overflow-hidden">
         {/* Background Elements */}
@@ -153,6 +161,12 @@ export default function Home() {
           </div>
         </div>
       </section>
+      
+      {/* Mission Section */}
+      <MissionSection />
+      
+      {/* Investment Options Section */}
+      <InvestmentOptions />
 
       {/* AI Chatbot Widget - this will be a component */}
       <div id="chatbot" className="fixed bottom-4 right-4 z-50">
@@ -249,6 +263,14 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Add the new sections */}
+      <ClockwiseETF />
+      <ClockwisePortfolios />
+      <ClockwiseHedgeFund />
+      <ClockwiseMedia />
+      <ClockwisePartners />
+      <ClockwiseTeam />
     </main>
   );
 }
