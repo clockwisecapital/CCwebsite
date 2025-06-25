@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from "next/image";
 import { Meteors } from "@/components/ui/meteors";
 import Header from "@/components/layout/Header";
 import MissionSection from "@/components/features/home/MissionSection";
