@@ -1,7 +1,12 @@
-import React from 'react';
+"use client";
+
+import React, { useState } from 'react';
 import Image from "next/image";
+import AnimatedSection from "../../ui/AnimatedSection";
 
 const ClockwiseTeam = () => {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  
   const teamMembers = [
     {
       name: "Eli Mikel, CFP®, CRPC®",
@@ -30,43 +35,75 @@ const ClockwiseTeam = () => {
   ];
 
   return (
-    <section className="py-20 px-4 bg-gradient-to-br from-[#F5F7FA] to-white">
-      <div className="max-w-6xl mx-auto">
+    <AnimatedSection animation="fade-right" className="py-16 px-4 relative bg-gradient-to-br from-black via-[#0A1A35] to-[#1A3A5F] overflow-hidden">
+      {/* Abstract background elements */}
+      <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-[#1FAAA3]/5 blur-3xl -z-0"></div>
+      <div className="absolute bottom-0 left-0 w-72 h-72 rounded-full bg-white/5 blur-2xl -z-0"></div>
+      
+      <div className="max-w-6xl mx-auto relative z-10">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-sans font-semibold text-[#1A3A5F] mb-6">Clockwise Team</h2>
-          <p className="text-lg md:text-xl font-serif leading-relaxed max-w-4xl mx-auto text-gray-700">
+          <h2 className="text-2xl md:text-3xl font-sans font-semibold text-white mb-4">Clockwise Team</h2>
+          <p className="text-base md:text-lg font-serif leading-relaxed max-w-3xl mx-auto text-gray-200">
             Our mission is to help clients safely navigate the pace of innovation propelled forward by an unprecedented technology cycle.
           </p>
-          <div className="w-24 h-1 bg-gradient-to-r from-[#1A3A5F] to-[#1FAAA3] mx-auto rounded-full mt-6"></div>
+          <div className="w-20 h-1 bg-gradient-to-r from-white to-[#1FAAA3] mx-auto rounded-full mt-4"></div>
         </div>
         
-        <div className="space-y-16 mt-12">
-          {teamMembers.map((member, index) => (
-            <div key={index} className="bg-white p-8 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100">
-              <div className="flex flex-col md:flex-row gap-8">
-                <div className="md:w-1/3">
-                  <div className="aspect-square rounded-xl overflow-hidden relative">
-                    <Image 
-                      src={member.imageSrc}
-                      alt={`Photo of ${member.name}`}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                      className="object-cover"
-                      priority
-                    />
+        {/* Staggered grid layout with precise alignment */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
+          {teamMembers.map((member, index) => {
+            // Alternate layout for visual interest
+            const isEven = index % 2 === 0;
+            
+            return (
+              <div 
+                key={index} 
+                className={`group ${isEven ? 'md:translate-y-12' : ''} transition-all duration-500`}
+                onMouseEnter={() => setActiveIndex(index)}
+                onMouseLeave={() => setActiveIndex(null)}
+              >
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg shadow-md hover:shadow-lg transition-all duration-500 border border-white/20 overflow-hidden group-hover:border-[#1FAAA3]/50 h-full">
+                  <div className="flex flex-col h-full">
+                    {/* Image container with hover effect */}
+                    <div className="relative h-56 overflow-hidden">
+                      <Image 
+                        src={member.imageSrc}
+                        alt={`Photo of ${member.name}`}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
+                        priority
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                      
+                      {/* Name and title overlay */}
+                      <div className="absolute bottom-0 left-0 right-0 p-3">
+                        <h3 className="text-base font-sans font-semibold text-white mb-0.5 group-hover:text-[#1FAAA3] transition-colors duration-300">
+                          {member.name}
+                        </h3>
+                        <p className="text-xs text-[#1FAAA3] font-medium">{member.title}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Bio with expanding effect - only shows on hover of this specific card */}
+                    <div className="p-4 bg-gradient-to-b from-black/40 to-transparent">
+                      <p className={`text-gray-200 font-serif leading-relaxed text-sm transition-all duration-500 ${activeIndex === index ? 'line-clamp-none' : 'line-clamp-2'}`}>
+                        {member.bio}
+                      </p>
+                      <div className="h-6 flex items-center justify-center mt-2">
+                        <span className="text-[#1FAAA3] text-sm">
+                          {activeIndex === index ? "Read less" : "Read more"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="md:w-2/3">
-                  <h3 className="text-2xl font-sans font-semibold text-[#1A3A5F] mb-2">{member.name}</h3>
-                  <p className="text-lg text-[#1FAAA3] font-medium mb-4">{member.title}</p>
-                  <p className="text-gray-600 font-serif leading-relaxed">{member.bio}</p>
-                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
-    </section>
+    </AnimatedSection>
   );
 };
 

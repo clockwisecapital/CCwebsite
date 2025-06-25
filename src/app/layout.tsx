@@ -5,6 +5,7 @@ import './fonts.css';
 
 // Import components
 import Footer from '../components/layout/Footer';
+import ScrollProgressIndicator from '../components/ui/ScrollProgressIndicator';
 
 // Only load IBM Plex Serif through next/font
 const ibmPlexSerif = IBM_Plex_Serif({
@@ -36,6 +37,11 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet" />
       </head>
       <body className={`${ibmPlexSerif.variable} font-sans min-h-screen flex flex-col`}>
+        <ScrollProgressIndicator 
+          sections={['Home', 'ETF', 'Portfolios', 'Hedge Fund', 'Media', 'Partners', 'Team']} 
+          position="right" 
+          showLabels={false}
+        />
         <div className="flex-grow">
           {children}
         </div>

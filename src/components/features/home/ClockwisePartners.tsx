@@ -1,19 +1,22 @@
+"use client";
+
 import React from 'react';
 import Image from "next/image";
+import AnimatedSection from "../../ui/AnimatedSection";
 
 const ClockwisePartners = () => {
   return (
-    <section className="py-20 px-4 bg-gradient-to-br from-white to-[#F5F7FA]">
+    <AnimatedSection animation="fade-up" className="py-16 px-4 bg-gradient-to-b from-white via-[#f5f7fa] to-[#1A3A5F] text-[#1A3A5F]">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-sans font-semibold text-[#1A3A5F] mb-6">Clockwise Partners</h2>
-          <p className="text-lg md:text-xl font-serif leading-relaxed max-w-4xl mx-auto text-gray-700">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl md:text-3xl font-sans font-semibold text-[#1A3A5F] mb-4">Clockwise Partners</h2>
+          <p className="text-base md:text-lg font-serif leading-relaxed max-w-3xl mx-auto text-gray-600">
             Our growing network of wealth management partners.
           </p>
-          <div className="w-24 h-1 bg-gradient-to-r from-[#1A3A5F] to-[#1FAAA3] mx-auto rounded-full mt-6"></div>
+          <div className="w-20 h-1 bg-gradient-to-r from-[#1A3A5F] to-[#1FAAA3] mx-auto rounded-full mt-4"></div>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-8 mt-12">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-5 md:gap-6 mt-8">
           {/* Partner logos with actual images */}
           {[
             { name: "Betterment", src: "/partners/Betterment.png" },
@@ -25,7 +28,7 @@ const ClockwisePartners = () => {
           ].map((partner) => (
             <div 
               key={partner.name}
-              className="aspect-square bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 border border-gray-100 p-6 flex items-center justify-center"
+              className="aspect-square bg-[#1A3A5F]/10 backdrop-blur-sm rounded-lg shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 border border-[#1A3A5F]/20 p-4 flex items-center justify-center"
             >
               <div className="relative w-full h-full flex items-center justify-center">
                 <Image 
@@ -40,7 +43,7 @@ const ClockwisePartners = () => {
           ))}
         </div>
       </div>
-    </section>
+    </AnimatedSection>
   );
 };
 

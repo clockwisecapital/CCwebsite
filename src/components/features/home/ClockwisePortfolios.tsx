@@ -1,119 +1,119 @@
+"use client";
+
 import React from 'react';
 import Link from 'next/link';
 import Image from "next/image";
+import AnimatedSection from "../../ui/AnimatedSection";
 
 const ClockwisePortfolios = () => {
   return (
-    <section className="py-20 px-4 bg-gradient-to-br from-[#F5F7FA] to-white">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-sans font-semibold text-[#1A3A5F] mb-6">Clockwise Portfolios</h2>
-          <p className="text-lg md:text-xl font-serif leading-relaxed max-w-4xl mx-auto text-gray-700">
-            Clockwise Adaptive Portfolios are broadly diversified ETF portfolios that rebalance monthly, dynamically adjusting to market conditions and cycles to align with investor risk preferences and goal time horizons.
-          </p>
-          <div className="w-24 h-1 bg-gradient-to-r from-[#1A3A5F] to-[#1FAAA3] mx-auto rounded-full mt-6"></div>
-        </div>
-        
-        {/* Placeholder for image - replace with actual image path */}
-        <div className="mt-8 mb-16 flex justify-center">
-          <div className="relative w-full max-w-4xl h-64 bg-[#F5F7FA] rounded-xl overflow-hidden">
-            {/* Replace with actual image */}
-            <div className="absolute inset-0 flex items-center justify-center text-[#1A3A5F] text-lg">
-              Portfolios Image Placeholder
-            </div>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <div className="bg-white p-8 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 border border-gray-100">
-            <div className="flex items-start mb-4">
-              <div className="bg-[#F5F7FA] p-3 rounded-lg mr-4">
-                {/* Placeholder for image - replace with actual image path */}
-                <div className="w-10 h-10 bg-[#1FAAA3] rounded-lg"></div>
+    <AnimatedSection animation="fade-right" className="py-16 px-4 relative bg-[#1A3A5F]/40">
+      <div className="max-w-6xl mx-auto relative z-10">
+        {/* Right-aligned layout with image on left */}
+        <div className="flex flex-col-reverse lg:flex-row items-center gap-8 lg:gap-12">
+          {/* Left image */}
+          <div className="lg:w-1/2">
+            <div className="relative w-full h-[400px] bg-black/30 rounded-lg overflow-hidden border border-white/20 shadow-xl">
+              {/* Replace with actual image */}
+              <div className="absolute inset-0 flex items-center justify-center text-white text-lg">
+                <div className="relative w-full h-full">
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#1FAAA3]/20 to-transparent opacity-70"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-5xl font-bold mb-2">Portfolios</div>
+                      <div className="text-xl">Adaptive Strategy</div>
+                      <div className="mt-4 text-sm">Portfolios Image Placeholder</div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-xl font-sans font-semibold text-[#1A3A5F]">Broad Diversification</h3>
             </div>
-            <p className="text-gray-600 font-serif">
-              Invests across global equities, bonds, and alternative assets using ETFs to enhance stability and growth.
-            </p>
           </div>
           
-          <div className="bg-white p-8 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 border border-gray-100">
-            <div className="flex items-start mb-4">
-              <div className="bg-[#F5F7FA] p-3 rounded-lg mr-4">
-                {/* Placeholder for image - replace with actual image path */}
-                <div className="w-10 h-10 bg-[#1FAAA3] rounded-lg"></div>
-              </div>
-              <h3 className="text-xl font-sans font-semibold text-[#1A3A5F]">Monthly Rebalancing</h3>
-            </div>
-            <p className="text-gray-600 font-serif">
-              Actively adjusted to maintain alignment with market conditions, investor risk preferences, and time horizons.
+          {/* Right content */}
+          <div className="lg:w-1/2 text-left lg:text-right">
+            <h2 className="text-2xl md:text-3xl font-sans font-medium text-white mb-4">Clockwise Portfolios</h2>
+            <div className="w-24 h-1 bg-gradient-to-r from-white to-[#1FAAA3] rounded-full mb-6 ml-0 lg:ml-auto"></div>
+            <p className="text-base md:text-lg font-serif leading-relaxed text-gray-200 mb-8">
+              Clockwise Adaptive Portfolios are broadly diversified ETF portfolios that rebalance monthly, dynamically adjusting to market conditions and cycles to align with investor risk preferences and goal time horizons.
             </p>
-          </div>
-          
-          <div className="bg-white p-8 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 border border-gray-100">
-            <div className="flex items-start mb-4">
-              <div className="bg-[#F5F7FA] p-3 rounded-lg mr-4">
-                {/* Placeholder for image - replace with actual image path */}
-                <div className="w-10 h-10 bg-[#1FAAA3] rounded-lg"></div>
-              </div>
-              <h3 className="text-xl font-sans font-semibold text-[#1A3A5F]">Goal-Oriented Strategy</h3>
-            </div>
-            <p className="text-gray-600 font-serif">
-              Designed to adapt to individual financial objectives, whether growth-focused or capital preservation.
-            </p>
-          </div>
-          
-          <div className="bg-white p-8 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 border border-gray-100">
-            <div className="flex items-start mb-4">
-              <div className="bg-[#F5F7FA] p-3 rounded-lg mr-4">
-                {/* Placeholder for image - replace with actual image path */}
-                <div className="w-10 h-10 bg-[#1FAAA3] rounded-lg"></div>
-              </div>
-              <h3 className="text-xl font-sans font-semibold text-[#1A3A5F]">Risk-Managed Approach</h3>
-            </div>
-            <p className="text-gray-600 font-serif">
-              Uses data-driven insights to optimize risk-adjusted returns based on market cycles and investor profiles.
-            </p>
-          </div>
-          
-          <div className="bg-white p-8 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 border border-gray-100">
-            <div className="flex items-start mb-4">
-              <div className="bg-[#F5F7FA] p-3 rounded-lg mr-4">
-                {/* Placeholder for image - replace with actual image path */}
-                <div className="w-10 h-10 bg-[#1FAAA3] rounded-lg"></div>
-              </div>
-              <h3 className="text-xl font-sans font-semibold text-[#1A3A5F]">Adaptive Investment Management</h3>
-            </div>
-            <p className="text-gray-600 font-serif">
-              Dynamically shifts allocations to capture market opportunities and navigate economic cycles.
-            </p>
-          </div>
-        </div>
-        
-        <div className="mt-12 text-center">
-          <div className="inline-flex flex-col sm:flex-row gap-4 sm:gap-8">
-            <Link 
-              href="/portfolio-finder" 
-              className="group relative inline-flex items-center justify-center px-8 py-4 font-medium text-white bg-[#1FAAA3] rounded-lg overflow-hidden transition-all duration-300 hover:bg-[#1A3A5F] hover:scale-105 shadow-md"
-            >
-              <span className="relative z-10 flex items-center">
-                AI Portfolio Finder
-              </span>
-            </Link>
             
-            <Link 
-              href="/get-started" 
-              className="group relative inline-flex items-center justify-center px-8 py-4 font-medium text-[#1A3A5F] bg-white border border-[#1A3A5F] rounded-lg overflow-hidden transition-all duration-300 hover:bg-[#F5F7FA] hover:scale-105 shadow-sm"
-            >
-              <span className="relative z-10 flex items-center">
-                Get Started
-              </span>
-            </Link>
+            {/* Cards in vertical layout */}
+            <div className="space-y-4">
+              <div className="bg-white/10 backdrop-blur-sm p-5 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 border border-white/20">
+                <div className="flex items-start lg:flex-row-reverse">
+                  <div className="bg-[#1FAAA3]/20 p-2 rounded-lg ml-0 mr-3 lg:ml-3 lg:mr-0 flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-[#1FAAA3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                    </svg>
+                  </div>
+                  <div className="lg:text-right">
+                    <h3 className="text-lg font-sans font-medium text-white mb-2">Broad Diversification</h3>
+                    <p className="text-gray-200 font-serif text-sm">
+                      Invests across global equities, bonds, and alternative assets using ETFs to enhance stability and growth.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white/10 backdrop-blur-sm p-5 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 border border-white/20">
+                <div className="flex items-start lg:flex-row-reverse">
+                  <div className="bg-[#1FAAA3]/20 p-2 rounded-lg ml-0 mr-3 lg:ml-3 lg:mr-0 flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-[#1FAAA3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </div>
+                  <div className="lg:text-right">
+                    <h3 className="text-lg font-sans font-medium text-white mb-2">Monthly Rebalancing</h3>
+                    <p className="text-gray-200 font-serif text-sm">
+                      Actively adjusted to maintain alignment with market conditions, investor risk preferences, and time horizons.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white/10 backdrop-blur-sm p-5 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 border border-white/20">
+                <div className="flex items-start lg:flex-row-reverse">
+                  <div className="bg-[#1FAAA3]/20 p-2 rounded-lg ml-0 mr-3 lg:ml-3 lg:mr-0 flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-[#1FAAA3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                  <div className="lg:text-right">
+                    <h3 className="text-lg font-sans font-medium text-white mb-2">Goal-Oriented Strategy</h3>
+                    <p className="text-gray-200 font-serif text-sm">
+                      Designed to adapt to individual financial objectives, whether growth-focused or capital preservation.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-8 flex justify-start lg:justify-end">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-6">
+                <Link 
+                  href="/portfolio-finder" 
+                  className="group relative inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-white bg-[#1FAAA3] rounded-md overflow-hidden transition-all duration-300 hover:bg-[#1FAAA3]/80 hover:scale-105 shadow-md"
+                >
+                  <span className="relative z-10 flex items-center">
+                    AI Portfolio Finder
+                  </span>
+                </Link>
+                
+                <Link 
+                  href="/get-started" 
+                  className="group relative inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-white bg-transparent border border-white rounded-md overflow-hidden transition-all duration-300 hover:bg-white/10 hover:scale-105 shadow-sm"
+                >
+                  <span className="relative z-10 flex items-center">
+                    Get Started
+                  </span>
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </section>
+    </AnimatedSection>
   );
 };
 
