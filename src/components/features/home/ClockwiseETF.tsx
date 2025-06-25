@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from "next/image";
 import AnimatedSection from "../../ui/AnimatedSection";
 
 const ClockwiseETF = () => {
@@ -16,7 +15,7 @@ const ClockwiseETF = () => {
             <h2 className="text-2xl md:text-3xl font-sans font-medium text-white mb-4">Clockwise ETF</h2>
             <div className="w-24 h-1 bg-gradient-to-r from-white to-[#1FAAA3] rounded-full mb-6"></div>
             <p className="text-base md:text-lg font-serif leading-relaxed text-gray-200 mb-8">
-              Clockwise's TIME ETF combines high-growth innovation investing with tactical hedging and dynamic sector rotation to capture upside, while managing downside risk in volatile markets.
+              Clockwise&apos;s TIME ETF combines high-growth innovation investing with tactical hedging and dynamic sector rotation to capture upside, while managing downside risk in volatile markets.
             </p>
             
             {/* Cards in vertical layout */}

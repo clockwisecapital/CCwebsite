@@ -51,7 +51,7 @@ const MissionSection = () => {
             </p>
             
             <p className="text-base md:text-lg font-serif leading-relaxed">
-              If done right, AI will be like having a billion Einstein's in every area of science, capable of modeling, predicting, and creating an unimaginable world of abundance. Can we navigate to a new world, or does the cycle repeat?
+              If done right, AI will be like having a billion Einstein&apos;s in every area of science, capable of modeling, predicting, and creating an unimaginable world of abundance. Can we navigate to a new world, or does the cycle repeat?
             </p>
             
             <p className="text-base md:text-lg font-serif leading-relaxed">
