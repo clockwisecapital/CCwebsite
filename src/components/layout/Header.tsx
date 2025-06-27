@@ -22,11 +22,11 @@ export default function Header(): React.JSX.Element {
 
   return (
     <header 
-      className={`w-full transition-all duration-300 mx-auto max-w-[98%] mt-1 rounded-full ${scrolled ? 
+      className={`w-full transition-all duration-300 fixed top-0 left-0 right-0 z-[9999] ${scrolled ? 
         'bg-black/30 backdrop-blur-md py-2' : 
-        'bg-black/15 backdrop-blur-sm py-4'}`}
+        'bg-transparent py-4'}`}
     >
-      <div className="w-full flex items-center justify-between px-6 sm:px-8 md:px-10 lg:px-12">
+      <div className="container mx-auto max-w-[98%] mt-1 rounded-full flex items-center justify-between px-6 sm:px-8 md:px-10 lg:px-12">
         {/* Logo with hover effects */}
         <Link href="/" className="flex items-center group">
           <div className="relative flex items-center transition-all duration-300 transform group-hover:scale-105">

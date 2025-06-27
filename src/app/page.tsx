@@ -3,12 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Meteors } from "@/components/ui/meteors";
-import Header from "@/components/layout/Header";
+// Header is now in layout.tsx
 import MissionSection from "@/components/features/home/MissionSection";
 import InvestmentOptions from "@/components/features/home/InvestmentOptions";
-import ClockwiseETF from "@/components/features/home/ClockwiseETF";
-import ClockwisePortfolios from "@/components/features/home/ClockwisePortfolios";
-import ClockwiseHedgeFund from "@/components/features/home/ClockwiseHedgeFund";
 import ClockwiseMedia from "@/components/features/home/ClockwiseMedia";
 import ClockwiseTeam from "@/components/features/home/ClockwiseTeam";
 
@@ -38,12 +35,9 @@ export default function Home() {
   return (
     <main className="overflow-x-hidden">
       {/* Hero Banner Section with header integration */}
-      <section className="relative min-h-[100vh] flex flex-col justify-center items-center">
+      <section className="relative min-h-[100vh] flex flex-col justify-start">
 
-        {/* Position header absolutely over hero */}
-        <div className="absolute top-0 left-0 right-0 z-50">
-          <Header />
-        </div>
+        {/* Header is now in layout.tsx */}
         
         {/* Video Background */}
         <div className="absolute inset-0 w-full h-full z-0">
@@ -67,41 +61,42 @@ export default function Home() {
           {/* Meteor animation overlay */}
           <Meteors 
             count={40}
-            className="z-20"
+            className="z-5"
           />
         </div>
         
-        {/* Content with staggered animations - using full width container with padding for header */}
-        <div className="w-full mx-auto text-center z-30 relative px-4 sm:px-6 lg:px-8 pt-24 transform transition-all duration-1000 ease-out translate-y-0 opacity-100">
-          {/* Headline with animated text reveal on a single line */}
+        {/* Content with staggered animations - using full width container with minimal padding for header */}
+        <div className="w-full text-center md:text-left z-10 relative px-4 sm:px-6 lg:px-8 pt-40 transform transition-all duration-1000 ease-out translate-y-0 opacity-100">
+          <div className="container mx-auto md:mx-0 md:pl-0">
+          {/* Headline with animated text reveal on two lines */}
           <h1 
             style={{
               fontFamily: 'Inter, sans-serif', 
-              fontWeight: 300,
-              fontSize: 'clamp(2rem, 25vw, 5.5rem)',
-              lineHeight: '0.9',
+              fontWeight: 600,
+              fontSize: 'clamp(2rem, 8vw, 5rem)',
+              lineHeight: '1.1',
               letterSpacing: '0.02em'
             }} 
-            className="mb-10 text-white overflow-visible max-w-none"
+            className="mb-6 text-white overflow-visible max-w-none"
           >
             <div className="relative overflow-visible">
               <div 
                 className={`transform transition-all duration-1000 delay-300 ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'}`}
-                style={{ maxWidth: 'none', whiteSpace: 'nowrap' }}
               >
-                Where Smart Investors Learn, Grow, and Plan
+                <div>Where Smart Investors</div>
+                <div>Learn, Grow, and Plan</div>
               </div>
             </div>
           </h1>
           
           {/* Animated line separator */}
-          <div className="relative mx-auto max-w-xs mb-10">
-            <div className={`h-px bg-gradient-to-r from-transparent via-white/80 to-transparent transition-all duration-1000 delay-1000 ${mounted ? 'w-full opacity-70' : 'w-0 opacity-0'}`}></div>
+          <div className="relative mx-auto md:mx-0 max-w-xs mb-6">
+            <div className={`h-px bg-gradient-to-r from-white/80 via-white/80 to-transparent md:from-white/80 md:to-transparent transition-all duration-1000 delay-1000 ${mounted ? 'w-full opacity-70' : 'w-0 opacity-0'}`}></div>
           </div>
           
           {/* Buttons with enhanced hover effects */}
-          <div className={`flex flex-col sm:flex-row justify-center gap-6 mt-8 transition-all duration-1000 delay-1200 transform ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-            <Link href="#chatbot" className="group relative overflow-hidden bg-[#1FAAA3] text-white font-sans font-bold py-4 px-8 rounded-lg shadow-lg transition-all duration-300">
+          <div className={`flex flex-col sm:flex-row justify-center md:justify-start gap-4 mt-6 transition-all duration-1000 delay-1200 transform ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
+            <Link href="#chatbot" className="group relative overflow-hidden bg-[#1FAAA3] text-white font-sans font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300">
               {/* Button shine effect */}
               <span className="absolute top-0 left-0 w-full h-full bg-white/20 transform -translate-x-full skew-x-12 group-hover:translate-x-full transition-transform duration-700 ease-out"></span>
               <span className="relative flex items-center justify-center space-x-2">
@@ -111,7 +106,7 @@ export default function Home() {
                 <span>Ask Clockwise AI</span>
               </span>
             </Link>
-            <Link href="/portfolio-rating" className="group relative overflow-hidden bg-transparent text-white border-2 border-white font-sans font-bold py-4 px-8 rounded-lg shadow-lg transition-all duration-300">
+            <Link href="/portfolio-rating" className="group relative overflow-hidden bg-transparent text-white border-2 border-white font-sans font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300">
               <span className="absolute top-0 left-0 w-full h-full transform -translate-x-full bg-white/5 skew-x-12 group-hover:translate-x-full transition-transform duration-700 ease-out"></span>
               <span className="relative flex items-center justify-center space-x-2">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -123,6 +118,7 @@ export default function Home() {
           </div>
           
           {/* Removed scroll indicator as it was disrupting button placement */}
+          </div>
         </div>
       </section>
       
@@ -144,7 +140,7 @@ export default function Home() {
             </div>
             
             {/* Partners logo grid with staggered animations */}
-            <div className="w-full mt-10 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 md:gap-8 items-center justify-items-center">
+            <div className="w-full mt-10 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-6 lg:gap-8 items-center justify-items-center">
               {/* Partner logos with actual images */}
               {[
                 { name: "Betterment", src: "/partners/Betterment.png" },
@@ -152,7 +148,8 @@ export default function Home() {
                 { name: "Burney Investment", src: "/partners/Burney Investment.webp" },
                 { name: "Sound Income Strategies", src: "/partners/Sound Income Strategies.png" },
                 { name: "Tidal", src: "/partners/Tidal.png" },
-                { name: "Charles Schwab", src: "/partners/charles schwab.png" }
+                { name: "Charles Schwab", src: "/partners/charles schwab.png" },
+                { name: "CNBC", src: "/partners/cnbc.png" }
               ].map((partner, i) => (
                 <div 
                   key={partner.name}
@@ -176,9 +173,6 @@ export default function Home() {
         </div>
       </section>
       
-      {/* Mission Section */}
-      <MissionSection />
-      
       {/* Investment Options Section with matching gray background */}
       <div className="w-full bg-[#E5E7EA]">
         <InvestmentOptions />
@@ -196,13 +190,14 @@ export default function Home() {
 
       {/* Introduction Section removed completely to avoid white space */}
 
-      {/* Add the new sections */}
-      <ClockwiseETF />
-      <ClockwisePortfolios />
-      <ClockwiseHedgeFund />
+      {/* Media and Mission & Team sections */}
       <div className="w-full bg-[#E5E7EA]">
         <ClockwiseMedia />
       </div>
+
+      {/* Mission Section */}
+      <MissionSection />
+
       <ClockwiseTeam />
     </main>
   );

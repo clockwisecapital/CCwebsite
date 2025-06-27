@@ -16,7 +16,7 @@ const ClockwisePartners = () => {
           <div className="w-20 h-1 bg-gradient-to-r from-[#1A3A5F] to-[#1FAAA3] mx-auto rounded-full mt-4"></div>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-5 md:gap-6 mt-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-5 md:gap-6 mt-8">
           {/* Partner logos with actual images */}
           {[
             { name: "Betterment", src: "/partners/Betterment.png" },
@@ -24,7 +24,8 @@ const ClockwisePartners = () => {
             { name: "Burney Investment", src: "/partners/Burney Investment.webp" },
             { name: "Sound Income Strategies", src: "/partners/Sound Income Strategies.png" },
             { name: "Tidal", src: "/partners/Tidal.png" },
-            { name: "Charles Schwab", src: "/partners/charles schwab.png" }
+            { name: "Charles Schwab", src: "/partners/charles schwab.png" },
+            { name: "CNBC", src: "/partners/cnbc.png" }
           ].map((partner) => (
             <div 
               key={partner.name}
@@ -36,7 +37,7 @@ const ClockwisePartners = () => {
                   alt={`${partner.name} logo`}
                   fill
                   sizes="(max-width: 768px) 50vw, 33vw"
-                  className="object-contain p-4"
+                  className="object-contain p-2"
                 />
               </div>
             </div>

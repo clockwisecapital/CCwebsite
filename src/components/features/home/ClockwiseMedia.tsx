@@ -4,51 +4,94 @@ import React from 'react';
 import AnimatedSection from "../../ui/AnimatedSection";
 
 const ClockwiseMedia = () => {
+  const videos = [
+    {
+      id: "EQ2OSHJF9VY",
+      title: "Investors need exposure to Nvidia, just to what degree, says Clockwise Capital's James Cakmak",
+    },
+    {
+      id: "ubtgD8j0lHw",
+      title: "'Too many unknowns' with election & market to be overweight megacaps, says Clockwise's Cakmak",
+    },
+    {
+      id: "JnTK7md0n0k",
+      title: "Cakmak: I think Netflix has redeemed itself... they'll figure it out.",
+    },
+    {
+      id: "Xjxmf0KDbDs",
+      title: "Cakmak: Trimming Nvidia, as most of its upside is already priced in",
+    },
+  ];
+
   return (
-    <AnimatedSection animation="zoom-in" className="py-12 px-4 relative overflow-hidden text-[#1A3A5F]">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl md:text-3xl font-sans font-medium text-[#1A3A5F] mb-4">Clockwise Media</h2>
-          <p className="text-base md:text-lg font-serif leading-relaxed max-w-3xl mx-auto text-gray-600">
-            Check Out Our Latest News Appearances
+    <AnimatedSection
+      animation="zoom-in"
+      className="py-20 px-4 bg-white text-[#1A3A5F] overflow-hidden"
+    >
+      <div className="max-w-7xl mx-auto">
+        {/* Heading */}
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-semibold mb-4">
+            Clockwise Media
+          </h2>
+          <p className="text-base md:text-lg max-w-3xl mx-auto text-gray-600">
+            Catch our latest media appearances and insights
           </p>
-          <div className="w-20 h-1 bg-gradient-to-r from-[#1A3A5F] to-[#1FAAA3] mx-auto rounded-full mt-4"></div>
+          <div className="w-24 h-1 bg-gradient-to-r from-[#1A3A5F] to-[#1FAAA3] mx-auto rounded-full mt-4" />
         </div>
-        
-        {/* Placeholder for image - replace with actual image path */}
-        <div className="mt-8 flex justify-center">
-          <div className="relative w-full max-w-3xl h-48 bg-[#1A3A5F]/10 rounded-lg overflow-hidden border border-[#1A3A5F]/20 shadow-sm">
-            {/* Replace with actual image */}
-            <div className="absolute inset-0 flex items-center justify-center text-[#1A3A5F] text-base">
-              Media Image Placeholder
+
+        {/* Video grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {videos.map((video) => (
+            <div
+              key={video.id}
+              className="overflow-hidden rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col"
+            >
+              <div className="aspect-video relative">
+                <iframe
+                  src={`https://www.youtube.com/embed/${video.id}?rel=0`}
+                  title={video.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full"
+                />
+              </div>
+              <h3 className="mt-3 text-xs sm:text-sm font-medium px-3 pb-4 min-h-[48px]">
+                {video.title}
+              </h3>
             </div>
-          </div>
+          ))}
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-8">
-          <div className="bg-[#1A3A5F]/10 backdrop-blur-sm p-5 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 border border-[#1A3A5F]/20">
-            <div className="aspect-video relative w-full mb-3 bg-[#1A3A5F]/20 rounded-md overflow-hidden">
-              {/* Replace with actual video thumbnail */}
-              <div className="absolute inset-0 flex items-center justify-center text-[#1A3A5F]">
-                Video Thumbnail
-              </div>
-            </div>
-            <h3 className="text-lg font-sans font-semibold text-[#1A3A5F] mb-2">Cakmak: Tech&apos;s rally takes away potential gains from 2025</h3>
-          </div>
-          
-          <div className="bg-[#1A3A5F]/10 backdrop-blur-sm p-5 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 border border-[#1A3A5F]/20">
-            <div className="aspect-video relative w-full mb-3 bg-[#1A3A5F]/20 rounded-md overflow-hidden">
-              {/* Replace with actual video thumbnail */}
-              <div className="absolute inset-0 flex items-center justify-center text-[#1A3A5F]">
-                Video Thumbnail
-              </div>
-            </div>
-            <h3 className="text-lg font-sans font-semibold text-[#1A3A5F] mb-2">Cakmak: Tech&apos;s rally takes away potential gains from 2025</h3>
-          </div>
+
+        {/* View all button */}
+        <div className="text-center mt-12">
+          <a
+            href="/media"
+            className="inline-flex items-center gap-2 bg-[#1FAAA3] hover:bg-[#17867A] text-white px-8 py-3 rounded-md font-medium shadow-lg transition-colors duration-300"
+          >
+            View All Media
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 7l5 5m0 0l-5 5m5-5H6"
+              />
+            </svg>
+          </a>
         </div>
       </div>
     </AnimatedSection>
   );
 };
+
+
 
 export default ClockwiseMedia;
