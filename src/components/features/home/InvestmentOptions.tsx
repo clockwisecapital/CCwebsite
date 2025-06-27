@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Card3D from '@/components/ui/Card3D';
-import { FaChartLine, FaExchangeAlt, FaChartPie } from 'react-icons/fa';
+
 import InvestmentModal from '@/components/ui/InvestmentModal';
 import InvestmentContent from '../home/InvestmentContent';
 
