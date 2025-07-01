@@ -148,8 +148,8 @@ export default function Home() {
               {/* Partner logos with actual images */}
               {[
                 { name: "CNBC", src: "/partners/cnbc.png" },
-                { name: "Bloomberg", src: "/partners/bloomberg.png" },
-                { name: "Yahoo Finance", src: "/partners/yahoo-finance.png" },
+                { name: "Bloomberg", src: "/partners/Bloomberg.png" },
+                { name: "Yahoo Finance", src: "/partners/Yahoo-Finance.png" },
                 { name: "Schwab TV", src: "/partners/charles schwab.png" }
               ].map((partner, i) => (
                 <div 
