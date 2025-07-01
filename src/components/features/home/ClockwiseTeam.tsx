@@ -68,6 +68,7 @@ const ClockwiseTeam = () => {
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-white mb-4">Meet Our Team</h2>
+            <div className="w-24 h-1 bg-gradient-to-r from-[#1A3A5F] to-[#1FAAA3] mx-auto rounded-full" />
           <p className="text-xl text-white/70 max-w-3xl mx-auto">
             Our expert team combines decades of experience in finance, technology, and economic cycles to guide you through today&apos;s complex investment landscape.
           </p>

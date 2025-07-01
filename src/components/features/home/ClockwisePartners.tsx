@@ -16,7 +16,7 @@ const ClockwisePartners = () => {
           <div className="w-20 h-1 bg-gradient-to-r from-[#1A3A5F] to-[#1FAAA3] mx-auto rounded-full mt-4"></div>
         </div>
         
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-5 md:gap-6 mt-8">
+        <div className="mx-auto w-fit grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-5 md:gap-6 mt-8 justify-items-center">
           {/* Partner logos with actual images */}
           {[
             { name: "Betterment", src: "/partners/Betterment.png" },

@@ -57,9 +57,9 @@ const ClockwiseMedia = () => {
                   className="absolute inset-0 w-full h-full"
                 />
               </div>
-              <h3 className="mt-3 text-xs sm:text-sm font-medium px-3 pb-4 min-h-[48px]">
+              <h5 className="mt-2 text-sm sm:text-base font-serif font-normal leading-snug px-3 pb-3 min-h-[48px]">
                 {video.title}
-              </h3>
+              </h5>
             </div>
           ))}
         </div>

@@ -8,6 +8,10 @@ import MissionSection from "@/components/features/home/MissionSection";
 import InvestmentOptions from "@/components/features/home/InvestmentOptions";
 import ClockwiseMedia from "@/components/features/home/ClockwiseMedia";
 import ClockwiseTeam from "@/components/features/home/ClockwiseTeam";
+import ReviewsSection from "@/components/features/home/ReviewsSection";
+import DisclosuresSection from "@/components/features/home/DisclosuresSection";
+import NavigatingTurbulentTimes from "@/components/features/home/NavigatingTurbulentTimes";
+import EconomicExplainers from "@/components/features/home/EconomicExplainers";
 
 // AnimatedText component removed as unused
 
@@ -83,8 +87,8 @@ export default function Home() {
               <div 
                 className={`transform transition-all duration-1000 delay-300 ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'}`}
               >
-                <div>Where Smart Investors</div>
-                <div>Learn, Grow, and Plan</div>
+                <div>Adaptive Portfolios & Advisors To Navigate Turbulent Times</div>
+                <div className="text-lg md:text-2xl font-normal mt-4">0% Management Fee Portfolios • Freemium Advisor Options</div>
               </div>
             </div>
           </h1>
@@ -135,25 +139,22 @@ export default function Home() {
             {/* Animated heading with reveal effect */}
             <div className="overflow-hidden">
               <h2 className="text-center text-gray-500 font-medium text-sm uppercase tracking-wider transform translate-y-0 opacity-100 transition-all duration-700 delay-300">
-                <span className="relative inline-block after:content-[''] after:absolute after:bottom-0 after:left-0 after:h-px after:bg-gray-300 after:w-full">Partners</span>
+                <span className="relative inline-block after:content-[''] after:absolute after:bottom-0 after:left-0 after:h-px after:bg-gray-300 after:w-full">As Seen On</span>
               </h2>
             </div>
             
             {/* Partners logo grid with staggered animations */}
-            <div className="w-full mt-10 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-6 lg:gap-8 items-center justify-items-center">
+            <div className="flex flex-wrap justify-center gap-6 lg:gap-8 mt-10">
               {/* Partner logos with actual images */}
               {[
-                { name: "Betterment", src: "/partners/Betterment.png" },
-                { name: "Bloomberg", src: "/partners/Bloomberg.png" },
-                { name: "Burney Investment", src: "/partners/Burney Investment.webp" },
-                { name: "Sound Income Strategies", src: "/partners/Sound Income Strategies.png" },
-                { name: "Tidal", src: "/partners/Tidal.png" },
-                { name: "Charles Schwab", src: "/partners/charles schwab.png" },
-                { name: "CNBC", src: "/partners/cnbc.png" }
+                { name: "CNBC", src: "/partners/cnbc.png" },
+                { name: "Bloomberg", src: "/partners/bloomberg.png" },
+                { name: "Yahoo Finance", src: "/partners/yahoo-finance.png" },
+                { name: "Schwab TV", src: "/partners/charles schwab.png" }
               ].map((partner, i) => (
                 <div 
                   key={partner.name}
-                  className="transform transition-all duration-500 hover:scale-110 opacity-90 hover:opacity-100 w-full aspect-[3/2]" 
+                  className="transform transition-all duration-500 hover:scale-110 opacity-90 hover:opacity-100 w-28 sm:w-32 flex items-center justify-center" 
                   style={{ transitionDelay: `${i * 100}ms` }}
                 >
                   <div className="relative w-full h-full flex items-center justify-center group">
@@ -172,7 +173,13 @@ export default function Home() {
           </div>
         </div>
       </section>
-      
+
+      {/* Customer Reviews */}
+      <ReviewsSection />
+       
+       <NavigatingTurbulentTimes />
+          <EconomicExplainers />
+
       {/* Investment Options Section with matching gray background */}
       <div className="w-full bg-[#E5E7EA]">
         <InvestmentOptions />
@@ -199,6 +206,9 @@ export default function Home() {
       <MissionSection />
 
       <ClockwiseTeam />
+
+      {/* Disclosures */}
+      <DisclosuresSection />
     </main>
   );
 }
