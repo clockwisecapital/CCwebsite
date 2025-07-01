@@ -13,7 +13,6 @@ import {
   Legend,
   Tooltip,
   CartesianGrid,
-  Area,
   LabelList,
 } from "recharts";
 
