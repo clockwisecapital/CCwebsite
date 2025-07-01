@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { IBM_Plex_Serif } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import './globals.css';
 import './fonts.css';
 
@@ -7,6 +8,7 @@ import './fonts.css';
 import Footer from '../components/layout/Footer';
 import Header from '../components/layout/Header';
 import ScrollProgressIndicator from '../components/ui/ScrollProgressIndicator';
+import React from 'react';
 
 // Only load IBM Plex Serif through next/font
 const ibmPlexSerif = IBM_Plex_Serif({
@@ -16,7 +18,10 @@ const ibmPlexSerif = IBM_Plex_Serif({
   display: 'swap',
 });
 
-// We'll load Inter directly via Google Fonts link in the head
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+});
 
 // Metadata for SEO
 export const metadata: Metadata = {
@@ -32,12 +37,8 @@ export default function RootLayout({
 }): React.JSX.Element {
   return (
     <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet" />
-      </head>
-      <body className={`${ibmPlexSerif.variable} font-sans min-h-screen flex flex-col relative`}>
+      <head />
+      <body className={`${inter.variable} ${ibmPlexSerif.variable} font-sans min-h-screen flex flex-col relative`}>
         <Header />
         <ScrollProgressIndicator 
           sections={['Home', 'ETF', 'Portfolios', 'Hedge Fund', 'Media', 'Partners', 'Team']} 
