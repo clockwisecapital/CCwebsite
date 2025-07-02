@@ -68,14 +68,10 @@ const EconomicExplainers: React.FC = () => (
       {/* card 2 */}
       <OverlayCard
         title="Passive vs Adaptive ETF Portfolios"
-        summary={(<>
-            <p className="text-gray-200 text-sm">Passive portfolios are like using a flip phone in 2025. They worked fine in the 1990s when markets were simpler, but today&rsquo;s volatile, AI-driven markets need smarter tools. Adaptive portfolios are like having a smartphone – same basic function (investing), but with way more intelligence built in.</p>
-            <p className="text-gray-200 text-sm">In 2022 a passive 60/40 portfolio fell 18 – 25 %. An adaptive Clockwise AI portfolio finished +8 – 15 % by recalculating optimal allocations daily.</p>
-          </>)}
-        details={(
+        summary={(
           <div className="grid grid-cols-2 gap-4 text-sm text-gray-200">
             <div>
-              <h4 className="font-semibold text-white mb-1">Passive Portfolios</h4>
+              <h4 className="font-semibold text-white mb-3">Passive Portfolios</h4>
               <ul className="list-disc list-inside space-y-1">
                 <li>Fixed allocations (60% stocks, 40% bonds)</li>
                 <li>Rebalances quarterly or yearly</li>
@@ -83,7 +79,7 @@ const EconomicExplainers: React.FC = () => (
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-white mb-1">Adaptive (AI)</h4>
+              <h4 className="font-semibold text-white mb-3">Adaptive (AI)</h4>
               <ul className="list-disc list-inside space-y-1">
                 <li>AI calculates optimal allocations daily</li>
                 <li>Adjusts to dynamic market correlations</li>
@@ -93,6 +89,12 @@ const EconomicExplainers: React.FC = () => (
               </ul>
             </div>
           </div>
+        )}
+        details={(
+          <>
+            <p className="text-gray-200 text-sm">Passive portfolios are like using a flip phone in 2025. They worked fine in the 1990s when markets were simpler, but today&rsquo;s volatile, AI-driven markets need smarter tools. Adaptive portfolios are like having a smartphone – same basic function (investing), but with way more intelligence built in.</p>
+            <p className="text-gray-200 text-sm">In 2022 a passive 60/40 portfolio fell 18 – 25 %. An adaptive Clockwise AI portfolio finished +8 – 15 % by recalculating optimal allocations daily.</p>
+          </>
         )}
       />
     </div>

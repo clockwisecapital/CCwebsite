@@ -101,9 +101,8 @@ const NavigatingTurbulentTimes: React.FC = () => {
           Navigating Turbulent Times
         </h2>
         <div className="w-24 h-1 bg-gradient-to-r from-[#1A3A5F] to-[#1FAAA3] mx-auto rounded-full" />
-        <p className="text-center text-white max-w-3xl mx-auto">
-          A visual roadmap of the economic cycle – where we’ve been, where we are
-          today, and what may lie ahead.
+        <p className="text-center text-white mx-auto md:whitespace-nowrap md:text-lg">
+          A visual roadmap of the economic cycle – where we’ve been, where we are today, and what may lie ahead.
         </p>
 
         {/* Timeline */}

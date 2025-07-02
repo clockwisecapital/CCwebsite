@@ -20,7 +20,7 @@ const ClockwiseTeam = () => {
   const teamMembers: TeamMember[] = [
     {
       name: 'Eli Mikel, CFP®, CRPC®',
-      title: 'Clockwise Partner',
+      title: 'Chief Growth Officer',
       imageSrc: '/team/Eli-clockwise.png',
       bio: 'Mr. Mikel is a seasoned financial professional with a deep passion for empowering clients to navigate the rapid pace of technological change. Armed with a Bachelor of Science in Finance from Virginia Commonwealth University and post-graduate education from Georgetown University, Mr. Mikel combines a strong academic foundation with over two decades of experience in finance and marketing. As a driving force behind the company\'s brand awareness, education, and growth initiatives, he leverages creative technology solutions to expand the firm\'s reach and impact, ensuring clients have access to innovative tools and insights. Mr. Mikel is dedicated to fostering a culture of transparency and financial literacy, equipping investors with the knowledge and resources they need to make informed decisions in an ever-evolving investment landscape. His commitment to client empowerment and education enables investors to thrive in a future shaped by technological advancement.',
       social: {
@@ -30,7 +30,7 @@ const ClockwiseTeam = () => {
     },
     {
       name: 'James Cakmak, CFA',
-      title: 'Clockwise Partner',
+      title: 'Portfolio Manager',
       imageSrc: '/team/James-clockwise.png',
       bio: 'Mr. Cakmak is a thought leader in the capital markets and more broadly within technology and innovation. At Clockwise Capital he is responsible for advancing the company\'s mission to harness transformative technologies and novel ideas. With two decades of experience in finance and a keen insight into emerging trends, Mr. Cakmak directs the fund\'s strategic approach, identifying high-potential investment opportunities and adeptly navigating complex market dynamics. His role encompasses rigorous research, analysis, and portfolio management, ensuring Clockwise remains agile and responsive to shifting market conditions. Leveraging Clockwise\'s AI-enhanced investment model, Mr. Cakmak actively engineers this tool to enhance the firm\'s ability to swiftly adapt to changes in technology and economic cycles, positioning it at the forefront of innovation-driven investment. Mr. Cakmak holds a Bachelor\'s degree from Johns Hopkins University, bringing both his academic and industry expertise to bear in cultivating a firm aligned with the future of transformative growth.',
       social: {
@@ -93,7 +93,7 @@ const ClockwiseTeam = () => {
                       />
                     </div>
                     <div className="mt-4 flex flex-col items-center min-h-[72px]">
-                      <h3 className="text-lg font-medium text-white text-center leading-snug">{member.name}</h3>
+                      <h3 className="text-lg font-medium text-white text-center leading-snug whitespace-nowrap">{member.name}</h3>
                       <p className="text-[#1FAAA3] text-center text-sm leading-snug">{member.title}</p>
                     </div>
                     
@@ -150,7 +150,7 @@ const ClockwiseTeam = () => {
           
           {/* Join the team button */}
           <motion.div 
-            className="mt-16 text-center"
+            className="mt-16 text-center hidden"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}

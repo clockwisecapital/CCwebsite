@@ -96,7 +96,7 @@ const Card3D: React.FC<Card3DProps> = ({
           )}
           
           <h3 
-            className="text-xl md:text-2xl font-medium text-white mb-4 group-hover:text-[#E3B23C] transition-colors duration-300"
+            className="text-xl md:text-2xl font-medium text-white mb-4 group-hover:text-[#E3B23C] transition-colors duration-300 whitespace-pre-line"
             style={{
               transform: isHovered ? 'translateZ(50px)' : 'translateZ(15px)',
               transformStyle: 'preserve-3d',
@@ -107,7 +107,7 @@ const Card3D: React.FC<Card3DProps> = ({
           </h3>
           
           <p 
-            className="text-white/70 text-sm md:text-base font-light mb-8 flex-grow"
+            className="text-white/70 text-sm md:text-base font-light mb-8 flex-grow whitespace-pre-line"
             style={{
               transform: isHovered ? 'translateZ(40px)' : 'translateZ(10px)',
               transformStyle: 'preserve-3d',

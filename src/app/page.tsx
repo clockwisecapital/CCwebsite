@@ -180,7 +180,7 @@ export default function Home() {
        <NavigatingTurbulentTimes />
           <EconomicExplainers />
 
-      {/* Investment Options Section with matching gray background */}
+      {/* Portfolio Optionss Section with matching gray background */}
       <div className="w-full bg-[#E5E7EA]">
         <InvestmentOptions />
         <AdvisorOptions />
