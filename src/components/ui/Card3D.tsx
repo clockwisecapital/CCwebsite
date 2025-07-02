@@ -9,7 +9,7 @@ interface Card3DProps {
   icon?: React.ReactNode;
   number: string;
   id: string;
-  onOpenModal: (id: string) => void;
+  onOpenModal?: (id: string) => void;
 }
 
 const Card3D: React.FC<Card3DProps> = ({ 
@@ -24,10 +24,10 @@ const Card3D: React.FC<Card3DProps> = ({
 
   return (
     <div 
-      className="block h-full perspective-1000 cursor-pointer"
+      className="block h-full perspective-1000"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={() => onOpenModal(id)}
+      onClick={onOpenModal ? () => onOpenModal(id) : undefined}
     >
       <div 
         className={`
@@ -117,8 +117,8 @@ const Card3D: React.FC<Card3DProps> = ({
             {description}
           </p>
           
-          <div 
-            className="mt-auto"
+          {/* CTA removed */}
+          {/* <div className="mt-auto">
             style={{
               transform: isHovered ? 'translateZ(60px)' : 'translateZ(20px)',
               transformStyle: 'preserve-3d',

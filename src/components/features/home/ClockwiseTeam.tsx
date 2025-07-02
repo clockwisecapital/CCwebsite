@@ -39,19 +39,10 @@ const ClockwiseTeam = () => {
       }
     },
     {
-      name: 'Dr. Harry Mamaysky',
-      title: 'Clockwise Quantstreet Partner',
-      imageSrc: '/team/Dr Harry-clockwise.png',
-      bio: 'Dr. Mamaysky is a partner at QuantStreet Capital, which offers its clients model and market analytics, wealth management, and investing services through separately managed accounts and works closely in partnership with Clockwise Capital. Harry is also a professor at Columbia Business School, where he is the director of the Program for Financial Studies. Harry\'s research focuses on the application of quantitative techniques to investing and wealth management. Harry is a frequent industry and academic speaker. Prior to Columbia, Harry spent years in finance practice, rising to senior portfolio manager at Citigroup, and later serving on the firm\'s Risk Executive Committee. Harry was a professor at the Yale School of Management, which he joined after earning his PhD in Finance from the Massachusetts Institute of Technology. He holds BS and MS degrees in Computer Science and a BA in Economics from Brown University.',
-      social: {
-        linkedin: 'https://linkedin.com'
-      }
-    },
-    {
-      name: 'Isaac Mamaysky, Esq.',
-      title: 'Clockwise Quantstreet Partner',
-      imageSrc: '/team/Isaac-clockwise.png',
-      bio: 'Mr. Mamaysky is a partner at QuantStreet Capital, where he oversees operations, compliance, and legal matters and works closely in partnership with Clockwise Capital. QuantStreet offers clients model and market analytics, wealth management, and investment services through separately managed accounts. In addition to his role at QuantStreet, Isaac is a partner at Potomac Law Group PLLC, where he founded the Investment Advisers, Asset Managers, and Private Funds practice. He is also an adjunct professor at the Elisabeth Haub School of Law at Pace University. Isaac has taught courses in Corporations and Partnerships, Ethics and Compliance, and Employment Law. He has also published numerous articles in these fields in academic journals and industry publications. Beyond his practice, Isaac and his wife, Lisa, have spent over a decade leading a large 501(c)(3) nonprofit focused on children\'s health, which they co-founded in 2012. Isaac is a cum laude graduate of the Boston University School of Law and a summa cum laude graduate of the University of Rhode Island.',
+      name: 'Adam Simon',
+      title: 'Portfolio Manager',
+      imageSrc: '/team/Adam%20Simon.jpeg',
+      bio: 'Adam Simon is a Portfolio Manager at Clockwise Capital, bringing over two decades of investment experience from Goldman Sachs, Brahman Capital, and Echo Street Capital, where he served as Partner and Director of Research at the $2 billion investment fund. With expertise spanning equity research, event-driven investing, and "quantamental" strategies, Adam leverages cutting-edge technology and AI-enhanced investment models to identify transformative opportunities in companies that save customers time or improve its quality, managing strategies across Clockwise\'s Adaptive Portfolios and hedge fund offerings while utilizing advanced options overlays and market cycle analysis to optimize returns and capitalize on artificial intelligence and broader technology trends.',
       social: {
         linkedin: 'https://linkedin.com'
       }
@@ -67,7 +58,7 @@ const ClockwiseTeam = () => {
     >
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-white mb-4">Meet Our Team</h2>
+          <h2 className="text-4xl font-bold text-white mb-4">Team</h2>
             <div className="w-24 h-1 bg-gradient-to-r from-[#1A3A5F] to-[#1FAAA3] mx-auto rounded-full" />
           <p className="text-xl text-white/70 max-w-3xl mx-auto">
             Our expert team combines decades of experience in finance, technology, and economic cycles to guide you through today&apos;s complex investment landscape.
@@ -76,14 +67,14 @@ const ClockwiseTeam = () => {
         
         <div className="max-w-7xl mx-auto">
           {/* Team members horizontal row */}
-          <div className="flex flex-wrap justify-center gap-8 mb-12" onMouseLeave={() => setActiveIndex(null)}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 justify-items-center items-start mb-12" onMouseLeave={() => setActiveIndex(null)}>
             {teamMembers.map((member, index) => {
               const isActive = activeIndex === index;
               
               return (
                 <motion.div 
                   key={index}
-                  className={`relative cursor-pointer transition-all duration-300 ${isActive ? 'scale-105' : 'hover:scale-105'}`}
+                  className={`relative w-64 cursor-pointer transition-all duration-300 ${isActive ? 'scale-105' : 'hover:scale-105'}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
@@ -97,12 +88,14 @@ const ClockwiseTeam = () => {
                         alt={member.name}
                         fill
                         sizes="160px"
-                        className="object-cover object-center bg-white"
+                        className={`object-cover object-center bg-white filter ${['Eli Mikel, CFP®, CRPC®','James Cakmak, CFA'].includes(member.name) ? 'grayscale' : ''}`}
                         priority
                       />
                     </div>
-                    <h3 className="mt-4 text-lg font-medium text-white">{member.name}</h3>
-                    <p className="text-[#1FAAA3]">{member.title}</p>
+                    <div className="mt-4 flex flex-col items-center min-h-[72px]">
+                      <h3 className="text-lg font-medium text-white text-center leading-snug">{member.name}</h3>
+                      <p className="text-[#1FAAA3] text-center text-sm leading-snug">{member.title}</p>
+                    </div>
                     
                     <div className="flex space-x-3 mt-2">
                       {member.social.linkedin && (

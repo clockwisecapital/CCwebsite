@@ -47,16 +47,13 @@ const MissionSection = () => {
           
           <div className="space-y-5 max-w-3xl mx-auto text-gray-100">
             <p className="text-base md:text-lg font-serif leading-relaxed">
-              Over the last 500 years the Scientific Revolution took us to space, mapped the human genome and created super intelligence, but still limits humanity to a world of scarcity. In this world resources are limited and inefficiently distributed, as a result predictable cycles of boom and bust recur over and over. Clockwise leverages experts, data and machine learning to map these cycles.
+              Over the last 500 years the Scientific Revolution took us to space, mapped the human genome and created super intelligence, but still limits humanity to a world of scarcity. In this world resources are limited and inefficiently distributed; as a result predictable cycles of boom and bust recur over and over. Clockwise leverages experts, data and machine learning to map these cycles.
             </p>
-            
+
             <p className="text-base md:text-lg font-serif leading-relaxed">
-              If done right, AI will be like having a billion Einstein&apos;s in every area of science, capable of modeling, predicting, and creating an unimaginable world of abundance. Can we navigate to a new world, or does the cycle repeat?
-            </p>
+              Our mission is to connect people with Portfolios and Advisors uniquely designed to navigate the exponential pace of change.</p>
             
-            <p className="text-base md:text-lg font-serif leading-relaxed">
-              Clockwise mission is to connect people with Advisors and Portfolios uniquely designed to navigate the awesome pace of exponential change.
-            </p>
+            
           </div>
           
           {/* eBook Download CTA */}
@@ -70,7 +67,7 @@ const MissionSection = () => {
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  Download EBook: TIME Investing
+                  Download Ebook: Coming Soon
                 </span>
               </Link>
             </div>

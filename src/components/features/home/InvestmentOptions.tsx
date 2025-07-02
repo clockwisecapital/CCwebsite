@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import Card3D from '@/components/ui/Card3D';
 
-import InvestmentModal from '@/components/ui/InvestmentModal';
-import InvestmentContent from '../home/InvestmentContent';
+
+
 
 type InvestmentOption = {
   id: string;
@@ -18,8 +18,8 @@ const investmentOptions: InvestmentOption[] = [
   {
     id: 'etf',
     number: '01',
-    title: 'Clockwise ETF',
-    description: 'Clockwise ETF NYSE: TIME is an active managed hedged growth fund. TIME rebalances weekly to adapt to dynamic technology and economic cycles.',
+    title: 'Clockwise Single ETF Portfolio',
+    description: 'Investment Minimum: <$50 — Clockwise ETF NYSE: TIME is an active managed hedged growth fund. TIME rebalances daily to adapt to dynamic technology and economic cycles.',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -29,8 +29,8 @@ const investmentOptions: InvestmentOption[] = [
   {
     id: 'portfolios',
     number: '02',
-    title: 'Clockwise Portfolios',
-    description: 'Clockwise Adaptive Portfolios leverage AI & human experts to broadly diversify ETF portfolios that rebalance on a monthly basis to align with investors unique risk preferences and goal time horizons.',
+    title: 'Clockwise Diversified Growth Portfolios',
+    description: 'Investment Minimum: $50k+ — Clockwise Adaptive Portfolios leverage AI & human experts to broadly diversify ETF portfolios for maximum risk-adjusted growth that rebalance on a monthly basis to align with investors\' unique risk preferences and goal time horizons.',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -40,8 +40,8 @@ const investmentOptions: InvestmentOption[] = [
   {
     id: 'hedge-fund',
     number: '03',
-    title: 'Clockwise Hedge Fund',
-    description: 'Clockwise Hedge Fund incorporates a derivative options overlay strategy to complement its core focus on innovation investing, aiming to enhance returns, hedge risks, and generate income.',
+    title: 'Clockwise Diversified Income Portfolios',
+    description: 'Investment Minimum: $50k+ — Clockwise Adaptive Portfolios leverage AI & human experts to broadly diversify ETF portfolios for maximum risk-adjusted income that rebalance on a monthly basis to align with investors\' unique risk preferences and goal time horizons.',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
@@ -51,17 +51,9 @@ const investmentOptions: InvestmentOption[] = [
 ];
 
 const InvestmentOptions = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeInvestment, setActiveInvestment] = useState<string | null>(null);
-  
-  const handleOpenModal = (id: string) => {
-    setActiveInvestment(id);
-    setIsModalOpen(true);
-  };
-  
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
+
+
+
   return (
     <section className="py-16 relative overflow-hidden">
       {/* Dark blue gradient background */}
@@ -77,6 +69,7 @@ const InvestmentOptions = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Section header */}
         <div className="text-center mb-12">
+          <p className="text-teal-300 uppercase tracking-wide mb-2">0% Management Fee Portfolios</p>
           <h2 className="text-3xl md:text-4xl font-sans font-medium text-white mb-4">
             Investment Options
           </h2>
@@ -96,25 +89,11 @@ const InvestmentOptions = () => {
                 icon={card.icon}
                 number={card.number}
                 id={card.id}
-                onOpenModal={handleOpenModal}
               />
             </div>
           ))}
         </div>
       </div>
-      
-      {/* Investment Modal */}
-      {isModalOpen && (
-        <InvestmentModal 
-          isOpen={isModalOpen} 
-          onClose={handleCloseModal}
-          title={investmentOptions.find(opt => opt.id === activeInvestment)?.title || 'Investment Details'}
-        >
-          <InvestmentContent 
-            type={activeInvestment as 'etf' | 'portfolios' | 'hedge-fund'} 
-          />
-        </InvestmentModal>
-      )}
     </section>
   );
 };

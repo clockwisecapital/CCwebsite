@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
 import Link from 'next/link';
@@ -75,6 +75,18 @@ import { phases, Phase } from "@/utils/turbulentData";
 
 const NavigatingTurbulentTimes: React.FC = () => {
   const [active, setActive] = useState<Phase>(phases[3]); // default to current phase
+
+  // Automatically cycle through phases every 5 seconds
+  useEffect(() => {
+    const id = setInterval(() => {
+      setActive((prev) => {
+        const currentIndex = phases.findIndex((ph) => ph.id === prev.id);
+        const next = phases[(currentIndex + 1) % phases.length];
+        return next;
+      });
+    }, 5000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <section

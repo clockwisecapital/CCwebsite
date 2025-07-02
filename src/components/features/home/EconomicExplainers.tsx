@@ -11,18 +11,16 @@ interface OverlayCardProps {
 }
 
 const OverlayCard: React.FC<OverlayCardProps> = ({ title, summary, details }) => {
-  const [open, setOpen] = React.useState(false);
   return (
-    <section className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 md:p-8 shadow-xl text-gray-100">
-      <h3 className="text-2xl font-semibold text-white mb-2">{title}</h3>
-      {summary}
-      {open && <div className="mt-4 space-y-3 text-sm text-gray-200">{details}</div>}
-      <button
-        className="mt-4 text-teal-300 underline"
-        onClick={() => setOpen((v) => !v)}
-      >
-        {open ? "Show less" : "Read more"}
-      </button>
+    <section className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 md:p-8 shadow-xl text-gray-100 flex flex-col space-y-4">
+      <h3 className="text-2xl font-semibold text-white mb-3">{title}</h3>
+      <div className="space-y-3 text-sm text-gray-200">
+        {summary}
+      </div>
+      <hr className="border-white/20" />
+      <div className="space-y-3 text-sm text-gray-200">
+        {details}
+      </div>
     </section>
   );
 };
@@ -70,28 +68,28 @@ const EconomicExplainers: React.FC = () => (
       {/* card 2 */}
       <OverlayCard
         title="Passive vs Adaptive ETF Portfolios"
-        summary={(
-          <p className="text-gray-200 text-sm">
-            In 2022 a passive 60/40 portfolio fell 18 – 25 %. An adaptive Clockwise AI portfolio finished +8 – 15 % by recalculating
-            optimal allocations daily.
-          </p>
-        )}
+        summary={(<>
+            <p className="text-gray-200 text-sm">Passive portfolios are like using a flip phone in 2025. They worked fine in the 1990s when markets were simpler, but today's volatile, AI-driven markets need smarter tools. Adaptive portfolios are like having a smartphone – same basic function (investing), but with way more intelligence built in.</p>
+            <p className="text-gray-200 text-sm">In 2022 a passive 60/40 portfolio fell 18 – 25 %. An adaptive Clockwise AI portfolio finished +8 – 15 % by recalculating optimal allocations daily.</p>
+          </>)}
         details={(
           <div className="grid grid-cols-2 gap-4 text-sm text-gray-200">
             <div>
-              <h4 className="font-semibold text-white mb-1">Passive</h4>
+              <h4 className="font-semibold text-white mb-1">Passive Portfolios</h4>
               <ul className="list-disc list-inside space-y-1">
-                <li>Fixed 60/40 allocation</li>
-                <li>Rebalanced quarterly/yearly</li>
-                <li>Ignores market volatility</li>
+                <li>Fixed allocations (60% stocks, 40% bonds)</li>
+                <li>Rebalances quarterly or yearly</li>
+                <li>Ignores market conditions</li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-white mb-1">Adaptive (AI)</h4>
               <ul className="list-disc list-inside space-y-1">
-                <li>Scans thousands of data points daily</li>
-                <li>Adjusts exposure with risk</li>
-                <li>Seeks downside protection and upside capture</li>
+                <li>AI calculates optimal allocations daily</li>
+                <li>Adjusts to dynamic market correlations</li>
+                <li>Protects downside automatically</li>
+                <li>Captures upside opportunities</li>
+                <li>Uses machine learning algorithms</li>
               </ul>
             </div>
           </div>

@@ -20,6 +20,21 @@
   animation: pulse-slow 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Slide-in from right for timed popup */
+@keyframes slide-in {
+  0% {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.animate-slide-in {
+  animation: slide-in 0.4s ease-out forwards;
+}
+
 :root {
   /* Color Variables Based on Design System */
   --primary-blue: #1A3A5F;

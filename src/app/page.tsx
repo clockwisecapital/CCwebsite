@@ -7,11 +7,13 @@ import { Meteors } from "@/components/ui/meteors";
 import MissionSection from "@/components/features/home/MissionSection";
 import InvestmentOptions from "@/components/features/home/InvestmentOptions";
 import ClockwiseMedia from "@/components/features/home/ClockwiseMedia";
+import AdvisorOptions from "@/components/features/home/AdvisorOptions";
 import ClockwiseTeam from "@/components/features/home/ClockwiseTeam";
 import ReviewsSection from "@/components/features/home/ReviewsSection";
 import DisclosuresSection from "@/components/features/home/DisclosuresSection";
 import NavigatingTurbulentTimes from "@/components/features/home/NavigatingTurbulentTimes";
 import EconomicExplainers from "@/components/features/home/EconomicExplainers";
+import TimedPopup from "@/components/ui/TimedPopup";
 
 // AnimatedText component removed as unused
 
@@ -87,7 +89,7 @@ export default function Home() {
               <div 
                 className={`transform transition-all duration-1000 delay-300 ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'}`}
               >
-                <div>Adaptive Portfolios & Advisors To Navigate Turbulent Times</div>
+                <div>Portfolios + Advisors <br />To Navigate Turbulent Times</div>
                 <div className="text-lg md:text-2xl font-normal mt-4">0% Management Fee Portfolios • Freemium Advisor Options</div>
               </div>
             </div>
@@ -134,7 +136,7 @@ export default function Home() {
           <div className="absolute -bottom-[8%] -left-[5%] w-64 h-64 bg-[#F5F7FA] rounded-full opacity-50"></div>
         </div>
         
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="flex flex-col items-center">
             {/* Animated heading with reveal effect */}
             <div className="overflow-hidden">
@@ -154,7 +156,7 @@ export default function Home() {
               ].map((partner, i) => (
                 <div 
                   key={partner.name}
-                  className="transform transition-all duration-500 hover:scale-110 opacity-90 hover:opacity-100 w-28 sm:w-32 flex items-center justify-center" 
+                  className="transform transition-all duration-500 hover:scale-110 opacity-90 hover:opacity-100 w-36 sm:w-44 md:w-56 flex items-center justify-center" 
                   style={{ transitionDelay: `${i * 100}ms` }}
                 >
                   <div className="relative w-full h-full flex items-center justify-center group">
@@ -175,15 +177,15 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Customer Reviews */}
-      <ReviewsSection />
-       
        <NavigatingTurbulentTimes />
           <EconomicExplainers />
 
       {/* Investment Options Section with matching gray background */}
       <div className="w-full bg-[#E5E7EA]">
         <InvestmentOptions />
+        <AdvisorOptions />
+        {/* Customer Reviews moved below advisor options */}
+        <ReviewsSection />
       </div>
 
       {/* AI Chatbot Widget - this will be a component */}
@@ -195,6 +197,9 @@ export default function Home() {
           </svg>
         </div>
       </div>
+
+      {/* Timed help popup */}
+      <TimedPopup />
 
       {/* Introduction Section removed completely to avoid white space */}
 
