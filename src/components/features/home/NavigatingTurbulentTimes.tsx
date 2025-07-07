@@ -90,6 +90,7 @@ const NavigatingTurbulentTimes: React.FC = () => {
 
   return (
     <section
+      id="learn"
       className="relative w-full bg-white bg-cover bg-center text-gray-200 px-4"
       style={{ backgroundImage: "url(/navigationsection/hidimba_Lufthansa_flight_departure_from_Toulouse_Airport_early__000dadca-0c15-4825-a4b4-cff6af17ca09.png)" }}
       aria-hidden="true"

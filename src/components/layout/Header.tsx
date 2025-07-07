@@ -8,7 +8,23 @@ export default function Header(): React.JSX.Element {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [closeTimer, setCloseTimer] = useState<NodeJS.Timeout | null>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  const handleCloseWithDelay = () => {
+    if (closeTimer) clearTimeout(closeTimer);
+    const timer = setTimeout(() => {
+      setIsMoreOpen(false);
+    }, 500); // 500ms delay before closing
+    setCloseTimer(timer);
+  };
+
+  const handleCancelClose = () => {
+    if (closeTimer) {
+      clearTimeout(closeTimer);
+      setCloseTimer(null);
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -28,8 +44,9 @@ export default function Header(): React.JSX.Element {
     return () => {
       window.removeEventListener('scroll', handleScroll);
       document.removeEventListener('mousedown', handleClickOutside);
+      if (closeTimer) clearTimeout(closeTimer);
     };
-  }, []);
+  }, [closeTimer]);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -63,35 +80,35 @@ export default function Header(): React.JSX.Element {
         <nav className="hidden md:flex items-center space-x-7 text-white">
           {/* Main Navigation Items */}
           <Link 
-            href="/mission" 
+            href="/#mission" 
             className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
           >
             <span className="absolute bottom-0 left-0 h-0.5 bg-[#E3B23C] w-0 group-hover:w-full transition-all duration-300"></span>
             Our Mission
           </Link>
           <Link 
-            href="/learn" 
+            href="/#learn" 
             className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
           >
             <span className="absolute bottom-0 left-0 h-0.5 bg-[#E3B23C] w-0 group-hover:w-full transition-all duration-300"></span>
             Learn
           </Link>
           <Link 
-            href="/grow" 
+            href="/#grow" 
             className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
           >
             <span className="absolute bottom-0 left-0 h-0.5 bg-[#E3B23C] w-0 group-hover:w-full transition-all duration-300"></span>
             Grow
           </Link>
           <Link 
-            href="/plan" 
+            href="/#plan" 
             className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
           >
             <span className="absolute bottom-0 left-0 h-0.5 bg-[#E3B23C] w-0 group-hover:w-full transition-all duration-300"></span>
             Plan
           </Link>
           <Link 
-            href="/reviews" 
+            href="/#reviews" 
             className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
           >
             <span className="absolute bottom-0 left-0 h-0.5 bg-[#E3B23C] w-0 group-hover:w-full transition-all duration-300"></span>
@@ -102,8 +119,11 @@ export default function Header(): React.JSX.Element {
           <div 
             ref={moreMenuRef}
             className="relative group"
-            onMouseEnter={() => setIsMoreOpen(true)}
-            onMouseLeave={() => setIsMoreOpen(false)}
+            onMouseEnter={() => {
+              handleCancelClose();
+              setIsMoreOpen(true);
+            }}
+            onMouseLeave={() => handleCloseWithDelay()}
           >
             <button 
               className="flex items-center text-base hover:text-[#E3B23C] font-medium transition-colors duration-300 cursor-pointer"
@@ -127,28 +147,28 @@ export default function Header(): React.JSX.Element {
             >
               <div className="py-2">
                 <Link 
-                  href="/media" 
+                  href="/#media" 
                   className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-[#E3B23C]"
                   onClick={() => setIsMoreOpen(false)}
                 >
                   Media
                 </Link>
                 <Link 
-                  href="/team" 
+                  href="/#team" 
                   className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-[#E3B23C]"
                   onClick={() => setIsMoreOpen(false)}
                 >
                   Team
                 </Link>
                 <Link 
-                  href="/contact" 
+                  href="/#footer" 
                   className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-[#E3B23C]"
                   onClick={() => setIsMoreOpen(false)}
                 >
                   Contact
                 </Link>
                 <Link 
-                  href="/disclosures" 
+                  href="/#disclosures" 
                   className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-[#E3B23C]"
                   onClick={() => setIsMoreOpen(false)}
                 >
@@ -205,7 +225,7 @@ export default function Header(): React.JSX.Element {
           <div className="flex flex-col space-y-4 font-sans">
             {/* Main Navigation Items */}
             <Link 
-              href="/mission" 
+              href="/#mission" 
               className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
               onClick={() => setIsMenuOpen(false)}
               style={{ transitionDelay: '0ms' }}
@@ -213,7 +233,7 @@ export default function Header(): React.JSX.Element {
               Our Mission
             </Link>
             <Link 
-              href="/learn" 
+              href="/#learn" 
               className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
               onClick={() => setIsMenuOpen(false)}
               style={{ transitionDelay: '50ms' }}
@@ -221,7 +241,7 @@ export default function Header(): React.JSX.Element {
               Learn
             </Link>
             <Link 
-              href="/grow" 
+              href="/#grow" 
               className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
               onClick={() => setIsMenuOpen(false)}
               style={{ transitionDelay: '100ms' }}
@@ -229,7 +249,7 @@ export default function Header(): React.JSX.Element {
               Grow
             </Link>
             <Link 
-              href="/plan" 
+              href="/#plan" 
               className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
               onClick={() => setIsMenuOpen(false)}
               style={{ transitionDelay: '150ms' }}
@@ -237,7 +257,7 @@ export default function Header(): React.JSX.Element {
               Plan
             </Link>
             <Link 
-              href="/reviews" 
+              href="/#reviews" 
               className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
               onClick={() => setIsMenuOpen(false)}
               style={{ transitionDelay: '200ms' }}
@@ -250,7 +270,7 @@ export default function Header(): React.JSX.Element {
               <p className="text-xs text-white/60 mb-2">More</p>
               <div className="flex flex-col space-y-3 pl-2">
                 <Link 
-                  href="/media" 
+                  href="/#media" 
                   className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
                   onClick={() => setIsMenuOpen(false)}
                   style={{ transitionDelay: '250ms' }}
@@ -258,7 +278,7 @@ export default function Header(): React.JSX.Element {
                   Media
                 </Link>
                 <Link 
-                  href="/team" 
+                  href="/#team" 
                   className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
                   onClick={() => setIsMenuOpen(false)}
                   style={{ transitionDelay: '300ms' }}
@@ -266,7 +286,7 @@ export default function Header(): React.JSX.Element {
                   Team
                 </Link>
                 <Link 
-                  href="/contact" 
+                  href="/#footer" 
                   className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
                   onClick={() => setIsMenuOpen(false)}
                   style={{ transitionDelay: '350ms' }}
@@ -274,7 +294,7 @@ export default function Header(): React.JSX.Element {
                   Contact
                 </Link>
                 <Link 
-                  href="/disclosures" 
+                  href="/#disclosures" 
                   className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
                   onClick={() => setIsMenuOpen(false)}
                   style={{ transitionDelay: '400ms' }}

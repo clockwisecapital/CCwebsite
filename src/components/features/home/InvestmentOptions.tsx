@@ -55,7 +55,7 @@ const InvestmentOptions = () => {
 
 
   return (
-    <section className="py-16 relative overflow-hidden">
+    <section id="grow" className="py-16 relative overflow-hidden">
       {/* Dark blue gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#0A1F35] via-[#1A3A5F] to-[#0A1F35] z-0" />
       

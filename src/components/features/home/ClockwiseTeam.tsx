@@ -52,7 +52,8 @@ const ClockwiseTeam = () => {
   
   
   return (
-    <AnimatedSection 
+    <div id="team">
+      <AnimatedSection 
       className="py-24 relative overflow-hidden bg-gradient-to-br from-[#0A1F35] to-[#0A1F35]/90"
       animation="fade-right"
     >
@@ -167,7 +168,8 @@ const ClockwiseTeam = () => {
           </motion.div>
         </div>
       </div>
-    </AnimatedSection>
+      </AnimatedSection>
+    </div>
   );
 };
 

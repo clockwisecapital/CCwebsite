@@ -24,10 +24,11 @@ const ClockwiseMedia = () => {
   ];
 
   return (
-    <AnimatedSection
-      animation="zoom-in"
-      className="py-20 px-4 bg-white text-[#1A3A5F] overflow-hidden"
-    >
+    <div id="media">
+      <AnimatedSection
+        animation="zoom-in"
+        className="py-20 px-4 bg-white text-[#1A3A5F] overflow-hidden"
+      >
       <div className="max-w-7xl mx-auto">
         {/* Heading */}
         <div className="text-center mb-12">
@@ -88,7 +89,8 @@ const ClockwiseMedia = () => {
           </a>
         </div>
       </div>
-    </AnimatedSection>
+      </AnimatedSection>
+    </div>
   );
 };
 
