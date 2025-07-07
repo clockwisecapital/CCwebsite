@@ -39,8 +39,7 @@ export default function Footer() {
             <h3 className="text-lg font-semibold mb-4">Contact Us</h3>
             <ul className="space-y-2">
               <li>Email: info@clockwisecapital.com</li>
-              <li>Phone: (555) 123-4567</li>
-              <li>Address: 123 Investor Ave, Financial District</li>
+              <li>Address: 1395 Brickell Ave. 800 Miami, FL 33131</li>
             </ul>
           </div>
           
