@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import { openGleapChat } from "@/utils/gleap";
 
 export default function TimedPopup() {
   const [show, setShow] = useState(false);
@@ -28,13 +28,15 @@ export default function TimedPopup() {
         <p className="text-sm mb-4">
           Ask Clockwise AI or book a free portfolio review with one click.
         </p>
-        <Link
-          href="#chatbot"
+        <button
           className="inline-block px-4 py-2 bg-[#1FAAA3] hover:bg-[#159c8d] rounded-md text-sm font-medium transition-colors duration-200"
-          onClick={() => setShow(false)}
+          onClick={() => {
+            setShow(false);
+            openGleapChat();
+          }}
         >
           Chat now
-        </Link>
+        </button>
       </div>
     </div>
   );

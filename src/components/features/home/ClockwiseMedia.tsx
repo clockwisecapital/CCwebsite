@@ -68,7 +68,9 @@ const ClockwiseMedia = () => {
         {/* View all button */}
         <div className="text-center mt-12">
           <a
-            href="/media"
+            href="https://www.youtube.com/@ClockwiseCapital-cm9wo"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-[#1FAAA3] hover:bg-[#17867A] text-white px-8 py-3 rounded-md font-medium shadow-lg transition-colors duration-300"
           >
             View All Media

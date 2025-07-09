@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from 'next/link';
+import { openGleapChat } from '@/utils/gleap';
 
 // Single transparent-glass card wrapper
 interface OverlayCardProps {
@@ -101,7 +102,10 @@ const EconomicExplainers: React.FC = () => (
 
     {/* CTA outside cards */}
     <div className="relative z-10 mt-12 text-center">
-      <Link href="#chatbot" className="group relative overflow-hidden bg-[#1FAAA3] text-white font-sans font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 inline-block">
+      <button 
+        onClick={openGleapChat} 
+        className="group relative overflow-hidden bg-[#1FAAA3] text-white font-sans font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 inline-block"
+      >
         <span className="absolute top-0 left-0 w-full h-full bg-white/20 transform -translate-x-full skew-x-12 group-hover:translate-x-full transition-transform duration-700 ease-out"></span>
         <span className="relative flex items-center justify-center space-x-2">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -109,7 +113,7 @@ const EconomicExplainers: React.FC = () => (
           </svg>
           <span>Ask Clockwise AI</span>
         </span>
-      </Link>
+      </button>
     </div>
   </section>
 );

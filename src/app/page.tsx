@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
+import { openGleapChat } from '../utils/gleap';
 import { Meteors } from "@/components/ui/meteors";
 // Header is now in layout.tsx
 import MissionSection from "@/components/features/home/MissionSection";
@@ -102,16 +103,18 @@ export default function Home() {
           
           {/* Buttons with enhanced hover effects */}
           <div className={`flex flex-col sm:flex-row justify-center md:justify-start gap-4 mt-6 transition-all duration-1000 delay-1200 transform ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-            <Link href="#chatbot" className="group relative overflow-hidden bg-[#1FAAA3] text-white font-sans font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300">
-              {/* Button shine effect */}
-              <span className="absolute top-0 left-0 w-full h-full bg-white/20 transform -translate-x-full skew-x-12 group-hover:translate-x-full transition-transform duration-700 ease-out"></span>
-              <span className="relative flex items-center justify-center space-x-2">
+            <button 
+              onClick={openGleapChat} 
+              className="group relative overflow-hidden bg-[#1FAAA3] text-white font-sans font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300"
+            >
+              <span className="absolute top-0 left-0 w-full h-full transform -translate-x-full bg-white/5 skew-x-12 group-hover:translate-x-full transition-transform duration-700 ease-in-out"></span>
+              <span className="relative flex items-center space-x-2">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                 </svg>
                 <span>Ask Clockwise AI</span>
               </span>
-            </Link>
+            </button>
             <Link href="/portfolio-rating" className="group relative overflow-hidden bg-transparent text-white border-2 border-white font-sans font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300">
               <span className="absolute top-0 left-0 w-full h-full transform -translate-x-full bg-white/5 skew-x-12 group-hover:translate-x-full transition-transform duration-700 ease-out"></span>
               <span className="relative flex items-center justify-center space-x-2">
@@ -188,15 +191,8 @@ export default function Home() {
         <ReviewsSection />
       </div>
 
-      {/* AI Chatbot Widget - this will be a component */}
-      <div id="chatbot" className="fixed bottom-4 right-4 z-50">
-        {/* Placeholder for AI chatbot component */}
-        <div className="bg-[#1A3A5F] text-white rounded-full p-4 shadow-lg cursor-pointer hover:bg-[#1FAAA3] transition-colors duration-200">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-          </svg>
-        </div>
-      </div>
+      {/* AI Chatbot Widget - now using Gleap, removed placeholder */}
+      {/* Gleap is now integrated in the root layout and will appear on all pages */}
 
       {/* Timed help popup */}
       <TimedPopup />

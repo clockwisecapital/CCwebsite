@@ -59,8 +59,7 @@ const MissionSection = () => {
           {/* eBook Download CTA */}
           <div className="mt-10 text-center">
             <div className="bg-white/90 backdrop-blur-sm shadow-md rounded-lg p-5 inline-block">
-              <Link 
-                href="#download-ebook" // This will need to be updated later with actual functionality
+              <div 
                 className="group relative inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-white bg-[#1FAAA3] rounded-md overflow-hidden transition-all duration-300 hover:bg-[#1FAAA3]/80 hover:scale-105 shadow-md"
               >
                 <span className="relative z-10 flex items-center">
@@ -69,7 +68,7 @@ const MissionSection = () => {
                   </svg>
                   Download Ebook: Coming Soon
                 </span>
-              </Link>
+              </div>
             </div>
           </div>
         </AnimatedSection>

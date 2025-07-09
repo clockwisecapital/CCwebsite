@@ -8,6 +8,7 @@ import './fonts.css';
 import Footer from '../components/layout/Footer';
 import Header from '../components/layout/Header';
 import ScrollProgressIndicator from '../components/ui/ScrollProgressIndicator';
+import GleapChatWrapper from '../components/ui/GleapChatWrapper';
 import React from 'react';
 
 // Only load IBM Plex Serif through next/font
@@ -49,6 +50,9 @@ export default function RootLayout({
           {children}
         </div>
         <Footer />
+        
+        {/* Render Gleap chat component via client wrapper */}
+        <GleapChatWrapper />
       </body>
     </html>
   );
