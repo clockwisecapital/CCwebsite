@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Footer() {
   // Get current year for copyright
@@ -74,20 +75,41 @@ export default function Footer() {
           </div>
         </div>
         
-        <div className="border-t border-gray-700 mt-10 pt-6 flex flex-col md:flex-row justify-between items-center">
-          <div className="mb-4 md:mb-0">
-            <Link href="/" className="text-xl font-bold">
-              Clockwise Capital
+        {/* Disclosure Message */}
+        <div className="mt-10 pt-6 text-sm">
+          <p className="mb-4">
+            Past performance is not indicative of future results. Differences in 
+            account size, timing of transactions and market conditions prevailing 
+            at the time of investment may lead to different results, and clients may 
+            lose money. Clients should consult with their advisor about the advisability regarding 
+            the use or appropriateness of investment.
+          </p>
+        </div>
+
+        {/* Bottom Footer */}
+        <div className="border-t border-gray-700 mt-6 pt-6 flex flex-col md:flex-row justify-between items-center">
+          <div className="mb-6 md:mb-0">
+            <Link href="/" aria-label="Clockwise Capital Home">
+              <Image 
+                src="/Clockwise White Logo Stacked.png" 
+                alt="Clockwise Capital" 
+                width={150} 
+                height={70} 
+                className="h-auto" 
+              />
             </Link>
+          </div>
+
+          {/* Navigation Links */}
+          <div className="flex flex-wrap justify-center gap-4 mb-6 md:mb-0">
+            <Link href="/adv" className="text-white hover:text-[#1FAAA3] transition-colors">ADV</Link>
+            <Link href="/disclosures" className="text-white hover:text-[#1FAAA3] transition-colors">Disclosure</Link>
+            <Link href="/privacy" className="text-white hover:text-[#1FAAA3] transition-colors">Privacy Policy</Link>
+            <Link href="/contact" className="text-white hover:text-[#1FAAA3] transition-colors">Contact Us</Link>
           </div>
           
           <div className="text-sm text-gray-400">
-            <p>© {currentYear} Clockwise Capital. All rights reserved.</p>
-            <p className="mt-1">
-              <Link href="/disclosures" className="hover:text-[#1FAAA3]">Disclosures</Link>
-              {' | '}
-              <Link href="/privacy" className="hover:text-[#1FAAA3]">Privacy Policy</Link>
-            </p>
+            <p>© {currentYear} Clockwise Capital LLC. All Rights Reserved {currentYear}. 1395 Brickell Ave. Unit 800, Miami FL 33131</p>
           </div>
         </div>
       </div>
