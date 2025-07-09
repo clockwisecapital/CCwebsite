@@ -115,7 +115,7 @@ export default function Home() {
                 <span>Ask Clockwise AI</span>
               </span>
             </button>
-            <Link href="/portfolio-rating" className="group relative overflow-hidden bg-transparent text-white border-2 border-white font-sans font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300">
+            <button onClick={openGleapChat} className="group relative overflow-hidden bg-transparent text-white border-2 border-white font-sans font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300">
               <span className="absolute top-0 left-0 w-full h-full transform -translate-x-full bg-white/5 skew-x-12 group-hover:translate-x-full transition-transform duration-700 ease-out"></span>
               <span className="relative flex items-center justify-center space-x-2">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -123,7 +123,7 @@ export default function Home() {
                 </svg>
                 <span>Rate My Portfolio</span>
               </span>
-            </Link>
+            </button>
           </div>
           
           {/* Removed scroll indicator as it was disrupting button placement */}

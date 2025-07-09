@@ -114,7 +114,13 @@ export default function GleapChat() {
           if (Gleap.getInstance && typeof Gleap.getInstance === 'function') {
             const instance = Gleap.getInstance();
             if (instance && instance.setAppTheme) {
-              instance.setAppTheme({"primaryColor":"#1A3A5F"});
+              instance.setAppTheme({
+              primaryColor: '#1A3A5F',      // Dark blue header & accents
+              buttonBackgroundColor: '#1FAAA3', // Teal action buttons
+              buttonTextColor: '#FFFFFF',  // White text on buttons
+              backgroundColor: '#F9FAFB',  // Light background inside chat
+              contrastColor: '#E3B23C'     // Gold highlight for links / bubbles
+            });
             }
           }
           
@@ -123,6 +129,8 @@ export default function GleapChat() {
             Gleap.showFeedbackButton(true);
             console.log('Showing Gleap feedback button');
           }
+
+          // Do not auto-start the AI bot; it will activate when the user sends the first message
           
           // Make Gleap globally accessible for button clicks
           if (Gleap) {

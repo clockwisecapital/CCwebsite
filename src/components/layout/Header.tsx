@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { openGleapChat } from '@/utils/gleap';
 
 export default function Header(): React.JSX.Element {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -179,8 +180,8 @@ export default function Header(): React.JSX.Element {
           </div>
 
           {/* Ask AI Button with enhanced hover effect */}
-          <Link 
-            href="#chatbot" 
+          <button 
+            onClick={openGleapChat}
             className="ml-5 relative overflow-hidden bg-[#E3B23C] text-white px-5 py-2 rounded-md font-sans font-medium group transition-all duration-300"
           >
             {/* Button shine effect */}
@@ -191,7 +192,7 @@ export default function Header(): React.JSX.Element {
               </svg>
               <span className="text-sm">Ask AI</span>
             </span>
-          </Link>
+          </button>
         </nav>
 
         {/* Mobile Menu Button */}
@@ -299,25 +300,27 @@ export default function Header(): React.JSX.Element {
                   onClick={() => setIsMenuOpen(false)}
                   style={{ transitionDelay: '400ms' }}
                 >
-                  Disclosures
-                </Link>
-              </div>
+                Disclosures
+              </Link>
             </div>
-            
-            {/* Ask AI Button (Mobile) */}
-            <Link 
-              href="#chatbot" 
-              className="ml-3 px-3 py-1.5 text-base font-medium text-black bg-[#E3B23C] hover:bg-[#c89b33] rounded-full transition-all duration-300 flex items-center gap-1.5"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-              </svg>
-              <span className="text-sm">Ask AI</span>
-            </Link>
           </div>
-        </nav>
-      </div>
-    </header>
-  );
+
+          {/* Ask AI Button (Mobile) */}
+          <button 
+            className="mt-4 px-3 py-1.5 text-base font-medium text-black bg-[#E3B23C] hover:bg-[#c89b33] rounded-full transition-all duration-300 flex items-center gap-1.5"
+            onClick={() => {
+              setIsMenuOpen(false);
+              openGleapChat();
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+            <span className="text-sm">Ask AI</span>
+          </button>
+        </div>
+      </nav>
+    </div>
+  </header>
+);
 }
