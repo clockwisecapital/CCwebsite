@@ -2,7 +2,7 @@
  * Utility functions for interacting with Gleap chat widget
  */
 
-import { GleapInstance, GleapSDK } from '@/types/gleap';
+import { GleapSDK } from '@/types/gleap';
 
 /**
  * Opens the Gleap chat widget programmatically
