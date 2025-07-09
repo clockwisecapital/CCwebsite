@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+
 import dynamic from 'next/dynamic';
 
 // Import the GleapChat component directly in a client component

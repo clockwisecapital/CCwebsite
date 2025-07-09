@@ -2,6 +2,8 @@
  * Utility functions for interacting with Gleap chat widget
  */
 
+import { GleapInstance, GleapSDK } from '@/types/gleap';
+
 /**
  * Opens the Gleap chat widget programmatically
  * This function can be attached to any "Ask Clockwise AI" button in the application
@@ -15,7 +17,7 @@ export const openGleapChat = (): void => {
   // First try GleapInstance which is our globally set variable
   if (window.GleapInstance) {
     console.log('Using GleapInstance global');
-    const Gleap = window.GleapInstance;
+    const Gleap = window.GleapInstance as GleapSDK;
     
     try {
       // Try all possible methods to open the chat
@@ -61,33 +63,34 @@ export const openGleapChat = (): void => {
   // Fallback to window.Gleap if GleapInstance didn't work
   if (window.Gleap) {
     console.log('Falling back to window.Gleap');
+    const Gleap = window.Gleap as GleapSDK;
     
     try {
       // Direct method call on Gleap global
-      if (typeof window.Gleap.open === 'function') {
-        console.log('Using window.Gleap.open()');
-        window.Gleap.open();
+      if (typeof Gleap.open === 'function') {
+        console.log('Using Gleap.open()');
+        Gleap.open();
         return;
       }
       
       // Try other methods
-      if (typeof window.Gleap.openConversation === 'function') {
-        console.log('Using window.Gleap.openConversation()');
-        window.Gleap.openConversation();
+      if (typeof Gleap.openConversation === 'function') {
+        console.log('Using Gleap.openConversation()');
+        Gleap.openConversation();
         return;
       }
       
       // Try using startBot
-      if (typeof window.Gleap.startBot === 'function') {
-        console.log('Using window.Gleap.startBot()');
-        window.Gleap.startBot();
+      if (typeof Gleap.startBot === 'function') {
+        console.log('Using Gleap.startBot()');
+        Gleap.startBot();
         return;
       }
       
       // Try using the widget instance directly
-      if (typeof window.Gleap.getInstance === 'function') {
+      if (typeof Gleap.getInstance === 'function') {
         console.log('Using getInstance().openWidget()');
-        const instance = window.Gleap.getInstance();
+        const instance = Gleap.getInstance();
         if (instance && typeof instance.openWidget === 'function') {
           instance.openWidget();
           return;
@@ -140,7 +143,7 @@ export const openGleapChat = (): void => {
  */
 declare global {
   interface Window {
-    Gleap?: any; // Using any type to avoid conflicts
-    GleapInstance?: any; // Our globally available instance
+    Gleap?: GleapSDK; // Using proper type instead of any
+    GleapInstance?: GleapSDK; // Using proper type instead of any
   }
 }

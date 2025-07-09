@@ -2,38 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { GleapSDK } from '@/types/gleap';
 
 // Create a variable to track if Gleap is initialized
 let isGleapInitialized = false;
 
-// Import Gleap only on client-side
-let Gleap: any;
+// Use undefined instead of null to match Window interface declaration
+let Gleap: GleapSDK | undefined = undefined;
 
 // For development testing, we're using a Gleap API key with AI chat enabled
 // IMPORTANT: Replace this with your actual API key in .env.local
 const TEMP_API_KEY = 'ogNWGglQvy3w1Vl7gQCGLYvBl5plfc2d'; // Demo key with AI capabilities
-
-// This function runs only on the client side
-if (typeof window !== 'undefined') {
-  try {
-    // Import the correct Gleap web package
-    Gleap = require('gleap');
-    
-    // Make Gleap globally available for our utility functions
-    (window as any).GleapInstance = Gleap;
-    (window as any).Gleap = Gleap;
-  } catch (error) {
-    console.error('Error importing Gleap:', error);
-  }
-}
-
-// Extend Window interface
-declare global {
-  interface Window {
-    GleapInstance?: any;
-    Gleap?: any;
-  }
-}
 
 // This component should only be used in client components or with the "use client" directive
 export default function GleapChat() {
@@ -41,6 +20,26 @@ export default function GleapChat() {
   const [initAttempts, setInitAttempts] = useState(0);
 
   useEffect(() => {
+    // Dynamically import Gleap to avoid require() style imports
+    const loadGleap = async () => {
+      try {
+        // Dynamic import instead of require()
+        const gleapModule = await import('gleap');
+        // Type assertion to safely assign to our GleapSDK interface
+        // This ensures TypeScript understands that the imported module conforms to our interface
+        const importedGleap = (gleapModule.default || gleapModule) as unknown as GleapSDK;
+        
+        // Make Gleap globally available
+        window.GleapInstance = importedGleap;
+        window.Gleap = importedGleap;
+        
+        return importedGleap;
+      } catch (error) {
+        console.error('Error importing Gleap:', error);
+        return undefined;
+      }
+    };
+    
     // Define the function to initialize Gleap
     const initializeGleap = async () => {
       if (typeof window === 'undefined') return;
@@ -51,6 +50,15 @@ export default function GleapChat() {
         return;
       }
 
+      // Load Gleap if not available
+      if (!Gleap) {
+        console.log('Gleap not loaded, attempting to load...');
+        const loadedGleap = await loadGleap();
+        if (loadedGleap) {
+          Gleap = loadedGleap;
+        }
+      }
+      
       // Make sure Gleap is available
       if (!Gleap) {
         console.error('Gleap not available for initialization');
@@ -62,12 +70,12 @@ export default function GleapChat() {
           setInitAttempts(nextAttempt);
           
           // Try to find Gleap on window
-          if ((window as any).Gleap) {
+          if (window.Gleap) {
             console.log('Found Gleap on window object');
-            Gleap = (window as any).Gleap;
-          } else if ((window as any).GleapInstance) {
+            Gleap = window.Gleap;
+          } else if (window.GleapInstance) {
             console.log('Found Gleap as GleapInstance');
-            Gleap = (window as any).GleapInstance;
+            Gleap = window.GleapInstance;
           }
         }
         return;
@@ -117,8 +125,10 @@ export default function GleapChat() {
           }
           
           // Make Gleap globally accessible for button clicks
-          (window as any).Gleap = Gleap;
-          (window as any).GleapInstance = Gleap;
+          if (Gleap) {
+            window.Gleap = Gleap;
+            window.GleapInstance = Gleap;
+          }
           
           // Mark as initialized
           isGleapInitialized = true;

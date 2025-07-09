@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { openGleapChat } from '../utils/gleap';
 import { Meteors } from "@/components/ui/meteors";
