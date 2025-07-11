@@ -75,18 +75,31 @@ import { phases, Phase } from "@/utils/turbulentData";
 
 const NavigatingTurbulentTimes: React.FC = () => {
   const [active, setActive] = useState<Phase>(phases[3]); // default to current phase
+  const [isPaused, setIsPaused] = useState<boolean>(false); // track pause state
 
-  // Automatically cycle through phases every 5 seconds
+  // Automatically cycle through phases every 5 seconds when not paused
   useEffect(() => {
-    const id = setInterval(() => {
-      setActive((prev) => {
-        const currentIndex = phases.findIndex((ph) => ph.id === prev.id);
-        const next = phases[(currentIndex + 1) % phases.length];
-        return next;
-      });
-    }, 5000);
-    return () => clearInterval(id);
-  }, []);
+    let id: NodeJS.Timeout;
+    
+    if (!isPaused) {
+      id = setInterval(() => {
+        setActive((prev) => {
+          const currentIndex = phases.findIndex((ph) => ph.id === prev.id);
+          const next = phases[(currentIndex + 1) % phases.length];
+          return next;
+        });
+      }, 5000);
+    }
+    
+    return () => {
+      if (id) clearInterval(id);
+    };
+  }, [isPaused]); // re-run effect when pause state changes
+  
+  // Toggle pause/play
+  const togglePlayPause = () => {
+    setIsPaused(!isPaused);
+  };
 
   return (
     <section
@@ -106,6 +119,27 @@ const NavigatingTurbulentTimes: React.FC = () => {
           A visual roadmap of the economic cycle – where we’ve been, where we are today, and what may lie ahead.
         </p>
 
+        {/* Timeline with Pause/Play button */}
+        <div className="relative flex flex-col items-center mb-4">
+          <button 
+            onClick={togglePlayPause} 
+            className="bg-[#1FAAA3] hover:bg-[#17867A] text-white rounded-full p-2 mb-4 transition-colors focus:outline-none focus:ring-2 focus:ring-white"
+            aria-label={isPaused ? "Play timeline animation" : "Pause timeline animation"}
+          >
+            {isPaused ? (
+              // Play icon
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              // Pause icon
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm4 0a1 1 0 112 0v4a1 1 0 11-2 0V8z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
+        </div>
+        
         {/* Timeline */}
         <div className="relative flex overflow-x-auto space-x-8 pb-6 mb-10 scroll-snap-x mandatory">
           {phases.map((p) => (

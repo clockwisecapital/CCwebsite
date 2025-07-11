@@ -16,11 +16,11 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4">Navigation</h3>
             <ul className="space-y-2">
-              <li><Link href="/mission" className="hover:text-[#1FAAA3] transition-colors">Our Mission</Link></li>
-              <li><Link href="/learn" className="hover:text-[#1FAAA3] transition-colors">Learn</Link></li>
-              <li><Link href="/grow" className="hover:text-[#1FAAA3] transition-colors">Grow</Link></li>
-              <li><Link href="/plan" className="hover:text-[#1FAAA3] transition-colors">Plan</Link></li>
-              <li><Link href="/reviews" className="hover:text-[#1FAAA3] transition-colors">Reviews</Link></li>
+              <li><Link href="/#mission" className="hover:text-[#1FAAA3] transition-colors">Our Mission</Link></li>
+              <li><Link href="/#learn" className="hover:text-[#1FAAA3] transition-colors">Learn</Link></li>
+              <li><Link href="/#grow" className="hover:text-[#1FAAA3] transition-colors">Grow</Link></li>
+              <li><Link href="/#plan" className="hover:text-[#1FAAA3] transition-colors">Plan</Link></li>
+              <li><Link href="/#reviews" className="hover:text-[#1FAAA3] transition-colors">Reviews</Link></li>
             </ul>
           </div>
           
@@ -28,19 +28,16 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4">More</h3>
             <ul className="space-y-2">
-              <li><Link href="/media" className="hover:text-[#1FAAA3] transition-colors">Media</Link></li>
-              <li><Link href="/team" className="hover:text-[#1FAAA3] transition-colors">Team</Link></li>
-              <li><Link href="/contact" className="hover:text-[#1FAAA3] transition-colors">Contact</Link></li>
-              <li><Link href="/disclosures" className="hover:text-[#1FAAA3] transition-colors">Disclosures</Link></li>
+              <li><Link href="/#media" className="hover:text-[#1FAAA3] transition-colors">Media</Link></li>
+              <li><Link href="/#team" className="hover:text-[#1FAAA3] transition-colors">Team</Link></li>
             </ul>
           </div>
           
-          {/* Column 3: Contact */}
+          {/* Column 3: Location */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Contact Us</h3>
+            <h3 className="text-lg font-semibold mb-4">Our Location</h3>
             <ul className="space-y-2">
-              <li>Email: info@clockwisecapital.com</li>
-              <li>Address: 1395 Brickell Ave. 800 Miami, FL 33131</li>
+              <li>1395 Brickell Ave. 800 Miami, FL 33131</li>
             </ul>
           </div>
           
@@ -102,10 +99,9 @@ export default function Footer() {
 
           {/* Navigation Links */}
           <div className="flex flex-wrap justify-center gap-4 mb-6 md:mb-0">
-            <Link href="/adv" className="text-white hover:text-[#1FAAA3] transition-colors">ADV</Link>
-            <Link href="/disclosures" className="text-white hover:text-[#1FAAA3] transition-colors">Disclosure</Link>
-            <Link href="/privacy" className="text-white hover:text-[#1FAAA3] transition-colors">Privacy Policy</Link>
-            <Link href="/contact" className="text-white hover:text-[#1FAAA3] transition-colors">Contact Us</Link>
+            <a href="https://adviserinfo.sec.gov/firm/summary/175233" target="_blank" rel="noopener noreferrer" className="text-white hover:text-[#1FAAA3] transition-colors">ADV</a>
+            <a href="/Clockwise Website Disclosure.pdf" target="_blank" rel="noopener noreferrer" className="text-white hover:text-[#1FAAA3] transition-colors">Disclosure</a>
+            <a href="/Clockwise Capital Privacy Policy.pdf" target="_blank" rel="noopener noreferrer" className="text-white hover:text-[#1FAAA3] transition-colors">Privacy Policy</a>
           </div>
           
           <div className="text-sm text-gray-400">
