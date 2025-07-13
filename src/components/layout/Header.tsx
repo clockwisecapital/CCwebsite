@@ -8,24 +8,7 @@ import { openGleapChat } from '@/utils/gleap';
 export default function Header(): React.JSX.Element {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [isMoreOpen, setIsMoreOpen] = useState(false);
-  const [closeTimer, setCloseTimer] = useState<NodeJS.Timeout | null>(null);
-  const moreMenuRef = useRef<HTMLDivElement>(null);
 
-  const handleCloseWithDelay = () => {
-    if (closeTimer) clearTimeout(closeTimer);
-    const timer = setTimeout(() => {
-      setIsMoreOpen(false);
-    }, 500); // 500ms delay before closing
-    setCloseTimer(timer);
-  };
-
-  const handleCancelClose = () => {
-    if (closeTimer) {
-      clearTimeout(closeTimer);
-      setCloseTimer(null);
-    }
-  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -34,20 +17,13 @@ export default function Header(): React.JSX.Element {
     
     window.addEventListener('scroll', handleScroll);
     
-    const handleClickOutside = (event: MouseEvent) => {
-      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
-        setIsMoreOpen(false);
-      }
-    };
-    
-    document.addEventListener('mousedown', handleClickOutside);
+
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      document.removeEventListener('mousedown', handleClickOutside);
-      if (closeTimer) clearTimeout(closeTimer);
+
     };
-  }, [closeTimer]);
+  }, []);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -81,13 +57,6 @@ export default function Header(): React.JSX.Element {
         <nav className="hidden md:flex items-center space-x-7 text-white">
           {/* Main Navigation Items */}
           <Link 
-            href="/#mission" 
-            className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
-          >
-            <span className="absolute bottom-0 left-0 h-0.5 bg-[#E3B23C] w-0 group-hover:w-full transition-all duration-300"></span>
-            Our Mission
-          </Link>
-          <Link 
             href="/#learn" 
             className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
           >
@@ -99,14 +68,14 @@ export default function Header(): React.JSX.Element {
             className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
           >
             <span className="absolute bottom-0 left-0 h-0.5 bg-[#E3B23C] w-0 group-hover:w-full transition-all duration-300"></span>
-            Grow
+            Portfolios
           </Link>
           <Link 
             href="/#plan" 
             className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
           >
             <span className="absolute bottom-0 left-0 h-0.5 bg-[#E3B23C] w-0 group-hover:w-full transition-all duration-300"></span>
-            Plan
+            Advisors
           </Link>
           <Link 
             href="/#reviews" 
@@ -115,69 +84,20 @@ export default function Header(): React.JSX.Element {
             <span className="absolute bottom-0 left-0 h-0.5 bg-[#E3B23C] w-0 group-hover:w-full transition-all duration-300"></span>
             Reviews
           </Link>
-          
-          {/* More Dropdown */}
-          <div 
-            ref={moreMenuRef}
-            className="relative group"
-            onMouseEnter={() => {
-              handleCancelClose();
-              setIsMoreOpen(true);
-            }}
-            onMouseLeave={() => handleCloseWithDelay()}
+          <Link 
+            href="/#media" 
+            className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
           >
-            <button 
-              className="flex items-center text-base hover:text-[#E3B23C] font-medium transition-colors duration-300 cursor-pointer"
-              onClick={() => setIsMoreOpen(!isMoreOpen)}
-            >
-              <span>More</span>
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                className={`ml-1 h-4 w-4 transition-transform duration-200 ${isMoreOpen ? 'rotate-180' : ''}`} 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            
-            {/* Dropdown Menu */}
-            <div 
-              className={`absolute top-full left-0 mt-2 w-40 rounded-md bg-white shadow-lg z-20 transform transition-all duration-200 ${isMoreOpen ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
-            >
-              <div className="py-2">
-                <Link 
-                  href="/#media" 
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-[#E3B23C]"
-                  onClick={() => setIsMoreOpen(false)}
-                >
-                  Media
-                </Link>
-                <Link 
-                  href="/#team" 
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-[#E3B23C]"
-                  onClick={() => setIsMoreOpen(false)}
-                >
-                  Team
-                </Link>
-                <Link 
-                  href="/#footer" 
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-[#E3B23C]"
-                  onClick={() => setIsMoreOpen(false)}
-                >
-                  Contact
-                </Link>
-                <Link 
-                  href="/#disclosures" 
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-[#E3B23C]"
-                  onClick={() => setIsMoreOpen(false)}
-                >
-                  Disclosures
-                </Link>
-              </div>
-            </div>
-          </div>
+            <span className="absolute bottom-0 left-0 h-0.5 bg-[#E3B23C] w-0 group-hover:w-full transition-all duration-300"></span>
+            Media
+          </Link>
+          <Link 
+            href="/#team" 
+            className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
+          >
+            <span className="absolute bottom-0 left-0 h-0.5 bg-[#E3B23C] w-0 group-hover:w-full transition-all duration-300"></span>
+            Team
+          </Link>
 
           {/* Ask AI Button with enhanced hover effect */}
           <button 
@@ -226,18 +146,10 @@ export default function Header(): React.JSX.Element {
           <div className="flex flex-col space-y-4 font-sans">
             {/* Main Navigation Items */}
             <Link 
-              href="/#mission" 
-              className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
-              onClick={() => setIsMenuOpen(false)}
-              style={{ transitionDelay: '0ms' }}
-            >
-              Our Mission
-            </Link>
-            <Link 
               href="/#learn" 
               className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
               onClick={() => setIsMenuOpen(false)}
-              style={{ transitionDelay: '50ms' }}
+              style={{ transitionDelay: '0ms' }}
             >
               Learn
             </Link>
@@ -245,65 +157,42 @@ export default function Header(): React.JSX.Element {
               href="/#grow" 
               className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
               onClick={() => setIsMenuOpen(false)}
-              style={{ transitionDelay: '100ms' }}
+              style={{ transitionDelay: '50ms' }}
             >
-              Grow
+              Portfolios
             </Link>
             <Link 
               href="/#plan" 
               className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
               onClick={() => setIsMenuOpen(false)}
-              style={{ transitionDelay: '150ms' }}
+              style={{ transitionDelay: '100ms' }}
             >
-              Plan
+              Advisors
             </Link>
             <Link 
               href="/#reviews" 
               className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
               onClick={() => setIsMenuOpen(false)}
-              style={{ transitionDelay: '200ms' }}
+              style={{ transitionDelay: '150ms' }}
             >
               Reviews
             </Link>
-            
-            {/* More items */}
-            <div className="pt-2 border-t border-white/10">
-              <p className="text-xs text-white/60 mb-2">More</p>
-              <div className="flex flex-col space-y-3 pl-2">
-                <Link 
-                  href="/#media" 
-                  className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
-                  onClick={() => setIsMenuOpen(false)}
-                  style={{ transitionDelay: '250ms' }}
-                >
-                  Media
-                </Link>
-                <Link 
-                  href="/#team" 
-                  className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
-                  onClick={() => setIsMenuOpen(false)}
-                  style={{ transitionDelay: '300ms' }}
-                >
-                  Team
-                </Link>
-                <Link 
-                  href="/#footer" 
-                  className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
-                  onClick={() => setIsMenuOpen(false)}
-                  style={{ transitionDelay: '350ms' }}
-                >
-                  Contact
-                </Link>
-                <Link 
-                  href="/#disclosures" 
-                  className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
-                  onClick={() => setIsMenuOpen(false)}
-                  style={{ transitionDelay: '400ms' }}
-                >
-                Disclosures
-              </Link>
-            </div>
-          </div>
+            <Link 
+              href="/#media" 
+              className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
+              onClick={() => setIsMenuOpen(false)}
+              style={{ transitionDelay: '200ms' }}
+            >
+              Media
+            </Link>
+            <Link 
+              href="/#team" 
+              className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
+              onClick={() => setIsMenuOpen(false)}
+              style={{ transitionDelay: '250ms' }}
+            >
+              Team
+            </Link>
 
           {/* Ask AI Button (Mobile) */}
           <button 

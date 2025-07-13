@@ -16,20 +16,20 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4">Navigation</h3>
             <ul className="space-y-2">
-              <li><Link href="/#mission" className="hover:text-[#1FAAA3] transition-colors">Our Mission</Link></li>
               <li><Link href="/#learn" className="hover:text-[#1FAAA3] transition-colors">Learn</Link></li>
-              <li><Link href="/#grow" className="hover:text-[#1FAAA3] transition-colors">Grow</Link></li>
-              <li><Link href="/#plan" className="hover:text-[#1FAAA3] transition-colors">Plan</Link></li>
+              <li><Link href="/#grow" className="hover:text-[#1FAAA3] transition-colors">Portfolios</Link></li>
+              <li><Link href="/#plan" className="hover:text-[#1FAAA3] transition-colors">Advisors</Link></li>
               <li><Link href="/#reviews" className="hover:text-[#1FAAA3] transition-colors">Reviews</Link></li>
+              <li><Link href="/#media" className="hover:text-[#1FAAA3] transition-colors">Media</Link></li>
+              <li><Link href="/#team" className="hover:text-[#1FAAA3] transition-colors">Team</Link></li>
             </ul>
           </div>
           
-          {/* Column 2: More Links */}
+          {/* Column 2: Legal */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">More</h3>
+            <h3 className="text-lg font-semibold mb-4">Legal</h3>
             <ul className="space-y-2">
-              <li><Link href="/#media" className="hover:text-[#1FAAA3] transition-colors">Media</Link></li>
-              <li><Link href="/#team" className="hover:text-[#1FAAA3] transition-colors">Team</Link></li>
+              <li><Link href="/#disclosures" className="hover:text-[#1FAAA3] transition-colors">Disclosures</Link></li>
             </ul>
           </div>
           

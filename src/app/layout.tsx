@@ -26,8 +26,13 @@ const inter = Inter({
 
 // Metadata for SEO
 export const metadata: Metadata = {
-  title: 'Clockwise Capital | Where Smart Investors Learn, Grow, Plan',
+  title: 'Clockwise Capital | Portfolios + Advisors to Navigate Turbulent Times',
   description: 'Clockwise Capital helps smart investors understand economic and technology cycles, positioning your portfolio for what\'s coming, not just what\'s happened.',
+  icons: {
+    icon: '/Clockwise%20White%20Logo%20Stacked.png',
+    shortcut: '/Clockwise%20White%20Logo%20Stacked.png',
+    apple: '/Clockwise%20White%20Logo%20Stacked.png',
+  },
 };
 
 // Root layout that wraps all pages

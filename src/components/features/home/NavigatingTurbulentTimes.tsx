@@ -180,7 +180,7 @@ const NavigatingTurbulentTimes: React.FC = () => {
             </p>
             {/* CTA after phase 4 */}
             {active.id >= 4 && (
-              <Link href="#investment-options" className="group relative overflow-hidden bg-[#1FAAA3] text-white font-sans font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 inline-block mt-4">
+              <Link href="#grow" className="group relative overflow-hidden bg-[#1FAAA3] text-white font-sans font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 inline-block mt-4">
                 <span className="absolute top-0 left-0 w-full h-full bg-white/20 transform -translate-x-full skew-x-12 group-hover:translate-x-full transition-transform duration-700 ease-out"></span>
                 <span className="relative flex items-center justify-center space-x-2">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
