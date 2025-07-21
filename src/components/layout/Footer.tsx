@@ -29,7 +29,9 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4">Legal</h3>
             <ul className="space-y-2">
-              <li><Link href="/#disclosures" className="hover:text-[#1FAAA3] transition-colors">Disclosures</Link></li>
+              <li><a href="/Clockwise_crs_175233.pdf" target="_blank" rel="noopener noreferrer" className="hover:text-[#1FAAA3] transition-colors">CRS</a></li>
+              <li><a href="/Clockwise Website Disclosure.pdf" target="_blank" rel="noopener noreferrer" className="hover:text-[#1FAAA3] transition-colors">Disclosure</a></li>
+              <li><a href="/Clockwise Capital Privacy Policy.pdf" target="_blank" rel="noopener noreferrer" className="hover:text-[#1FAAA3] transition-colors">Privacy Policy</a></li>
             </ul>
           </div>
           

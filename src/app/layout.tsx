@@ -29,9 +29,9 @@ export const metadata: Metadata = {
   title: 'Clockwise Capital | Portfolios + Advisors to Navigate Turbulent Times',
   description: 'Clockwise Capital helps smart investors understand economic and technology cycles, positioning your portfolio for what\'s coming, not just what\'s happened.',
   icons: {
-    icon: '/Clockwise%20White%20Logo%20Stacked.png',
-    shortcut: '/Clockwise%20White%20Logo%20Stacked.png',
-    apple: '/Clockwise%20White%20Logo%20Stacked.png',
+    icon: '/CC%20(Blue%20C).png',
+    shortcut: '/CC%20(Blue%20C).png',
+    apple: '/CC%20(Blue%20C).png',
   },
 };
 
