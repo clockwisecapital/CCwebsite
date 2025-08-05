@@ -6,7 +6,7 @@ import { GleapSDK } from '@/types/gleap';
 
 /**
  * Opens the Gleap chat widget programmatically
- * This function can be attached to any "Ask Clockwise AI" button in the application
+ * This function can be attached to any "Find An Advisor" button in the application
  */
 export const openGleapChat = (): void => {
   // Only run on client side

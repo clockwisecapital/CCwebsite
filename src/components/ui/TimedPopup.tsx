@@ -26,7 +26,7 @@ export default function TimedPopup() {
         </button>
         <h4 className="text-lg font-semibold mb-2">Need help?</h4>
         <p className="text-sm mb-4">
-          Ask Clockwise AI or book a free portfolio review with one click.
+          Find An Advisor or book a free portfolio review with one click.
         </p>
         <button
           className="inline-block px-4 py-2 bg-[#1FAAA3] hover:bg-[#159c8d] rounded-md text-sm font-medium transition-colors duration-200"
