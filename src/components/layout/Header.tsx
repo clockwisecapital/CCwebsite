@@ -78,11 +78,13 @@ export default function Header(): React.JSX.Element {
             Advisors
           </Link>
           <Link 
-            href="/#reviews" 
+            href="https://clockwisefunds.com/" 
             className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
+            target="_blank"
+            rel="noopener noreferrer"
           >
             <span className="absolute bottom-0 left-0 h-0.5 bg-[#E3B23C] w-0 group-hover:w-full transition-all duration-300"></span>
-            Reviews
+            Funds
           </Link>
           <Link 
             href="/#media" 
@@ -170,12 +172,14 @@ export default function Header(): React.JSX.Element {
               Advisors
             </Link>
             <Link 
-              href="/#reviews" 
+              href="https://clockwisefunds.com/" 
               className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
               onClick={() => setIsMenuOpen(false)}
               style={{ transitionDelay: '150ms' }}
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              Reviews
+              Funds
             </Link>
             <Link 
               href="/#media" 

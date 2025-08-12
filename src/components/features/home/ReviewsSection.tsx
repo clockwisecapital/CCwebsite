@@ -11,15 +11,15 @@ interface Review {
 
 const reviews: Review[] = [
   {
-    name: "Sarah T.",
-    text: "Clockwise’s insights transformed how I think about risk. Highly recommend!",
+    name: "Brandon W.",
+    text: "Clockwise's insights transformed how I think about risk. Highly recommend!",
   },
   {
-    name: "Michael R.",
+    name: "Daniel F.",
     text: "The AI tools are intuitive and incredibly helpful in planning my portfolio.",
   },
   {
-    name: "Lena K.",
+    name: "Elizabeth B.",
     text: "I booked a consultation and felt instantly at ease—knowledgeable and transparent team.",
   },
 ];
