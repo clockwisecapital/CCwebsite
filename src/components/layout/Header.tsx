@@ -78,6 +78,13 @@ export default function Header(): React.JSX.Element {
             Advisors
           </Link>
           <Link 
+            href="/portfolio" 
+            className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
+          >
+            <span className="absolute bottom-0 left-0 h-0.5 bg-[#E3B23C] w-0 group-hover:w-full transition-all duration-300"></span>
+            Portfolio AI
+          </Link>
+          <Link 
             href="https://clockwisefunds.com/" 
             className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
             target="_blank"
@@ -170,6 +177,14 @@ export default function Header(): React.JSX.Element {
               style={{ transitionDelay: '100ms' }}
             >
               Advisors
+            </Link>
+            <Link 
+              href="/portfolio" 
+              className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
+              onClick={() => setIsMenuOpen(false)}
+              style={{ transitionDelay: '125ms' }}
+            >
+              Portfolio AI
             </Link>
             <Link 
               href="https://clockwisefunds.com/" 
