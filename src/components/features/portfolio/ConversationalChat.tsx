@@ -6,23 +6,34 @@ import { PortfolioChart } from '@/components/ui/PortfolioChart';
 interface Message {
   id: string;
   role: 'user' | 'assistant';
-  content: string;
+  content?: string;
   timestamp: Date;
-  step?: ConversationStep;
-  chartData?: any;
-  toolResults?: any[];
+  displaySpec?: DisplaySpec;
+  sessionInfo?: SessionInfo;
 }
 
-type ConversationStep = 
-  | 'greeting'
-  | 'portfolio_questions'
-  | 'goals'
-  | 'analysis'
-  | 'cycle_risks'
-  | 'problem_detection'
-  | 'solution_cta'
-  | 'image_option'
-  | 'complete';
+interface DisplaySpec {
+  blocks: DisplayBlock[];
+  meta?: {
+    timestamp?: string;
+    sources_count?: number;
+    cost_estimate?: number;
+    version?: string;
+  };
+}
+
+interface DisplayBlock {
+  type: 'summary_bullets' | 'stat_group' | 'table' | 'chart' | 'sources' | 'cta_group' | 'conversation_text';
+  content: string;
+}
+
+interface SessionInfo {
+  id: string;
+  stage: 'qualify' | 'goals' | 'portfolio' | 'analyze' | 'explain' | 'cta' | 'end';
+  completed_slots: string[];
+  missing_slots: string[];
+  key_facts: string[];
+}
 
 interface PortfolioData {
   stocks?: number;
@@ -47,25 +58,23 @@ export function ConversationalChat({}: ConversationalChatProps) {
     {
       id: '1',
       role: 'assistant',
-      content: `Hello! I'm your AI portfolio advisor from Clockwise Capital. I'll help you evaluate your investment portfolio through the lens of accelerating market cycles and identify risks and opportunities.
+      content: `Hello! I'm your AI portfolio advisor from Clockwise Capital. I'll help you evaluate your investment portfolio and guide you through our systematic analysis process.
 
-I'll guide you through a few questions about your portfolio and investment goals, then provide you with a comprehensive analysis including:
-• Your position in current economic cycles
-• Risk assessment and concentration analysis  
-• Comparison with our TIME ETF strategy
-• Actionable recommendations
-
-Would you like to get started? Just tell me a bit about your current portfolio.`,
+Would you like to get started with your portfolio analysis?`,
       timestamp: new Date(),
-      step: 'greeting',
     },
   ]);
 
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState<ConversationStep>('greeting');
-  const [portfolioData, setPortfolioData] = useState<PortfolioData>({});
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  const [sessionInfo, setSessionInfo] = useState<SessionInfo>({
+    id: '',
+    stage: 'qualify',
+    completed_slots: [],
+    missing_slots: [],
+    key_facts: []
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -76,40 +85,6 @@ Would you like to get started? Just tell me a bit about your current portfolio.`
     scrollToBottom();
   }, [messages]);
 
-  const generateChart = async (chartType: 'allocation' | 'comparison') => {
-    try {
-      const response = await fetch('/api/generateChart', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chartType,
-          portfolioData,
-          analysisData: analysisResult
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Chart generation failed');
-      }
-
-      const data = await response.json();
-      
-      // Add chart as a new message
-      const chartMessage: Message = {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: `Here's your ${chartType === 'allocation' ? 'portfolio allocation' : 'portfolio comparison'} chart:`,
-        timestamp: new Date(),
-        chartData: data.chartConfig
-      };
-
-      setMessages(prev => [...prev, chartMessage]);
-    } catch (error) {
-      console.error('Chart generation error:', error);
-    }
-  };
 
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
@@ -126,13 +101,20 @@ Would you like to get started? Just tell me a bit about your current portfolio.`
     setIsLoading(true);
 
     try {
-      await handleConversationalResponse(userMessage);
+      await handleFSMResponse(userMessage);
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'I apologize, but I encountered an error. Please try again or contact support if the issue persists.',
+        displaySpec: {
+          blocks: [
+            {
+              type: 'summary_bullets',
+              content: JSON.stringify(['I apologize, but I encountered an error. Please try again or contact support if the issue persists.'])
+            }
+          ]
+        },
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -141,16 +123,26 @@ Would you like to get started? Just tell me a bit about your current portfolio.`
     }
   };
 
-  const handleConversationalResponse = async (userMessage: Message) => {
-    const response = await fetch('/api/portfolioAgent', {
+  const handleFSMResponse = async (userMessage: Message) => {
+    console.log('handleFSMResponse called with userMessage:', userMessage);
+    console.log('userMessage.content:', userMessage.content);
+    
+    // Use the new FSM chat endpoint
+    const response = await fetch('/api/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        query: userMessage.content,
-        portfolioContext: portfolioData,
-        conversationHistory: messages.slice(-6), // Last 6 messages for context
+        message: userMessage.content || '',
+        sessionId: sessionId,
+        conversationHistory: messages
+          .filter(m => m.content) // Only include messages with content
+          .slice(-6) // Last 6 messages for context
+          .map(m => ({
+            role: m.role,
+            content: m.content || ''
+          }))
       }),
     });
 
@@ -159,185 +151,225 @@ Would you like to get started? Just tell me a bit about your current portfolio.`
     }
 
     const data = await response.json();
+    console.log('Frontend received data:', data);
+    console.log('DisplaySpec:', data.displaySpec);
     
-    // Extract portfolio data from the conversation
-    const extractedData = extractPortfolioData(userMessage.content, data.response);
-    if (extractedData) {
-      setPortfolioData(prev => ({ ...prev, ...extractedData }));
+    // Update session info
+    if (data.session) {
+      setSessionInfo(data.session);
     }
-
-    // Determine next step based on conversation progress
-    const nextStep = determineNextStep(data.response, portfolioData);
     
     const assistantMessage: Message = {
       id: (Date.now() + 1).toString(),
       role: 'assistant',
-      content: data.response,
+      displaySpec: data.displaySpec,
+      sessionInfo: data.session,
       timestamp: new Date(),
-      step: nextStep,
-      toolResults: data.toolResults,
-      chartData: data.toolResults?.find((result: any) => result.tool === 'generate_portfolio_chart')?.data
     };
 
+    console.log('Creating assistant message:', assistantMessage);
     setMessages(prev => [...prev, assistantMessage]);
-    setCurrentStep(nextStep);
   };
 
-  const performAnalysis = async (userMessage: Message) => {
-    const response = await fetch('/api/analyzePortfolio', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        portfolioData,
-        conversationHistory: messages.slice(-6),
-      }),
-    });
+  // DisplaySpec renderer component
+  const renderDisplaySpec = (displaySpec: DisplaySpec) => {
+    console.log('Rendering DisplaySpec:', displaySpec);
+    console.log('Number of blocks:', displaySpec?.blocks?.length);
+    
+    if (!displaySpec || !displaySpec.blocks) {
+      console.log('No displaySpec or blocks found');
+      return <div>No content to display</div>;
+    }
+    
+    return (
+      <div className="space-y-4">
+        {displaySpec.blocks.map((block, index) => {
+          console.log(`Rendering block ${index}:`, block);
+          let content;
+          
+          // Handle both JSON-stringified and plain string content
+          if (block.type === 'summary_bullets') {
+            try {
+              content = JSON.parse(block.content || '[]');
+            } catch {
+              // If not JSON, treat as single bullet point
+              content = [block.content || ''];
+            }
+          } else if (block.type === 'cta_group') {
+            try {
+              content = JSON.parse(block.content || '[]');
+            } catch {
+              // If not JSON, create single button from string
+              const buttonText = block.content || 'Continue';
+              let action = 'continue';
+              
+              // Map button text to appropriate actions
+              if (buttonText.toLowerCase().includes('start') || buttonText.toLowerCase().includes('analysis')) {
+                action = 'start_analysis';
+              } else if (buttonText.toLowerCase().includes('looks good')) {
+                action = 'looks_good';
+              }
+              
+              content = [{
+                label: buttonText,
+                action: action
+              }];
+            }
+          } else {
+            try {
+              content = JSON.parse(block.content || '[]');
+            } catch {
+              content = [];
+            }
+          }
+          
+          console.log(`Processed content for block ${index}:`, content);
 
-    if (!response.ok) {
-      throw new Error('Analysis failed');
+          return (
+            <div key={index}>
+              {block.type === 'summary_bullets' && (
+                <ul className="space-y-2">
+                  {content.map((item: string, i: number) => (
+                    <li key={i} className="flex items-start space-x-2">
+                      <span className="text-blue-400 mt-1">•</span>
+                      <span className="text-sm">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              
+              {block.type === 'stat_group' && (
+                <div className="grid grid-cols-2 gap-4">
+                  {content.map((stat: any, i: number) => (
+                    <div key={i} className="bg-slate-700 p-3 rounded-lg">
+                      <div className="text-xs text-slate-400">{stat.label}</div>
+                      <div className="text-lg font-semibold text-white">
+                        {stat.value}{stat.unit && ` ${stat.unit}`}
+                      </div>
+                      {stat.asOf && <div className="text-xs text-slate-500">as of {stat.asOf}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {block.type === 'cta_group' && (
+                <div className="flex flex-wrap gap-3 mt-4">
+                  {content.map((button: any, i: number) => (
+                    <button
+                      key={i}
+                      onClick={() => handleCTAClick(button.action, button.payload)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    >
+                      {button.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              {block.type === 'conversation_text' && (
+                <div className="text-sm leading-relaxed">
+                  {content.map((text: string, i: number) => (
+                    <p key={i} className="mb-2">{text}</p>
+                  ))}
+                </div>
+              )}
+              
+              {block.type === 'sources' && (
+                <div className="bg-slate-700 p-4 rounded-lg">
+                  <h4 className="text-sm font-medium text-slate-300 mb-2">Sources:</h4>
+                  <ul className="space-y-1">
+                    {content.map((source: any, i: number) => (
+                      <li key={i} className="text-xs text-slate-400">
+                        <a href={source.url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-400">
+                          {source.publisher}: {source.title}
+                        </a>
+                        {source.asOf && ` (${source.asOf})`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const handleCTAClick = async (action: string, payload?: any) => {
+    console.log('CTA clicked:', action, payload);
+    
+    // Map action to appropriate message
+    let messageText = '';
+    switch (action) {
+      case 'start_analysis':
+        messageText = 'Start Analysis';
+        break;
+      case 'continue':
+        messageText = 'Continue';
+        break;
+      case 'view_summary':
+      case 'looks_good':
+        messageText = 'Looks good';
+        break;
+      default:
+        messageText = action || 'Continue';
+        break;
     }
 
-    const result = await response.json();
-    setAnalysisResult(result);
+    console.log('CTA messageText:', messageText);
 
-    const analysisMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant',
-      content: result.analysisNarrative,
+    // Create user message directly without going through input
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: messageText,
       timestamp: new Date(),
-      step: 'cycle_risks',
     };
 
-    setMessages(prev => [...prev, analysisMessage]);
-    setCurrentStep('cycle_risks');
+    setMessages(prev => [...prev, userMessage]);
+    setIsLoading(true);
 
-    // Continue with cycle risks and recommendations
-    setTimeout(() => {
-      const recommendationsMessage: Message = {
-        id: (Date.now() + 2).toString(),
-        role: 'assistant',
-        content: `Based on my analysis, here are my key recommendations:
-
-${result.recommendations.map((rec: string, index: number) => `${index + 1}. ${rec}`).join('\n')}
-
-Would you like me to generate a visual lifecycle chart showing your portfolio's position in the current market cycles? Or would you prefer to schedule a free consultation with one of our advisors to discuss these recommendations in detail?`,
-        timestamp: new Date(),
-        step: 'solution_cta',
-      };
-      
-      setMessages(prev => [...prev, recommendationsMessage]);
-      setCurrentStep('solution_cta');
-    }, 2000);
-  };
-
-  const generateImage = async (type: 'lifecycle' | 'portfolio_comparison') => {
     try {
-      const response = await fetch('/api/generateImage', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type,
-          analysisData: {
-            debtCyclePhase: analysisResult?.marketCycleAnalysis?.debtCyclePhase,
-            sp500LifecycleStage: analysisResult?.marketCycleAnalysis?.sp500LifecycleStage,
-            portfolioAllocation: {
-              stocks: portfolioData.stocks || 0,
-              bonds: portfolioData.bonds || 0,
-              cash: portfolioData.cash || 0,
-              commodities: portfolioData.commodities || 0,
-              realEstate: portfolioData.realEstate || 0,
-              alternatives: portfolioData.alternatives || 0,
-            },
-            timeEtfComparison: analysisResult?.timeEtfComparison,
-          },
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const imageMessage: Message = {
-          id: (Date.now() + 3).toString(),
-          role: 'assistant',
-          content: `Here's your ${type === 'lifecycle' ? 'market lifecycle' : 'portfolio comparison'} visualization:
-
-![${type} Chart](${data.imageUrl})
-
-This chart shows your portfolio's current positioning. Would you like to schedule a consultation to discuss how to optimize your strategy based on these insights?`,
-          timestamp: new Date(),
-          step: 'image_option',
-        };
-        
-        setMessages(prev => [...prev, imageMessage]);
-      }
+      await handleFSMResponse(userMessage);
     } catch (error) {
-      console.error('Image generation failed:', error);
+      console.error('Error handling CTA click:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        displaySpec: {
+          blocks: [
+            {
+              type: 'summary_bullets',
+              content: JSON.stringify(['I apologize, but I encountered an error. Please try again or contact support if the issue persists.'])
+            }
+          ]
+        },
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const extractPortfolioData = (userInput: string, aiResponse: string): Partial<PortfolioData> | null => {
-    const extracted: Partial<PortfolioData> = {};
     
-    // Extract percentages from user input
-    const percentageRegex = /(\d+(?:\.\d+)?)\s*%?\s*(stocks?|bonds?|cash|commodities?|real\s*estate|alternatives?)/gi;
-    let match;
-    
-    while ((match = percentageRegex.exec(userInput)) !== null) {
-      const value = parseFloat(match[1]);
-      const asset = match[2].toLowerCase().replace(/\s+/g, '');
-      
-      if (asset.includes('stock')) extracted.stocks = value;
-      else if (asset.includes('bond')) extracted.bonds = value;
-      else if (asset.includes('cash')) extracted.cash = value;
-      else if (asset.includes('commodit')) extracted.commodities = value;
-      else if (asset.includes('real') || asset.includes('estate')) extracted.realEstate = value;
-      else if (asset.includes('alternative')) extracted.alternatives = value;
+    // Handle restart case separately if needed
+    if (action === 'restart') {
+      setMessages([{
+        id: '1',
+        role: 'assistant',
+        content: `Hello! I'm your AI portfolio advisor from Clockwise Capital. Would you like to get started with your portfolio analysis?`,
+        timestamp: new Date(),
+      }]);
+      setSessionInfo({
+        id: '',
+        stage: 'qualify',
+        completed_slots: [],
+        missing_slots: [],
+        key_facts: []
+      });
+    } else if (action === 'schedule_consultation') {
+      window.open('/contact', '_blank');
     }
-
-    // Extract dollar amounts
-    const dollarRegex = /\$?([\d,]+(?:\.\d{2})?)\s*(million|k|thousand)?/gi;
-    const dollarMatch = dollarRegex.exec(userInput);
-    if (dollarMatch) {
-      let value = parseFloat(dollarMatch[1].replace(/,/g, ''));
-      const unit = dollarMatch[2]?.toLowerCase();
-      
-      if (unit === 'million') value *= 1000000;
-      else if (unit === 'k' || unit === 'thousand') value *= 1000;
-      
-      extracted.currentValue = value;
-    }
-
-    // Extract goal information
-    if (userInput.toLowerCase().includes('income')) {
-      extracted.goalType = 'Annual Income';
-    } else if (userInput.toLowerCase().includes('lump sum') || userInput.toLowerCase().includes('target')) {
-      extracted.goalType = 'Lump Sum';
-    }
-
-    return Object.keys(extracted).length > 0 ? extracted : null;
-  };
-
-  const determineNextStep = (aiResponse: string, currentData: PortfolioData): ConversationStep => {
-    if (isPortfolioDataComplete()) {
-      return 'analysis';
-    } else if (currentData.stocks !== undefined || currentData.bonds !== undefined) {
-      return 'portfolio_questions';
-    } else if (currentData.goalType || currentData.goalAmount) {
-      return 'goals';
-    } else {
-      return 'portfolio_questions';
-    }
-  };
-
-  const isPortfolioDataComplete = (): boolean => {
-    const hasAllocation = portfolioData.stocks !== undefined && 
-                         portfolioData.bonds !== undefined &&
-                         portfolioData.cash !== undefined;
-    const hasGoals = portfolioData.goalType !== undefined && portfolioData.currentValue !== undefined;
-    return hasAllocation && hasGoals;
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -348,9 +380,9 @@ This chart shows your portfolio's current positioning. Would you like to schedul
   };
 
   const getStepProgress = (): number => {
-    const steps = ['greeting', 'portfolio_questions', 'goals', 'analysis', 'cycle_risks', 'solution_cta'];
-    const currentIndex = steps.indexOf(currentStep);
-    return Math.max(0, (currentIndex / (steps.length - 1)) * 100);
+    const stageOrder = ['qualify', 'goals', 'portfolio', 'analyze', 'explain', 'cta'];
+    const currentIndex = stageOrder.indexOf(sessionInfo.stage);
+    return Math.max(0, (currentIndex / (stageOrder.length - 1)) * 100);
   };
 
   const getDynamicSpacing = (): string => {
@@ -383,7 +415,7 @@ This chart shows your portfolio's current positioning. Would you like to schedul
         {/* Progress Indicator */}
         <div className="flex items-center space-x-2">
           <span className="text-sm text-slate-400">
-            {currentStep.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            {sessionInfo.stage.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
           </span>
           <div className="w-20 bg-slate-700 rounded-full h-1">
             <div 
@@ -427,10 +459,22 @@ This chart shows your portfolio's current positioning. Would you like to schedul
                       ? 'bg-blue-600 text-white'
                       : 'bg-slate-800 text-white border border-slate-700'
                   }`}>
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
+                    {message.content && (
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
+                    )}
+                    {message.displaySpec && (
+                      <div className="text-sm leading-relaxed">
+                        {renderDisplaySpec(message.displaySpec)}
+                      </div>
+                    )}
                   </div>
                   <div className={`text-xs text-slate-400 mt-1 ${message.role === 'user' ? 'text-right' : ''}`}>
                     {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {message.sessionInfo && (
+                      <span className="ml-2 text-slate-500">
+                        Stage: {message.sessionInfo.stage}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -459,73 +503,11 @@ This chart shows your portfolio's current positioning. Would you like to schedul
             </div>
           )}
           
-          {messages.map((message) => (
-            <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
-              <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                message.role === 'user' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-slate-800 text-slate-100'
-              }`}>
-                <div className="whitespace-pre-wrap">{message.content}</div>
-                
-                {message.chartData && (
-                  <div className="mt-4">
-                    <PortfolioChart chartConfig={message.chartData} />
-                  </div>
-                )}
-                
-                {/* Chart Generation Buttons - only show after assistant messages when portfolio data exists */}
-                {message.role === 'assistant' && portfolioData.stocks !== undefined && !message.chartData && (
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      onClick={() => generateChart('allocation')}
-                      className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs"
-                    >
-                      📊 Show Allocation
-                    </button>
-                    <button
-                      onClick={() => generateChart('comparison')}
-                      className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs"
-                    >
-                      📈 Compare vs TIME ETF
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
           
           <div ref={messagesEndRef} />
         </div>
       </div>
 
-      {/* Quick Actions */}
-      {currentStep === 'solution_cta' && analysisResult && (
-        <div className="border-t border-slate-700 px-6 py-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={() => generateImage('lifecycle')}
-                className="inline-flex items-center px-4 py-2 text-sm font-medium text-slate-300 bg-slate-800 border border-slate-600 rounded-lg hover:bg-slate-700 transition-colors"
-              >
-                Generate Lifecycle Chart
-              </button>
-              <button
-                onClick={() => generateImage('portfolio_comparison')}
-                className="inline-flex items-center px-4 py-2 text-sm font-medium text-slate-300 bg-slate-800 border border-slate-600 rounded-lg hover:bg-slate-700 transition-colors"
-              >
-                Portfolio Comparison Chart
-              </button>
-              <button
-                onClick={() => window.open('/contact', '_blank')}
-                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Schedule Consultation
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Input Area */}
       <div className="border-t border-slate-700 px-6 py-4">

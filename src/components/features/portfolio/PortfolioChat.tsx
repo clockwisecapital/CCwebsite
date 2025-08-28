@@ -1,34 +1,65 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { AnalysisResult, InvestmentGoals, PortfolioHolding, AnalysisMode } from '@/app/portfolio/page';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
-  content: string;
+  content?: string;
   timestamp: Date;
+  displaySpec?: DisplaySpec;
+  sessionInfo?: SessionInfo;
+}
+
+interface DisplaySpec {
+  blocks: DisplayBlock[];
+  meta?: {
+    timestamp?: string;
+    sources_count?: number;
+    cost_estimate?: number;
+    version?: string;
+  };
+}
+
+interface DisplayBlock {
+  type: 'summary_bullets' | 'stat_group' | 'table' | 'chart' | 'sources' | 'cta_group';
+  content: string;
+}
+
+interface SessionInfo {
+  id: string;
+  stage: 'qualify' | 'goals' | 'portfolio' | 'analyze' | 'explain' | 'cta' | 'end';
+  completed_slots: string[];
+  missing_slots: string[];
+  key_facts: string[];
 }
 
 interface PortfolioChatProps {
-  mode: AnalysisMode;
-  goals: InvestmentGoals | null;
-  portfolio: PortfolioHolding[];
-  analysisResult: AnalysisResult | null;
+  // Simplified props - now using FSM system
 }
 
-export function PortfolioChat({ mode, goals, portfolio, analysisResult }: PortfolioChatProps) {
+export function PortfolioChat({}: PortfolioChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
-      content: `Hello! I'm your AI portfolio advisor. I've analyzed your portfolio and I'm here to answer any questions about your investment strategy, risk profile, or market cycles. What would you like to know?`,
+      content: `Hello! I'm your AI portfolio advisor from Clockwise Capital. I'll help you evaluate your investment portfolio and guide you through our systematic analysis process.
+
+Would you like to get started with your portfolio analysis?`,
       timestamp: new Date(),
     },
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  const [sessionInfo, setSessionInfo] = useState<SessionInfo>({
+    id: '',
+    stage: 'qualify',
+    completed_slots: [],
+    missing_slots: [],
+    key_facts: []
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -45,7 +76,7 @@ export function PortfolioChat({ mode, goals, portfolio, analysisResult }: Portfo
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: inputMessage,
+      content: inputMessage.trim(),
       timestamp: new Date(),
     };
 
@@ -54,46 +85,174 @@ export function PortfolioChat({ mode, goals, portfolio, analysisResult }: Portfo
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/portfolio/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: inputMessage,
-          mode,
-          goals,
-          portfolio,
-          analysisResult,
-          chatHistory: messages,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Chat request failed');
-      }
-
-      const data = await response.json();
-      
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: data.response,
-        timestamp: new Date(),
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
+      await handleFSMResponse(userMessage);
     } catch (error) {
-      console.error('Chat error:', error);
+      console.error('Error sending message:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'I apologize, but I encountered an error. Please try again or contact support if the issue persists.',
+        displaySpec: {
+          blocks: [
+            {
+              type: 'summary_bullets',
+              content: JSON.stringify(['I apologize, but I encountered an error. Please try again or contact support if the issue persists.'])
+            }
+          ]
+        },
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleFSMResponse = async (userMessage: Message) => {
+    // Use the new FSM chat endpoint
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: userMessage.content,
+        sessionId: sessionId,
+        conversationHistory: messages
+          .filter(m => m.content) // Only include messages with content
+          .slice(-6) // Last 6 messages for context
+          .map(m => ({
+            role: m.role,
+            content: m.content || ''
+          }))
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Chat request failed');
+    }
+
+    const data = await response.json();
+    
+    // Update session info
+    if (data.session) {
+      setSessionInfo(data.session);
+    }
+    
+    const assistantMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      role: 'assistant',
+      displaySpec: data.displaySpec,
+      sessionInfo: data.session,
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, assistantMessage]);
+  };
+
+  // DisplaySpec renderer component
+  const renderDisplaySpec = (displaySpec: DisplaySpec) => {
+    return (
+      <div className="space-y-3">
+        {displaySpec.blocks.map((block, index) => {
+          let content;
+          try {
+            content = JSON.parse(block.content || '[]');
+          } catch {
+            content = [];
+          }
+
+          return (
+            <div key={index}>
+              {block.type === 'summary_bullets' && (
+                <ul className="space-y-1">
+                  {content.map((item: string, i: number) => (
+                    <li key={i} className="flex items-start space-x-2">
+                      <span className="text-blue-500 mt-1 text-xs">•</span>
+                      <span className="text-xs">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              
+              {block.type === 'stat_group' && (
+                <div className="grid grid-cols-2 gap-2">
+                  {content.map((stat: any, i: number) => (
+                    <div key={i} className="bg-gray-50 p-2 rounded">
+                      <div className="text-xs text-gray-500">{stat.label}</div>
+                      <div className="text-sm font-semibold text-gray-900">
+                        {stat.value}{stat.unit && ` ${stat.unit}`}
+                      </div>
+                      {stat.asOf && <div className="text-xs text-gray-400">as of {stat.asOf}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {block.type === 'cta_group' && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {content.map((button: any, i: number) => (
+                    <button
+                      key={i}
+                      onClick={() => handleCTAClick(button.action, button.payload)}
+                      className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors"
+                    >
+                      {button.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              {block.type === 'sources' && (
+                <div className="bg-gray-50 p-2 rounded">
+                  <h4 className="text-xs font-medium text-gray-600 mb-1">Sources:</h4>
+                  <ul className="space-y-1">
+                    {content.map((source: any, i: number) => (
+                      <li key={i} className="text-xs text-gray-500">
+                        <a href={source.url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600">
+                          {source.publisher}: {source.title}
+                        </a>
+                        {source.asOf && ` (${source.asOf})`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const handleCTAClick = (action: string, payload?: any) => {
+    switch (action) {
+      case 'start_analysis':
+      case 'view_summary':
+      case 'looks_good':
+        // Continue conversation
+        sendMessage();
+        break;
+      case 'restart':
+        // Reset session
+        setMessages([{
+          id: '1',
+          role: 'assistant',
+          content: `Hello! I'm your AI portfolio advisor from Clockwise Capital. Would you like to get started with your portfolio analysis?`,
+          timestamp: new Date(),
+        }]);
+        setSessionInfo({
+          id: '',
+          stage: 'qualify',
+          completed_slots: [],
+          missing_slots: [],
+          key_facts: []
+        });
+        break;
+      case 'schedule_consultation':
+        window.open('/contact', '_blank');
+        break;
+      default:
+        console.log('CTA clicked:', action, payload);
     }
   };
 
@@ -127,7 +286,7 @@ export function PortfolioChat({ mode, goals, portfolio, analysisResult }: Portfo
         </div>
         <div className="flex items-center space-x-2">
           <span className="text-xs bg-blue-500 px-2 py-1 rounded">
-            {mode === 'standard' ? 'Standard' : 'Agent'} Mode
+            Stage: {sessionInfo.stage}
           </span>
           <button
             onClick={() => setIsOpen(false)}
@@ -154,9 +313,21 @@ export function PortfolioChat({ mode, goals, portfolio, analysisResult }: Portfo
                   : 'bg-gray-100 text-gray-900'
               }`}
             >
-              <p className="text-sm">{message.content}</p>
+              {message.content && (
+                <p className="text-sm">{message.content}</p>
+              )}
+              {message.displaySpec && (
+                <div className="text-sm">
+                  {renderDisplaySpec(message.displaySpec)}
+                </div>
+              )}
               <p className="text-xs mt-1 opacity-70">
                 {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {message.sessionInfo && (
+                  <span className="ml-2">
+                    Stage: {message.sessionInfo.stage}
+                  </span>
+                )}
               </p>
             </div>
           </div>
