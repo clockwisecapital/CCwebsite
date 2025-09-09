@@ -2,7 +2,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { fsmOrchestrator } from "@/lib/fsm";
-import { sessionManager } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
   try {
@@ -76,9 +75,12 @@ export async function POST(req: NextRequest) {
       } : null,
       usage: result.usage || null
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
     console.error('❌ Chat API error:', error);
-    console.error('Error stack:', error.stack);
+    console.error('Error stack:', errorStack);
     console.log('=== CHAT API REQUEST END (ERROR) ===\n');
     return NextResponse.json({
       displaySpec: {
@@ -101,7 +103,7 @@ export async function POST(req: NextRequest) {
           }
         ]
       },
-      error: error.message
+      error: errorMessage
     }, { status: 500 });
   }
 }

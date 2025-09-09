@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { PortfolioChart } from '@/components/ui/PortfolioChart';
 
 interface Message {
   id: string;
@@ -35,22 +34,8 @@ interface SessionInfo {
   key_facts: string[];
 }
 
-interface PortfolioData {
-  stocks?: number;
-  bonds?: number;
-  cash?: number;
-  commodities?: number;
-  realEstate?: number;
-  alternatives?: number;
-  topHoldings?: string[];
-  sectorExposure?: string[];
-  currentValue?: number;
-  goalType?: 'Annual Income' | 'Lump Sum';
-  goalAmount?: number;
-}
-
 interface ConversationalChatProps {
-  // Removed mode props - now using unified agentic approach
+  mode?: 'unified';
 }
 
 export function ConversationalChat({}: ConversationalChatProps) {

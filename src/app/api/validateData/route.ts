@@ -233,7 +233,7 @@ function validateCsvData(csvData: string): ValidationResult {
       parsedData: formValidation.isValid ? parsedData : undefined,
     };
 
-  } catch (error) {
+  } catch {
     errors.push('Failed to parse CSV data - please check format');
     return { isValid: false, errors, warnings };
   }

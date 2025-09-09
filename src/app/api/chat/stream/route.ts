@@ -1,7 +1,6 @@
 // Streaming SSE endpoint for real-time conversation flow
 
 import { NextRequest } from "next/server";
-import { client } from "@/lib/openai";
 import { fsmOrchestrator } from "@/lib/fsm";
 import { sessionManager } from "@/lib/session";
 
@@ -88,7 +87,8 @@ export async function POST(req: NextRequest) {
 
           controller.close();
 
-        } catch (error: any) {
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
           console.error('Streaming error:', error);
           
           // Send error in SSE format
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
             type: 'error',
             data: {
               message: 'Sorry, I encountered an error. Please try again.',
-              error: error.message
+              error: errorMessage
             }
           })}\n\n`));
           
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Stream setup error:', error);
     return new Response('Stream setup failed', { status: 500 });
   }

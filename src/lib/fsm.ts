@@ -36,7 +36,11 @@ import * as path from 'path';
 interface ConversationContext {
   sessionId: string;
   userMessage: string;
-  conversationHistory: any[];
+  conversationHistory: Array<{
+    role: 'user' | 'assistant';
+    content: string;
+    timestamp?: Date;
+  }>;
 }
 
 /**
@@ -445,7 +449,7 @@ Return {} if absolutely no data found.
    * @param goals - Current goals data object
    * @returns Array of completed slot names
    */
-  private getCompletedGoalSlots(goals: any): string[] {
+  private getCompletedGoalSlots(goals: GoalsData): string[] {
     const completedSlots: string[] = [];
     if (goals?.goal_type) completedSlots.push('goal_type');
     if (goals?.goal_amount) completedSlots.push('goal_amount');
@@ -464,7 +468,7 @@ Return {} if absolutely no data found.
    * @param goals - Current goals data object
    * @returns Array of human-readable labels for completed slots
    */
-  private getCompletedGoalLabels(goals: any): string[] {
+  private getCompletedGoalLabels(goals: GoalsData): string[] {
     const completedSlots = this.getCompletedGoalSlots(goals);
     const labelMap: Record<string, string> = {
       'goal_type': 'Investment goal',
@@ -485,7 +489,7 @@ Return {} if absolutely no data found.
    * @param goals - Current goals data object
    * @returns Array of missing slot names that still need to be collected
    */
-  private getMissingGoalSlots(goals: any): string[] {
+  private getMissingGoalSlots(goals: GoalsData): string[] {
     const requiredSlots = ['goal_type', 'goal_amount', 'horizon_years', 'risk_tolerance', 'liquidity_needs'];
     const completedSlots = this.getCompletedGoalSlots(goals);
     return requiredSlots.filter(slot => !completedSlots.includes(slot));
@@ -603,7 +607,10 @@ Generate a single conversational response (2-3 sentences max):`;
       promptText = this.getFallbackPrompt(missingSlots);
     }
 
-    const blocks: any[] = [
+    const blocks: Array<{
+      type: string;
+      content: string;
+    }> = [
       {
         type: "summary_bullets",
         content: JSON.stringify([
@@ -698,7 +705,7 @@ Generate a single conversational response (2-3 sentences max):`;
       // ======================================================================
       // SPECIAL FLOW 1: NEW INVESTOR - Users who haven't started investing
       // ======================================================================
-      if ((aiExtraction as any).new_investor) {
+      if ((aiExtraction as PortfolioData & { new_investor?: boolean; suggest_default?: boolean }).new_investor) {
         console.log('🆕 New investor detected - creating special flow');
         session.portfolio.new_investor = true;
         session.portfolio.allocations = { stocks: 0, bonds: 0, cash: 0 }; // Zero allocation
@@ -736,7 +743,7 @@ Generate a single conversational response (2-3 sentences max):`;
       // ======================================================================
       // SPECIAL FLOW 2: ALLOCATION SUGGESTION - Users requesting recommendations
       // ======================================================================
-      if ((aiExtraction as any).suggest_default) {
+      if ((aiExtraction as PortfolioData & { new_investor?: boolean; suggest_default?: boolean }).suggest_default) {
         const defaultAllocation = this.getDefaultAllocation(session.goals);
         session.portfolio.allocations = { ...(session.portfolio.allocations || {}), ...defaultAllocation };
         session.portfolio.currency = session.portfolio.currency || 'USD'; // Set default currency
@@ -821,7 +828,7 @@ Generate a single conversational response (2-3 sentences max):`;
     return await this.buildUnifiedPortfolioResponse(session, context);
   }
 
-  private async handleDefaultStage(session: SessionMemory, context: ConversationContext) {
+  private async handleDefaultStage(session: SessionMemory, _context: ConversationContext) {
     return {
       displaySpec: {
         blocks: [
@@ -836,7 +843,10 @@ Generate a single conversational response (2-3 sentences max):`;
     };
   }
 
-  private formatResponse(response: any, session: SessionMemory) {
+  private formatResponse(response: {
+    displaySpec: any;
+    usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+  }, session: SessionMemory) {
     return {
       ...response,
       session: session,
@@ -844,7 +854,7 @@ Generate a single conversational response (2-3 sentences max):`;
     };
   }
 
-  private async aiExtractPortfolio(userMessage: string, session: SessionMemory): Promise<Partial<PortfolioData>> {
+  private async aiExtractPortfolio(userMessage: string, _session: SessionMemory): Promise<Partial<PortfolioData>> {
     try {
       console.log('🤖 Extracting portfolio data from:', userMessage);
       
@@ -1038,7 +1048,7 @@ Return empty object {} if no portfolio data found.
   }
 
   // Unified response builder for portfolio stage
-  private async buildUnifiedPortfolioResponse(session: SessionMemory, context: ConversationContext) {
+  private async buildUnifiedPortfolioResponse(session: SessionMemory, _context: ConversationContext) {
     const completedSlots = this.getCompletedPortfolioSlots(session.portfolio);
     const missingSlots = this.getMissingPortfolioSlots(session.portfolio);
     const completedLabels = this.getCompletedPortfolioLabels(session.portfolio);
@@ -1060,7 +1070,7 @@ Return empty object {} if no portfolio data found.
           title: "Current Portfolio Allocation",
           columns: ["Asset Class", "Allocation"],
           rows: Object.entries(allocations)
-            .filter(([_, value]) => (value as number) > 0)
+            .filter(([, value]) => (value as number) > 0)
             .map(([key, value]) => [
               key.charAt(0).toUpperCase() + key.slice(1),
               `${value}%`
@@ -1082,7 +1092,7 @@ Return empty object {} if no portfolio data found.
         title: "Current Portfolio Allocation",
         columns: ["Asset Class", "Allocation"],
         rows: Object.entries(allocations)
-          .filter(([_, value]) => (value as number) > 0)
+          .filter(([, value]) => (value as number) > 0)
           .map(([key, value]) => [
             key.charAt(0).toUpperCase() + key.slice(1),
             `${value}%`
@@ -1092,7 +1102,10 @@ Return empty object {} if no portfolio data found.
       promptText = "Perfect! I have your portfolio details. Ready to proceed with analysis?";
     }
 
-    const blocks: any[] = [
+    const blocks: Array<{
+      type: string;
+      content: string;
+    }> = [
       {
         type: "summary_bullets",
         content: JSON.stringify([
@@ -1150,7 +1163,7 @@ Return empty object {} if no portfolio data found.
    * 
    * ADVANCEMENT CRITERIA: Analysis complete → CTA/Booking stage
    */
-  private async handleAnalyzeStage(session: SessionMemory, context: ConversationContext) {
+  private async handleAnalyzeStage(session: SessionMemory, _context: ConversationContext) {
     console.log('🎯 ANALYZE STAGE HANDLER START');
     console.log('📊 Analyzing portfolio against goals with client-controlled market context...');
 
@@ -1231,7 +1244,7 @@ Return empty object {} if no portfolio data found.
    * - Technology and company cycle context
    * - Risk factors and investment opportunities
    */
-  private async gatherMarketData(goals: any, portfolio: any): Promise<any> {
+  private async gatherMarketData(_goals: GoalsData, _portfolio: PortfolioData): Promise<any> {
     try {
       console.log('📄 Loading market context from configuration file...');
       
@@ -1357,8 +1370,9 @@ Return empty object {} if no portfolio data found.
       const topHoldings = portfolio?.top_positions?.slice(0, 3).map((pos: any) => pos.name).join(', ') || 'Not specified';
       
       // Extract Clockwise portfolio information from market data
-      const clockwisePortfolios = marketData?.metadata?.clockwisePortfolios || {};
-      const salesNarrative = marketData?.metadata?.salesNarrative || {};
+      // Note: These could be used for future sales narrative customization
+      // const clockwisePortfolios = marketData?.metadata?.clockwisePortfolios || {};
+      // const salesNarrative = marketData?.metadata?.salesNarrative || {};
 
       const analysisPrompt = `
 You are a Clockwise Capital portfolio advisor analyzing a client's investment approach. Your goal is to create positive doubt about their current strategy and guide them toward booking a consultation to discuss Clockwise's superior solutions.

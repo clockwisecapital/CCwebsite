@@ -133,8 +133,8 @@ export async function collectPortfolio(
     
     // Add key facts
     const topAllocations = Object.entries(normalized.allocations)
-      .filter(([_, value]) => value > 0)
-      .sort(([_, a], [__, b]) => b - a)
+      .filter(([, value]) => value > 0)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 2)
       .map(([key, value]) => `${key}=${value}%`);
     
