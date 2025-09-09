@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function validateFormData(data: Record<string, any>): ValidationResult {
+function validateFormData(data: Record<string, unknown>): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -96,14 +96,15 @@ function validateFormData(data: Record<string, any>): ValidationResult {
   }
 
   // Validate goal type and amount
-  if (data.goalType && !['Annual Income', 'Lump Sum'].includes(data.goalType)) {
+  if (data.goalType && typeof data.goalType === 'string' && !['Annual Income', 'Lump Sum'].includes(data.goalType)) {
     errors.push('Goal type must be either "Annual Income" or "Lump Sum"');
   }
 
   if (data.goalAmount !== undefined) {
     if (typeof data.goalAmount !== 'number' || data.goalAmount <= 0) {
       errors.push('Goal amount must be a positive number');
-    } else if (data.currentValue && data.goalAmount < data.currentValue && data.goalType === 'Lump Sum') {
+    } else if (typeof data.currentValue === 'number' && typeof data.goalAmount === 'number' && 
+               data.goalAmount < data.currentValue && data.goalType === 'Lump Sum') {
       warnings.push('Goal amount is less than current portfolio value');
     }
   }
@@ -188,7 +189,7 @@ function validateCsvData(csvData: string): ValidationResult {
     }
 
     // Parse data rows
-    const parsedData: any = {};
+    const parsedData: Record<string, unknown> = {};
     
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(',').map(v => v.trim());

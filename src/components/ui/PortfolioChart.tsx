@@ -30,9 +30,9 @@ ChartJS.register(
 interface PortfolioChartProps {
   chartConfig: {
     type: string;
-    data: any;
-    config: any;
-    chartData: any;
+    data: unknown;
+    config: unknown;
+    chartData: unknown;
   };
 }
 
@@ -43,27 +43,19 @@ export function PortfolioChart({ chartConfig }: PortfolioChartProps) {
     switch (type) {
       case 'allocation':
         return (
-          <div className="w-full h-64">
-            <Pie data={chartData} options={config} />
-          </div>
+          <Pie data={chartData as never} options={config as never} />
         );
-      case 'lifecycle':
+      case 'performance':
         return (
-          <div className="w-full h-64">
-            <Line data={chartData} options={config} />
-          </div>
-        );
-      case 'risk_return':
-        return (
-          <div className="w-full h-64">
-            <Line data={chartData} options={config} />
-          </div>
+          <Line data={chartData as never} options={config as never} />
         );
       case 'comparison':
         return (
-          <div className="w-full h-64">
-            <Bar data={chartData} options={config} />
-          </div>
+          <Line data={chartData as never} options={config as never} />
+        );
+      case 'analysis':
+        return (
+          <Bar data={chartData as never} options={config as never} />
         );
       default:
         return (
@@ -74,10 +66,12 @@ export function PortfolioChart({ chartConfig }: PortfolioChartProps) {
     }
   };
 
+  const configWithTitle = config as { plugins?: { title?: { text?: string } } };
+
   return (
     <div className="bg-slate-800 p-4 rounded-lg border border-slate-700">
       <h3 className="text-white text-lg font-semibold mb-4">
-        {config.plugins?.title?.text || 'Portfolio Chart'}
+        {configWithTitle.plugins?.title?.text || 'Portfolio Chart'}
       </h3>
       {renderChart()}
     </div>

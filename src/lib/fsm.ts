@@ -776,7 +776,7 @@ Generate a single conversational response (2-3 sentences max):`;
       // Handle optional fields (don't overwrite, just add/update)
       if (aiExtraction.top_positions && aiExtraction.top_positions.length > 0) {
         // Convert weight to percentage if needed
-        const topPositions = aiExtraction.top_positions.map((pos: any) => ({
+        const topPositions = aiExtraction.top_positions.map((pos: { name: string; percentage?: number; weight?: number }) => ({
           name: pos.name,
           percentage: pos.percentage || pos.weight || 0
         }));
@@ -784,12 +784,13 @@ Generate a single conversational response (2-3 sentences max):`;
         console.log('📈 Updated top positions:', topPositions);
       }
 
-      if ((aiExtraction as any).sector_exposure && (aiExtraction as any).sector_exposure.length > 0) {
-        session.portfolio.sector_exposure = (aiExtraction as any).sector_exposure;
-        console.log('🏭 Updated sector exposure:', (aiExtraction as any).sector_exposure);
+      const extractionWithExtras = aiExtraction as any;
+      if (extractionWithExtras.sector_exposure && Array.isArray(extractionWithExtras.sector_exposure) && extractionWithExtras.sector_exposure.length > 0) {
+        session.portfolio.sector_exposure = extractionWithExtras.sector_exposure;
+        console.log('🏭 Updated sector exposure:', extractionWithExtras.sector_exposure);
       }
 
-      if ((aiExtraction as any).skip_optional) {
+      if (extractionWithExtras.skip_optional) {
         console.log('⏭️ User chose to skip optional details');
       }
 
@@ -811,7 +812,7 @@ Generate a single conversational response (2-3 sentences max):`;
               type: "summary_bullets",
               content: JSON.stringify([
                 "🎉 Portfolio allocation complete!",
-                `Total allocation: ${Object.values(session.portfolio.allocations || {}).reduce((a: number, b: any) => a + (typeof b === 'number' ? b : 0), 0)}%`,
+                `Total allocation: ${Object.values(session.portfolio.allocations || {}).reduce((a: number, b: unknown) => a + (typeof b === 'number' ? b : 0), 0)}%`,
                 `Currency: ${session.portfolio.currency || 'USD'}`
               ])
             },
@@ -850,7 +851,7 @@ Generate a single conversational response (2-3 sentences max):`;
   }
 
   private formatResponse(response: {
-    displaySpec: any;
+    displaySpec: { blocks: Array<{ type: string; content: string }> };
     usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
   }, session: SessionMemory) {
     return {
@@ -962,24 +963,26 @@ Return empty object {} if no portfolio data found.
   }
 
   // Portfolio helper methods (proven pattern)
-  private getCompletedPortfolioSlots(portfolio: any): string[] {
+  private getCompletedPortfolioSlots(portfolio: unknown): string[] {
     const completedSlots: string[] = [];
-    if (portfolio?.allocations && this.isValidAllocation(portfolio.allocations)) {
+    const portfolioData = portfolio as Record<string, unknown>;
+    
+    if (portfolioData?.allocations && this.isValidAllocation(portfolioData.allocations)) {
       completedSlots.push('allocations');
     }
-    if (portfolio?.currency) {
+    if (portfolioData?.currency) {
       completedSlots.push('currency');
     }
-    if (portfolio?.top_positions && Array.isArray(portfolio.top_positions) && portfolio.top_positions.length > 0) {
+    if (portfolioData?.top_positions && Array.isArray(portfolioData.top_positions) && portfolioData.top_positions.length > 0) {
       completedSlots.push('top_positions');
     }
-    if (portfolio?.sectors && Array.isArray(portfolio.sectors) && portfolio.sectors.length > 0) {
+    if (portfolioData?.sectors && Array.isArray(portfolioData.sectors) && portfolioData.sectors.length > 0) {
       completedSlots.push('sectors');
     }
     return completedSlots;
   }
 
-  private getCompletedPortfolioLabels(portfolio: any): string[] {
+  private getCompletedPortfolioLabels(portfolio: unknown): string[] {
     const completedSlots = this.getCompletedPortfolioSlots(portfolio);
     const labelMap: Record<string, string> = {
       'allocations': 'Portfolio allocation',
@@ -990,7 +993,7 @@ Return empty object {} if no portfolio data found.
     return completedSlots.map(slot => labelMap[slot]).filter(Boolean);
   }
 
-  private getMissingPortfolioSlots(portfolio: any): string[] {
+  private getMissingPortfolioSlots(portfolio: unknown): string[] {
     const requiredSlots = ['allocations', 'currency'];
     const optionalSlots = ['top_positions', 'sectors'];
     const completedSlots = this.getCompletedPortfolioSlots(portfolio);
@@ -1004,24 +1007,25 @@ Return empty object {} if no portfolio data found.
     return [...missingRequired, ...missingOptional];
   }
 
-  private isPortfolioComplete(portfolio: any): boolean {
+  private isPortfolioComplete(portfolio: unknown): boolean {
     // Require allocations and currency, then offer optional fields
     const requiredSlots = ['allocations', 'currency'];
     const completedSlots = this.getCompletedPortfolioSlots(portfolio);
     const hasRequired = requiredSlots.every(slot => completedSlots.includes(slot));
     
     // If required slots complete but no optional data offered yet, don't complete
-    if (hasRequired && !portfolio.optional_offered) {
+    const portfolioData = portfolio as Record<string, unknown>;
+    if (hasRequired && !portfolioData.optional_offered) {
       return false; // Will prompt for sectors/holdings first
     }
     
     return hasRequired;
   }
 
-  private isValidAllocation(allocations: any): boolean {
+  private isValidAllocation(allocations: unknown): boolean {
     if (!allocations || typeof allocations !== 'object') return false;
     
-    const total = Object.values(allocations).reduce((sum: number, val: any) => {
+    const total = Object.values(allocations as Record<string, unknown>).reduce((sum: number, val: unknown) => {
       return sum + (typeof val === 'number' ? val : 0);
     }, 0);
     
@@ -1039,9 +1043,11 @@ Return empty object {} if no portfolio data found.
     session.missing_slots = this.getMissingPortfolioSlots(session.portfolio);
   }
 
-  private getDefaultAllocation(goals: any): any {
-    const riskLevel = goals?.risk_tolerance || 'medium';
-    const horizon = goals?.horizon_years || 10;
+  private getDefaultAllocation(goals: unknown): Record<string, number> {
+    const goalsData = goals as Record<string, unknown>;
+    const riskLevel = goalsData?.risk_tolerance || 'medium';
+    const horizonValue = goalsData?.horizon_years;
+    const horizon = typeof horizonValue === 'number' ? horizonValue : 10;
     
     // Conservative defaults based on risk and time horizon
     if (riskLevel === 'low' || horizon < 5) {
@@ -1061,7 +1067,7 @@ Return empty object {} if no portfolio data found.
     
     let promptText: string;
     let showTable = false;
-    let tableData: any = null;
+    let tableData: Record<string, unknown> | null = null;
 
     if (missingSlots.includes('allocations')) {
       promptText = "Please share your current portfolio allocation as percentages. For example: 'My portfolio is 60% stocks, 30% bonds, 10% cash'. If you don't have investments yet, just say 'I'm new to investing' or 'suggest an allocation' for a recommendation.";
@@ -1177,7 +1183,7 @@ Return empty object {} if no portfolio data found.
     // STEP 1: LOAD MARKET CONTEXT - Read from configuration file
     // ========================================================================
     console.log('🚀 STEP 1: Loading market context from configuration...');
-    const marketData = await this.gatherMarketData(session.goals || {}, session.portfolio || {});
+    const marketData = await this.gatherMarketData();
     console.log('📋 STEP 1: Market context loaded:', JSON.stringify(marketData, null, 2));
     
     // Note: No search counting needed since we're using static context
@@ -1223,9 +1229,9 @@ Return empty object {} if no portfolio data found.
             type: "cta_group",
             content: JSON.stringify([
               { 
-                label: marketData?.metadata?.bookingConfiguration?.consultationLabel || "Book Free Consultation", 
+                label: (marketData as Record<string, any>)?.metadata?.bookingConfiguration?.consultationLabel || "Book Free Consultation", 
                 action: "external_link",
-                url: marketData?.metadata?.bookingConfiguration?.calendlyUrl || "https://calendly.com/clockwisecapital/appointments",
+                url: (marketData as Record<string, any>)?.metadata?.bookingConfiguration?.calendlyUrl || "https://calendly.com/clockwisecapital/appointments",
                 target: "_blank"
               },
               { 
@@ -1250,7 +1256,7 @@ Return empty object {} if no portfolio data found.
    * - Technology and company cycle context
    * - Risk factors and investment opportunities
    */
-  private async gatherMarketData(_goals: GoalsData | {}, _portfolio: PortfolioData | {}): Promise<any> {
+  private async gatherMarketData(): Promise<Record<string, unknown>> {
     try {
       console.log('📄 Loading market context from configuration file...');
       
@@ -1315,82 +1321,46 @@ Return empty object {} if no portfolio data found.
    * 
    * Generates specific search terms based on:
    * - Investment goals and timeline
-   * - Risk tolerance preferences  
-   * - Current market conditions relevance
-   * - Portfolio optimization opportunities
-   * - TIME ETF and SPY comparison data
-   */
-  private buildMarketSearchQuery(goals: any, portfolio: any): string {
-    let query = 'current market conditions ';
-    
-    // Always include TIME ETF and SPY for comparison
-    query += 'TIME ETF performance SPY S&P 500 comparison ';
-    
-    // Add timeline-specific context
-    if (goals?.horizon_years) {
-      if (goals.horizon_years <= 3) {
-        query += 'short-term investment outlook ';
-      } else if (goals.horizon_years <= 7) {
-        query += 'medium-term market trends ';
-      } else {
-        query += 'long-term economic outlook ';
-      }
     }
-    
-    // Add risk-relevant market data
-    if (goals?.risk_tolerance) {
-      const riskLevel = goals.risk_tolerance.toLowerCase();
-      if (riskLevel === 'low') {
-        query += 'bond yields interest rates economic stability ';
-      } else if (riskLevel === 'medium') {
-        query += 'balanced portfolio market volatility ';
-      } else {
-        query += 'growth stocks market opportunities ';
-      }
-    }
-    
-    // Add specific portfolio context if available
-    if (portfolio?.top_positions && portfolio.top_positions.length > 0) {
-      const topHoldings = portfolio.top_positions.slice(0, 3).map((pos: any) => pos.name).join(' ');
-      query += `${topHoldings} current performance `;
-    }
-    
-    // Add goal-specific context
-    if (goals?.goal_type) {
-      const goalType = goals.goal_type.toLowerCase();
-      const riskLevel = goals?.risk_tolerance?.toLowerCase() || 'medium';
-      query += `${goalType} investment ${riskLevel} risk portfolio sector allocation `;
-    }
-    
-    return query;
   }
-
-  /**
+  
+  // Add specific portfolio context if available
+  const topPositions = portfolioData?.top_positions;
+  if (Array.isArray(topPositions) && topPositions.length > 0) {
+    const topHoldings = topPositions.slice(0, 3).map((pos: Record<string, unknown>) => pos.name).join(' ');
+    query += `${topHoldings} current performance `;
    * ANALYZE PORTFOLIO WITH AI - Generate comprehensive analysis using market data
    */
-  private async analyzePortfolioWithAI(goals: any, portfolio: any, marketData: any): Promise<any> {
+  private async analyzePortfolioWithAI(goals: unknown, portfolio: unknown, marketData: unknown): Promise<Record<string, unknown>> {
     try {
       console.log('🧠 Performing AI portfolio analysis...');
       
+      const goalsData = goals as Record<string, unknown>;
+      const portfolioData = portfolio as Record<string, unknown>;
+      const marketDataObj = marketData as Record<string, unknown>;
+      
       // Get user's top holdings for personalization
-      const topHoldings = portfolio?.top_positions?.slice(0, 3).map((pos: any) => pos.name).join(', ') || 'Not specified';
+      const topPositions = portfolioData?.top_positions;
+      const topHoldings = Array.isArray(topPositions) 
+        ? topPositions.slice(0, 3).map((pos: Record<string, unknown>) => pos.name).join(', ') 
+        : 'Not specified';
       
       // Extract Clockwise portfolio information from market data
       // Note: These could be used for future sales narrative customization
-      // const clockwisePortfolios = marketData?.metadata?.clockwisePortfolios || {};
-      // const salesNarrative = marketData?.metadata?.salesNarrative || {};
+      // const clockwisePortfolios = marketDataObj?.metadata?.clockwisePortfolios || {};
+      // const salesNarrative = marketDataObj?.metadata?.salesNarrative || {};
 
       const analysisPrompt = `
 You are a Clockwise Capital portfolio advisor analyzing a client's investment approach. Your goal is to create positive doubt about their current strategy and guide them toward booking a consultation to discuss Clockwise's superior solutions.
 
 CLIENT PROFILE:
-- Goal: ${goals?.goal_type} of $${goals?.goal_amount?.toLocaleString()} over ${goals?.horizon_years} years
-- Risk Profile: ${goals?.risk_tolerance} risk tolerance, ${goals?.liquidity_needs} liquidity needs
+- Goal: ${goalsData?.goal_type} of $${typeof goalsData?.goal_amount === 'number' ? goalsData.goal_amount.toLocaleString() : 'TBD'} over ${goalsData?.horizon_years} years
+- Risk Profile: ${goalsData?.risk_tolerance} risk tolerance, ${goalsData?.liquidity_needs} liquidity needs
 - Top Holdings: ${topHoldings}
-- Current Allocation: ${portfolio?.allocations?.stocks || 0}% stocks, ${portfolio?.allocations?.bonds || 0}% bonds, ${portfolio?.allocations?.alternatives || 0}% alternatives
+- Current Allocation: ${(portfolioData?.allocations as Record<string, number>)?.stocks || 0}% stocks, ${(portfolioData?.allocations as Record<string, number>)?.bonds || 0}% bonds, ${(portfolioData?.allocations as Record<string, number>)?.alternatives || 0}% alternatives
 
 CURRENT MARKET REALITY:
-${marketData?.content || 'Standard market conditions'}
+${marketDataObj?.content || 'Standard market conditions'}
 
 CLOCKWISE SOLUTIONS TO REFERENCE:
 - TIME ETF (NYSE: TIME): Active managed hedged growth fund that rebalances daily to adapt to technology and economic cycles. Minimum investment: <$50
@@ -1455,12 +1425,15 @@ Provide analysis in this JSON format that drives toward consultation booking:
       console.error('❌ Portfolio analysis error:', error);
       
       // Fallback analysis with sales-oriented approach
+      const goalsData = goals as Record<string, unknown>;
+      const portfolioData = portfolio as Record<string, unknown>;
+      
       return {
-        riskLevel: goals?.risk_tolerance || 'Medium',
-        marketContext: portfolio?.new_investor 
+        riskLevel: goalsData?.risk_tolerance || 'Medium',
+        marketContext: portfolioData?.new_investor 
           ? 'Today\'s market presents unique challenges for new investors. With elevated valuations and increasing complexity, starting with professional guidance gives you a significant advantage in building wealth efficiently.'
           : 'Current market dynamics reveal several concerning trends for individual investors. The combination of stretched valuations, cycle transitions, and sector concentration risks suggests your portfolio may face headwinds that require professional navigation.',
-        recommendation: portfolio?.new_investor 
+        recommendation: portfolioData?.new_investor 
           ? 'Starting your investment journey with professional management positions you for long-term success. Clockwise\'s TIME ETF offers daily adaptation to market cycles, while our Diversified Portfolios provide comprehensive risk management. Book a consultation to discover which solution aligns best with your goals.'
           : 'Your current portfolio shows initiative, but today\'s market environment demands more sophisticated approaches. Clockwise\'s cycle-aware strategies and daily rebalancing capabilities address risks that traditional portfolios miss. Schedule a consultation to explore how our adaptive solutions can optimize your path to financial goals.',
         metrics: [

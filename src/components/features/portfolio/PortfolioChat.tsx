@@ -190,7 +190,7 @@ Would you like to get started with your portfolio analysis?`,
               
               {block.type === 'cta_group' && (
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {content.map((button: { label: string; action: string; payload?: any }, i: number) => (
+                  {content.map((button: { label: string; action: string; payload?: unknown }, i: number) => (
                     <button
                       key={i}
                       onClick={() => handleCTAClick(button.action, button.payload)}
@@ -224,7 +224,7 @@ Would you like to get started with your portfolio analysis?`,
     );
   };
 
-  const handleCTAClick = (action: string, payload?: Record<string, any>) => {
+  const handleCTAClick = (action: string, payload?: unknown) => {
     switch (action) {
       case 'start_analysis':
       case 'view_summary':
