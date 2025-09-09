@@ -67,7 +67,7 @@ Would you like to get started with your portfolio analysis?`,
 
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  const [sessionId, setSessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   const [sessionInfo, setSessionInfo] = useState<SessionInfo>({
     id: '',
     stage: 'qualify',
@@ -252,12 +252,46 @@ Would you like to get started with your portfolio analysis?`,
                 </div>
               )}
               
+              {block.type === 'table' && (
+                <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
+                  {content.title && (
+                    <div className="px-4 py-3 border-b border-slate-700">
+                      <h4 className="text-sm font-medium text-white">{content.title}</h4>
+                    </div>
+                  )}
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-slate-700">
+                        <tr>
+                          {content.columns?.map((column: string, i: number) => (
+                            <th key={i} className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                              {column}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-700">
+                        {content.rows?.map((row: string[], i: number) => (
+                          <tr key={i} className="hover:bg-slate-750">
+                            {row.map((cell: string, j: number) => (
+                              <td key={j} className="px-4 py-3 text-sm text-white">
+                                {cell}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+              
               {block.type === 'cta_group' && (
                 <div className="flex flex-wrap gap-3 mt-4">
                   {content.map((button: any, i: number) => (
                     <button
                       key={i}
-                      onClick={() => handleCTAClick(button.action, button.payload)}
+                      onClick={() => handleCTAClick(button.action, button)}
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                     >
                       {button.label}
@@ -296,10 +330,76 @@ Would you like to get started with your portfolio analysis?`,
     );
   };
 
-  const handleCTAClick = async (action: string, payload?: any) => {
-    console.log('CTA clicked:', action, payload);
+  const handleCTAClick = async (action: string, button?: any) => {
+    console.log('CTA clicked:', action, button);
     
-    // Map action to appropriate message
+    // Handle special actions that don't require chat messages
+    if (action === 'external_link' && button?.url) {
+      // Open external link in new tab
+      window.open(button.url, '_blank');
+      return;
+    }
+    
+    if (action === 'restart_conversation') {
+      // Generate new session ID to ensure fresh backend session
+      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      setSessionId(newSessionId);
+      
+      // Reset conversation state and go directly to goals stage
+      setMessages([{
+        id: '1',
+        role: 'assistant',
+        displaySpec: {
+          blocks: [
+            {
+              type: "summary_bullets",
+              content: JSON.stringify([
+                "Let's start fresh with your investment goals! 🎯",
+                "I'll help you define your financial objectives and create a personalized strategy."
+              ])
+            },
+            {
+              type: "conversation_text",
+              content: JSON.stringify([
+                "To provide you with the best portfolio recommendations, I need to understand your investment goals. Please tell me about your financial objectives - what are you hoping to achieve with your investments?"
+              ])
+            }
+          ]
+        },
+        timestamp: new Date(),
+      }]);
+      setSessionInfo({
+        id: newSessionId,
+        stage: 'goals',
+        completed_slots: [],
+        missing_slots: ['goal_type', 'goal_amount', 'horizon_years', 'risk_tolerance', 'liquidity_needs'],
+        key_facts: []
+      });
+      
+      // Sync backend by sending an initial message to advance to goals stage
+      setTimeout(async () => {
+        try {
+          await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              message: 'start analysis',
+              sessionId: newSessionId,
+              conversationHistory: []
+            }),
+          });
+          console.log('Backend session synced to goals stage');
+        } catch (error) {
+          console.error('Failed to sync backend session:', error);
+        }
+      }, 100);
+      
+      return;
+    }
+    
+    // Map action to appropriate message for chat-based actions
     let messageText = '';
     switch (action) {
       case 'start_analysis':
@@ -311,6 +411,9 @@ Would you like to get started with your portfolio analysis?`,
       case 'view_summary':
       case 'looks_good':
         messageText = 'Looks good';
+        break;
+      case 'start':
+        messageText = 'yes';
         break;
       default:
         messageText = action || 'Continue';
@@ -350,25 +453,6 @@ Would you like to get started with your portfolio analysis?`,
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
-    }
-    
-    // Handle restart case separately if needed
-    if (action === 'restart') {
-      setMessages([{
-        id: '1',
-        role: 'assistant',
-        content: `Hello! I'm your AI portfolio advisor from Clockwise Capital. Would you like to get started with your portfolio analysis?`,
-        timestamp: new Date(),
-      }]);
-      setSessionInfo({
-        id: '',
-        stage: 'qualify',
-        completed_slots: [],
-        missing_slots: [],
-        key_facts: []
-      });
-    } else if (action === 'schedule_consultation') {
-      window.open('/contact', '_blank');
     }
   };
 

@@ -1,0 +1,55 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2025-09-09",
+  "updatedBy": "Client",
+  "marketContext": "As of September 2025, markets sit at all-time highs, buoyed by expected Fed rate cuts but shadowed by stagflationary pressures—slowing growth, sticky 3% inflation, and weakening jobs—leaving valuations stretched at ~25x earnings. Through Clockwise AI's economic cycle lens, we are late in both the short- and long-term debt cycles, where policy easing delivers diminishing returns and systemic fragility rises. The technology cycle places us in the deployment phase of the AI revolution: real productivity gains are emerging, but they remain insufficient to justify euphoric pricing. Meanwhile, the company cycle framework warns that today's dominant firms may struggle to sustain leadership as creative destruction accelerates. Taken together, markets can grind higher, but with narrowing room for error, rising tail risks, and a paradoxical mix of easy-money optimism, debt-driven fragility, and technology-fueled disruption. This backdrop supports a growth-oriented stance, but highlights the dangers of concentration risk.",
+  "keyMetrics": {
+    "marketValuation": "~25x earnings",
+    "inflation": "3%",
+    "cyclePosition": {
+      "debtCycle": "Late stage",
+      "technologyCycle": "AI deployment phase",
+      "companyCycle": "Creative destruction acceleration"
+    }
+  },
+  "investmentTheme": "Growth-oriented with concentration risk awareness",
+  "riskFactors": [
+    "Stretched valuations",
+    "Stagflationary pressures", 
+    "Debt cycle fragility",
+    "Policy effectiveness declining"
+  ],
+  "opportunities": [
+    "AI productivity gains",
+    "Fed rate cut support",
+    "Technology disruption"
+  ],
+  "clockwisePortfolios": {
+    "singleETF": {
+      "name": "Clockwise Single ETF Portfolio",
+      "ticker": "TIME",
+      "minimum": "<$50",
+      "description": "Clockwise ETF NYSE: TIME is an active managed hedged growth fund. TIME rebalances daily to adapt to dynamic technology and economic cycles."
+    },
+    "diversifiedGrowth": {
+      "name": "Clockwise Diversified Growth Portfolios", 
+      "minimum": "$50k+",
+      "description": "Clockwise Adaptive Portfolios leverage AI & human experts to broadly diversify ETF portfolios for maximum risk-adjusted growth that rebalance on a monthly basis to align with investors' unique risk preferences and goal time horizons."
+    },
+    "diversifiedIncome": {
+      "name": "Clockwise Diversified Income Portfolios",
+      "minimum": "$50k+", 
+      "description": "Clockwise Adaptive Portfolios leverage AI & human experts to broadly diversify ETF portfolios for maximum risk-adjusted income that rebalance on a monthly basis to align with investors' unique risk preferences and goal time horizons."
+    }
+  },
+  "salesNarrative": {
+    "tone": "Positive but creates doubt about current approach",
+    "goal": "Drive consultation bookings to sell Clockwise portfolios",
+    "approach": "Highlight gaps and risks in current strategy while positioning Clockwise as the solution"
+  },
+  "bookingConfiguration": {
+    "calendlyUrl": "https://calendly.com/clockwisecapital/appointments",
+    "consultationLabel": "Book Free Consultation",
+    "reportLabel": "Generate Detailed Report"
+  }
+}

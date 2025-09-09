@@ -29,7 +29,25 @@ export interface SessionMemory {
 export class SessionManager {
   private sessions: Map<string, SessionMemory> = new Map();
 
-  createSession(sessionId: string): SessionMemory {
+  // Generate truly unique session ID to prevent collisions
+  generateUniqueSessionId(): string {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2);
+    const uuid = crypto.randomUUID ? crypto.randomUUID() : `fallback-${Math.random()}`;
+    return `session-${timestamp}-${random}-${uuid}`;
+  }
+
+  createSession(sessionId?: string): SessionMemory {
+    // Generate unique ID if not provided or if collision detected
+    const finalSessionId = sessionId && !this.sessions.has(sessionId) 
+      ? sessionId 
+      : this.generateUniqueSessionId();
+    
+    console.log('🆕 Creating new session:', finalSessionId);
+    
+    // Clean up expired sessions before creating new one
+    this.cleanupExpiredSessions();
+    
     const session: SessionMemory = {
       stage: 'qualify',
       completed_slots: [],
@@ -37,17 +55,39 @@ export class SessionManager {
       key_facts: [],
       search_count: 0,
       search_budget_exceeded: false,
-      session_id: sessionId,
+      session_id: finalSessionId,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
     
-    this.sessions.set(sessionId, session);
+    this.sessions.set(finalSessionId, session);
+    console.log('✅ Session created successfully. Total sessions:', this.sessions.size);
     return session;
   }
 
   getSession(sessionId: string): SessionMemory | null {
-    return this.sessions.get(sessionId) || null;
+    const session = this.sessions.get(sessionId) || null;
+    
+    if (session) {
+      // Check for session expiry
+      if (this.isSessionExpired(session)) {
+        console.log('⏰ Session expired, removing:', sessionId);
+        this.sessions.delete(sessionId);
+        return null;
+      }
+      
+      // Log session retrieval for debugging
+      console.log('📖 Retrieved session:', sessionId, '- Stage:', session.stage, '- Slots:', session.completed_slots.length);
+    }
+    
+    return session;
+  }
+
+  // Create a completely fresh session (for contamination recovery)
+  createFreshSession(): SessionMemory {
+    const uniqueId = this.generateUniqueSessionId();
+    console.log('🔄 Creating fresh session after contamination detection:', uniqueId);
+    return this.createSession(uniqueId);
   }
 
   updateSession(sessionId: string, updates: Partial<SessionMemory>): SessionMemory | null {
@@ -65,7 +105,51 @@ export class SessionManager {
   }
 
   clearSession(sessionId: string): void {
+    console.log('🗑️ Clearing session:', sessionId);
     this.sessions.delete(sessionId);
+    console.log('📊 Total sessions remaining:', this.sessions.size);
+  }
+
+  // Check if session is expired (24 hours)
+  private isSessionExpired(session: SessionMemory): boolean {
+    const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+    const sessionAge = Date.now() - new Date(session.created_at).getTime();
+    return sessionAge > maxAge;
+  }
+
+  // Clean up expired sessions to prevent memory leaks
+  cleanupExpiredSessions(): void {
+    const beforeCount = this.sessions.size;
+    let expiredCount = 0;
+
+    for (const [sessionId, session] of this.sessions.entries()) {
+      if (this.isSessionExpired(session)) {
+        this.sessions.delete(sessionId);
+        expiredCount++;
+        console.log('🧹 Expired session removed:', sessionId);
+      }
+    }
+
+    if (expiredCount > 0) {
+      console.log(`🧹 Cleanup complete: ${expiredCount} expired sessions removed. ${beforeCount} → ${this.sessions.size}`);
+    }
+  }
+
+  // Force clear all sessions (for testing/debugging)
+  clearAllSessions(): void {
+    const count = this.sessions.size;
+    this.sessions.clear();
+    console.log(`🧹 Force cleared all ${count} sessions`);
+  }
+
+  // Get session count for monitoring
+  getSessionCount(): number {
+    return this.sessions.size;
+  }
+
+  // List all active session IDs (for debugging)
+  getActiveSessionIds(): string[] {
+    return Array.from(this.sessions.keys());
   }
 
   // Generate working header for model context

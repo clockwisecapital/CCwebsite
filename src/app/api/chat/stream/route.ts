@@ -69,13 +69,14 @@ export async function POST(req: NextRequest) {
           }
 
           // Send final session update
+          const updatedSession = sessionManager.getSession(sessionId);
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
             type: 'session_update',
             data: {
-              stage: result.session.stage,
-              completed_slots: result.session.completed_slots,
-              missing_slots: result.session.missing_slots,
-              key_facts: result.session.key_facts
+              stage: updatedSession?.stage || session.stage,
+              completed_slots: updatedSession?.completed_slots || session.completed_slots,
+              missing_slots: updatedSession?.missing_slots || session.missing_slots,
+              key_facts: updatedSession?.key_facts || session.key_facts
             }
           })}\n\n`));
 
