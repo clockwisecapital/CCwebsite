@@ -143,10 +143,10 @@ export class FSMOrchestrator {
         result = await this.handlePortfolioStage(session, context);
         break;
       case 'analyze':
-        result = await this.handleAnalyzeStage(session, context);
+        result = await this.handleAnalyzeStage(session);
         break;
       default:
-        result = await this.handleDefaultStage(session, context);
+        result = await this.handleDefaultStage(session);
     }
 
     console.log('📤 Result Overview:', {
@@ -694,7 +694,7 @@ Generate a single conversational response (2-3 sentences max):`;
     // ========================================================================
     // STEP 1: AI EXTRACTION - Parse user message for portfolio data/flags
     // ========================================================================
-    const aiExtraction = await this.aiExtractPortfolio(context.userMessage, session) || {};
+    const aiExtraction = await this.aiExtractPortfolio(context.userMessage) || {};
     console.log('🤖 AI Extraction Result:', aiExtraction);
 
     // ========================================================================
@@ -784,7 +784,7 @@ Generate a single conversational response (2-3 sentences max):`;
         console.log('📈 Updated top positions:', topPositions);
       }
 
-      const extractionWithExtras = aiExtraction as any;
+      const extractionWithExtras = aiExtraction as Record<string, unknown>;
       if (extractionWithExtras.sector_exposure && Array.isArray(extractionWithExtras.sector_exposure) && extractionWithExtras.sector_exposure.length > 0) {
         session.portfolio.sector_exposure = extractionWithExtras.sector_exposure;
         console.log('🏭 Updated sector exposure:', extractionWithExtras.sector_exposure);
@@ -832,10 +832,10 @@ Generate a single conversational response (2-3 sentences max):`;
     }
 
     // Step 4: Generate unified response
-    return await this.buildUnifiedPortfolioResponse(session, context);
+    return await this.buildUnifiedPortfolioResponse(session);
   }
 
-  private async handleDefaultStage(session: SessionMemory, _context: ConversationContext) {
+  private async handleDefaultStage(session: SessionMemory) {
     return {
       displaySpec: {
         blocks: [
@@ -861,7 +861,7 @@ Generate a single conversational response (2-3 sentences max):`;
     };
   }
 
-  private async aiExtractPortfolio(userMessage: string, _session: SessionMemory): Promise<Partial<PortfolioData>> {
+  private async aiExtractPortfolio(userMessage: string): Promise<Partial<PortfolioData>> {
     try {
       console.log('🤖 Extracting portfolio data from:', userMessage);
       
@@ -1060,7 +1060,7 @@ Return empty object {} if no portfolio data found.
   }
 
   // Unified response builder for portfolio stage
-  private async buildUnifiedPortfolioResponse(session: SessionMemory, _context: ConversationContext) {
+  private async buildUnifiedPortfolioResponse(session: SessionMemory) {
     const completedSlots = this.getCompletedPortfolioSlots(session.portfolio);
     const missingSlots = this.getMissingPortfolioSlots(session.portfolio);
     const completedLabels = this.getCompletedPortfolioLabels(session.portfolio);
@@ -1175,7 +1175,7 @@ Return empty object {} if no portfolio data found.
    * 
    * ADVANCEMENT CRITERIA: Analysis complete → CTA/Booking stage
    */
-  private async handleAnalyzeStage(session: SessionMemory, _context: ConversationContext) {
+  private async handleAnalyzeStage(session: SessionMemory) {
     console.log('🎯 ANALYZE STAGE HANDLER START');
     console.log('📊 Analyzing portfolio against goals with client-controlled market context...');
 
@@ -1229,9 +1229,9 @@ Return empty object {} if no portfolio data found.
             type: "cta_group",
             content: JSON.stringify([
               { 
-                label: (marketData as Record<string, any>)?.metadata?.bookingConfiguration?.consultationLabel || "Book Free Consultation", 
+                label: (((marketData as Record<string, unknown>)?.metadata as Record<string, unknown>)?.bookingConfiguration as Record<string, unknown>)?.consultationLabel || "Book Free Consultation", 
                 action: "external_link",
-                url: (marketData as Record<string, any>)?.metadata?.bookingConfiguration?.calendlyUrl || "https://calendly.com/clockwisecapital/appointments",
+                url: (((marketData as Record<string, unknown>)?.metadata as Record<string, unknown>)?.bookingConfiguration as Record<string, unknown>)?.calendlyUrl || "https://calendly.com/clockwisecapital/appointments",
                 target: "_blank"
               },
               { 
