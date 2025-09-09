@@ -21,7 +21,12 @@ interface ValidationResult {
   isValid: boolean;
   errors: string[];
   warnings: string[];
-  parsedData?: any;
+  parsedData?: {
+    allocations?: Record<string, number>;
+    currency?: string;
+    topHoldings?: Array<{ name: string; percentage: number }>;
+    sectorExposure?: Array<{ sector: string; percentage: number }>;
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -51,7 +56,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function validateFormData(data: any): ValidationResult {
+function validateFormData(data: Record<string, any>): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 

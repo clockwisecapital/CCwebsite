@@ -35,7 +35,7 @@ interface SessionInfo {
 }
 
 interface PortfolioChatProps {
-  // Simplified props - now using FSM system
+  mode?: 'unified';
 }
 
 export function PortfolioChat({}: PortfolioChatProps) {
@@ -176,7 +176,7 @@ Would you like to get started with your portfolio analysis?`,
               
               {block.type === 'stat_group' && (
                 <div className="grid grid-cols-2 gap-2">
-                  {content.map((stat: any, i: number) => (
+                  {content.map((stat: { label: string; value: string | number; unit?: string; asOf?: string }, i: number) => (
                     <div key={i} className="bg-gray-50 p-2 rounded">
                       <div className="text-xs text-gray-500">{stat.label}</div>
                       <div className="text-sm font-semibold text-gray-900">
@@ -190,7 +190,7 @@ Would you like to get started with your portfolio analysis?`,
               
               {block.type === 'cta_group' && (
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {content.map((button: any, i: number) => (
+                  {content.map((button: { label: string; action: string; payload?: any }, i: number) => (
                     <button
                       key={i}
                       onClick={() => handleCTAClick(button.action, button.payload)}
@@ -206,7 +206,7 @@ Would you like to get started with your portfolio analysis?`,
                 <div className="bg-gray-50 p-2 rounded">
                   <h4 className="text-xs font-medium text-gray-600 mb-1">Sources:</h4>
                   <ul className="space-y-1">
-                    {content.map((source: any, i: number) => (
+                    {content.map((source: { title: string; url: string; publisher?: string; asOf?: string }, i: number) => (
                       <li key={i} className="text-xs text-gray-500">
                         <a href={source.url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600">
                           {source.publisher}: {source.title}
@@ -224,7 +224,7 @@ Would you like to get started with your portfolio analysis?`,
     );
   };
 
-  const handleCTAClick = (action: string, payload?: any) => {
+  const handleCTAClick = (action: string, payload?: Record<string, any>) => {
     switch (action) {
       case 'start_analysis':
       case 'view_summary':

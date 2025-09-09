@@ -594,9 +594,10 @@ Generate a single conversational response (2-3 sentences max):`;
 
   // Build unified response for goals stage following proven pattern
   private async buildUnifiedGoalsResponse(session: SessionMemory, context: ConversationContext) {
-    const completedSlots = this.getCompletedGoalSlots(session.goals);
-    const missingSlots = this.getMissingGoalSlots(session.goals);
-    const completedLabels = this.getCompletedGoalLabels(session.goals);
+    const completedSlots = this.getCompletedGoalSlots(session.goals || {});
+    const missingSlots = this.getMissingGoalSlots(session.goals || {});
+    const completedGoalLabels = this.getCompletedGoalLabels(session.goals || {});
+    this.updateGoalSlots(session);
 
     // Generate contextual AI response
     let promptText: string;
@@ -615,7 +616,7 @@ Generate a single conversational response (2-3 sentences max):`;
         type: "summary_bullets",
         content: JSON.stringify([
           `Progress: ${completedSlots.length}/5 investment goals collected`,
-          ...(completedLabels.length > 0 ? [`✓ ${completedLabels.join(', ')}`] : [])
+          ...(completedGoalLabels.length > 0 ? [`✓ ${completedGoalLabels.join(', ')}`] : [])
         ])
       },
       {
@@ -639,18 +640,18 @@ Generate a single conversational response (2-3 sentences max):`;
     };
   }
 
-  private isGoalsComplete(goals: any): boolean {
-    return this.getMissingGoalSlots(goals).length === 0;
+  private isGoalsComplete(goals: GoalsData | undefined): boolean {
+    return this.getMissingGoalSlots(goals || {}).length === 0;
   }
 
   private updateGoalSlots(session: SessionMemory): void {
     const goalSlots = ['goal_type', 'goal_amount', 'horizon_years', 'risk_tolerance', 'liquidity_needs'];
-    const currentCompleted = this.getCompletedGoalSlots(session.goals);
+    const currentCompleted = this.getCompletedGoalSlots(session.goals || {});
     
     // Update only goals-related slots, preserve others
     const otherSlots = session.completed_slots.filter(slot => !goalSlots.includes(slot));
     session.completed_slots = [...otherSlots, ...currentCompleted];
-    session.missing_slots = this.getMissingGoalSlots(session.goals);
+    session.missing_slots = this.getMissingGoalSlots(session.goals || {});
   }
 
   // ============================================================================
@@ -774,13 +775,18 @@ Generate a single conversational response (2-3 sentences max):`;
 
       // Handle optional fields (don't overwrite, just add/update)
       if (aiExtraction.top_positions && aiExtraction.top_positions.length > 0) {
-        session.portfolio.top_positions = aiExtraction.top_positions;
-        console.log('📈 Updated top positions:', aiExtraction.top_positions);
+        // Convert weight to percentage if needed
+        const topPositions = aiExtraction.top_positions.map((pos: any) => ({
+          name: pos.name,
+          percentage: pos.percentage || pos.weight || 0
+        }));
+        session.portfolio.top_positions = topPositions;
+        console.log('📈 Updated top positions:', topPositions);
       }
 
-      if (aiExtraction.sectors && aiExtraction.sectors.length > 0) {
-        session.portfolio.sectors = aiExtraction.sectors;
-        console.log('🏭 Updated sectors:', aiExtraction.sectors);
+      if ((aiExtraction as any).sector_exposure && (aiExtraction as any).sector_exposure.length > 0) {
+        session.portfolio.sector_exposure = (aiExtraction as any).sector_exposure;
+        console.log('🏭 Updated sector exposure:', (aiExtraction as any).sector_exposure);
       }
 
       if ((aiExtraction as any).skip_optional) {
@@ -1065,7 +1071,7 @@ Return empty object {} if no portfolio data found.
       // Show current allocation table
       if (session.portfolio?.allocations) {
         showTable = true;
-        const allocations = session.portfolio.allocations;
+        const allocations = session.portfolio.allocations || {};
         tableData = {
           title: "Current Portfolio Allocation",
           columns: ["Asset Class", "Allocation"],
@@ -1077,7 +1083,7 @@ Return empty object {} if no portfolio data found.
             ])
         };
       }
-    } else if (!session.portfolio?.optional_offered) {
+    } else if (session.portfolio && !session.portfolio.optional_offered) {
       // Required fields complete, now offer optional details
       promptText = "Great! Now I'd like to get more details to provide better analysis. Can you share your top stock holdings (like 'Apple 8%, Microsoft 6%') or sector exposure (like 'Technology 30%, Healthcare 15%')? You can also say 'skip' to proceed with basic analysis.";
       
@@ -1087,7 +1093,7 @@ Return empty object {} if no portfolio data found.
       
       // Show current allocation table
       showTable = true;
-      const allocations = session.portfolio.allocations;
+      const allocations = session.portfolio?.allocations || {};
       tableData = {
         title: "Current Portfolio Allocation",
         columns: ["Asset Class", "Allocation"],
@@ -1171,7 +1177,7 @@ Return empty object {} if no portfolio data found.
     // STEP 1: LOAD MARKET CONTEXT - Read from configuration file
     // ========================================================================
     console.log('🚀 STEP 1: Loading market context from configuration...');
-    const marketData = await this.gatherMarketData(session.goals, session.portfolio);
+    const marketData = await this.gatherMarketData(session.goals || {}, session.portfolio || {});
     console.log('📋 STEP 1: Market context loaded:', JSON.stringify(marketData, null, 2));
     
     // Note: No search counting needed since we're using static context
@@ -1180,7 +1186,7 @@ Return empty object {} if no portfolio data found.
     // ========================================================================
     // STEP 2: PORTFOLIO ANALYSIS - Generate insights using AI + static market context
     // ========================================================================
-    const analysis = await this.analyzePortfolioWithAI(session.goals, session.portfolio, marketData);
+    const analysis = await this.analyzePortfolioWithAI(session.goals || {}, session.portfolio || {}, marketData);
     
     // Store analysis in session
     session.analysis_result = analysis;
@@ -1244,7 +1250,7 @@ Return empty object {} if no portfolio data found.
    * - Technology and company cycle context
    * - Risk factors and investment opportunities
    */
-  private async gatherMarketData(_goals: GoalsData, _portfolio: PortfolioData): Promise<any> {
+  private async gatherMarketData(_goals: GoalsData | {}, _portfolio: PortfolioData | {}): Promise<any> {
     try {
       console.log('📄 Loading market context from configuration file...');
       

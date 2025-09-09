@@ -10,11 +10,30 @@ export interface SessionMemory {
   key_facts: string[];
   
   // Session data (server side)
-  goals?: any;
-  portfolio?: any;
-  analysis_result?: any;
-  charts_meta?: any;
-  research_sources?: any[];
+  goals?: {
+    goal_type?: 'growth' | 'income' | 'balanced' | 'preservation' | 'lump_sum';
+    goal_amount?: number;
+    horizon_years?: number;
+    risk_tolerance?: 'low' | 'medium' | 'high';
+    liquidity_needs?: 'low' | 'medium' | 'high';
+    target_return?: number;
+  };
+  portfolio?: {
+    allocations?: Record<string, number>;
+    currency?: string;
+    new_investor?: boolean;
+    optional_offered?: boolean;
+    top_positions?: Array<{ name: string; percentage: number }>;
+    sector_exposure?: Array<{ sector: string; percentage: number }>;
+  };
+  analysis_result?: Record<string, unknown>;
+  charts_meta?: Record<string, unknown>;
+  research_sources?: Array<{
+    title: string;
+    url: string;
+    publisher?: string;
+    asOf?: string;
+  }>;
   
   // Search budget tracking
   search_count: number;

@@ -24,6 +24,7 @@ export interface SectorAllocation {
 export interface PortfolioData {
   allocations: PortfolioAllocations;
   currency: string;
+  new_investor?: boolean;
   top_positions?: TopPosition[];
   sectors?: SectorAllocation[];
 }
@@ -115,6 +116,7 @@ export async function collectPortfolio(
       alternatives: allocations.alternatives || 0
     },
     currency: portfolioData.currency!,
+    new_investor: portfolioData.new_investor,
     top_positions: portfolioData.top_positions,
     sectors: portfolioData.sectors
   };
@@ -124,8 +126,31 @@ export async function collectPortfolio(
   // Update session with portfolio data
   const session = sessionManager.getSession(sessionId);
   if (session) {
+    // Convert PortfolioData to session-compatible format
+    const sessionPortfolio = {
+      allocations: {
+        stocks: normalized.allocations.stocks,
+        bonds: normalized.allocations.bonds,
+        cash: normalized.allocations.cash,
+        commodities: normalized.allocations.commodities,
+        real_estate: normalized.allocations.real_estate,
+        alternatives: normalized.allocations.alternatives
+      } as Record<string, number>,
+      currency: normalized.currency,
+      new_investor: normalized.new_investor,
+      optional_offered: false,
+      top_positions: normalized.top_positions?.map(pos => ({
+        name: pos.name,
+        percentage: pos.weight
+      })),
+      sector_exposure: normalized.sectors?.map(sector => ({
+        sector: sector.name,
+        percentage: sector.percentage
+      }))
+    };
+    
     sessionManager.updateSession(sessionId, {
-      portfolio: normalized
+      portfolio: sessionPortfolio
     });
     
     // Update completed slots

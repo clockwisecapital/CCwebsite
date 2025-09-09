@@ -225,7 +225,7 @@ Would you like to get started with your portfolio analysis?`,
               
               {block.type === 'stat_group' && (
                 <div className="grid grid-cols-2 gap-4">
-                  {content.map((stat: any, i: number) => (
+                  {content.map((stat: { label: string; value: string | number; unit?: string; asOf?: string }, i: number) => (
                     <div key={i} className="bg-slate-700 p-3 rounded-lg">
                       <div className="text-xs text-slate-400">{stat.label}</div>
                       <div className="text-lg font-semibold text-white">
@@ -273,7 +273,7 @@ Would you like to get started with your portfolio analysis?`,
               
               {block.type === 'cta_group' && (
                 <div className="flex flex-wrap gap-3 mt-4">
-                  {content.map((button: any, i: number) => (
+                  {content.map((button: { label: string; action: string; url?: string }, i: number) => (
                     <button
                       key={i}
                       onClick={() => handleCTAClick(button.action, button)}
@@ -297,7 +297,7 @@ Would you like to get started with your portfolio analysis?`,
                 <div className="bg-slate-700 p-4 rounded-lg">
                   <h4 className="text-sm font-medium text-slate-300 mb-2">Sources:</h4>
                   <ul className="space-y-1">
-                    {content.map((source: any, i: number) => (
+                    {content.map((source: { title: string; url: string; publisher?: string; asOf?: string }, i: number) => (
                       <li key={i} className="text-xs text-slate-400">
                         <a href={source.url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-400">
                           {source.publisher}: {source.title}
@@ -315,7 +315,7 @@ Would you like to get started with your portfolio analysis?`,
     );
   };
 
-  const handleCTAClick = async (action: string, button?: any) => {
+  const handleCTAClick = async (action: string, button?: { label: string; action: string; url?: string }) => {
     console.log('CTA clicked:', action, button);
     
     // Handle special actions that don't require chat messages
