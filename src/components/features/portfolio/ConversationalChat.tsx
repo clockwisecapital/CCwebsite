@@ -61,14 +61,24 @@ Would you like to get started with your portfolio analysis?`,
     key_facts: []
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Removed automatic scrolling to improve UX
+  // Users can manually scroll as needed
+  
+  // Keep the ref for potential future use
+  // const scrollToBottom = () => {
+  //   messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // };
+
+  // Auto-resize textarea based on content
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    }
   };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
 
 
   const sendMessage = async () => {
@@ -84,6 +94,9 @@ Would you like to get started with your portfolio analysis?`,
     setMessages(prev => [...prev, userMessage]);
     setInputMessage('');
     setIsLoading(true);
+    
+    // Reset textarea height after sending
+    setTimeout(() => adjustTextareaHeight(), 0);
 
     try {
       await handleFSMResponse(userMessage);
@@ -584,11 +597,15 @@ Would you like to get started with your portfolio analysis?`,
           <div className="flex items-end space-x-3">
             <div className="flex-1">
               <textarea
+                ref={textareaRef}
                 value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
+                onChange={(e) => {
+                  setInputMessage(e.target.value);
+                  adjustTextareaHeight();
+                }}
                 onKeyPress={handleKeyPress}
                 placeholder="What do you want to know?"
-                className="w-full px-4 py-3 text-sm bg-slate-800 border border-slate-600 text-white placeholder-slate-400 rounded-lg resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 text-sm bg-slate-800 border border-slate-600 text-white placeholder-slate-400 rounded-lg resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800"
                 rows={1}
                 disabled={isLoading}
                 style={{ minHeight: '44px', maxHeight: '120px' }}

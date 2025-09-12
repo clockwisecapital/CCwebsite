@@ -1,11 +1,15 @@
 'use client';
 
 import { ConversationalChat } from '@/components/features/portfolio/ConversationalChat';
+import NavigatingTurbulentTimes from '@/components/features/home/NavigatingTurbulentTimes';
 
 export default function PortfolioPage() {
 
   return (
     <div className="min-h-screen bg-slate-900 pt-20">
+      {/* Learn Section */}
+      <NavigatingTurbulentTimes />
+      
       {/* Clean Header */}
       <div className="border-b border-slate-700">
         <div className="max-w-7xl mx-auto px-6 py-6">

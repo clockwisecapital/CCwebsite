@@ -44,19 +44,40 @@ interface ConversationContext {
 }
 
 /**
- * Investment goals data structure - all fields extracted via AI from user messages
+ * SIMPLIFIED: 3-step data collection structure
+ * Step 1: Goal selection, Step 2: Amount & Timeline, Step 3: Portfolio Holdings
+ */
+interface SimplifiedGoalsData {
+  goal_type?: 'growth' | 'income' | 'both';     // Step 1: Simple selection
+  target_amount?: number;                        // Step 2: Combined amount
+  timeline_years?: number;                       // Step 2: Combined timeline
+}
+
+/**
+ * SIMPLIFIED: Portfolio holdings focused on value and positions
+ */
+interface SimplifiedPortfolioData {
+  portfolio_value?: number;                      // Step 3: Total portfolio value
+  holdings?: Array<{ name: string; value: number; }>; // Step 3: Actual positions with dollar values
+  new_investor?: boolean;                        // Step 3: Special flow detection
+}
+
+/**
+ * LEGACY: Original investment goals data structure - KEEP for analysis compatibility
+ * This will be populated via data transformation from simplified collection
  */
 interface GoalsData {
   goal_type?: 'growth' | 'income' | 'balanced' | 'preservation' | 'lump_sum';
-  goal_amount?: number;          // Target dollar amount
-  horizon_years?: number;        // Investment timeline
-  risk_tolerance?: 'low' | 'medium' | 'high';
-  liquidity_needs?: 'low' | 'medium' | 'high';
+  goal_amount?: number;          // Derived from target_amount
+  horizon_years?: number;        // Derived from timeline_years
+  risk_tolerance?: 'low' | 'medium' | 'high';    // Inferred from goal_type
+  liquidity_needs?: 'low' | 'medium' | 'high';   // Inferred from goal_type
   target_return?: number;        // Optional expected return percentage
 }
 
 /**
- * Portfolio data structure - supports existing investors and new investor flows
+ * LEGACY: Portfolio data structure - KEEP for analysis compatibility
+ * This will be populated via data transformation from simplified collection
  */
 interface PortfolioData {
   allocations?: {
@@ -90,6 +111,13 @@ interface PortfolioData {
  * - Return consistent DisplaySpec responses for frontend rendering
  */
 export class FSMOrchestrator {
+  private sessionManager = sessionManager;
+  private currentSessionData: {
+    portfolioValue: string;
+    holdings: string;
+    portfolioType: string;
+  } | null = null;
+  private currentSession: SessionMemory | null = null;
   
   /**
    * MAIN ENTRY POINT - Process user message through FSM
@@ -110,11 +138,11 @@ export class FSMOrchestrator {
     // ============================================================================
     // SESSION MANAGEMENT - Get existing session or create new one
     // ============================================================================
-    let session = sessionManager.getSession(context.sessionId);
+    let session = this.sessionManager.getSession(context.sessionId);
     
     if (!session) {
       console.log('🆕 Creating new session for:', context.sessionId);
-      session = sessionManager.createSession(context.sessionId);
+      session = this.sessionManager.createSession(context.sessionId);
     } else {
       console.log('♻️  Using existing session:', context.sessionId);
     }
@@ -138,6 +166,9 @@ export class FSMOrchestrator {
         break;
       case 'goals':
         result = await this.handleGoalsStage(session, context);
+        break;
+      case 'amount_timeline':
+        result = await this.handleAmountTimelineStage(session, context);
         break;
       case 'portfolio':
         result = await this.handlePortfolioStage(session, context);
@@ -207,90 +238,72 @@ export class FSMOrchestrator {
       sessionManager.advanceStage(session);
     }
 
-    return this.formatResponse(response, session);
+    return { ...response, session, usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } };
   }
 
   // ============================================================================
-  //                              STAGE 2: GOALS COLLECTION HANDLER
+  //                              STEP 1: GOAL SELECTION HANDLER (SIMPLIFIED)
   // ============================================================================
   
   /**
-   * GOALS STAGE - Collect investment goals via hybrid AI extraction
+   * GOAL SELECTION STAGE - Simple 3-option goal selection
    * 
-   * This stage implements the PROVEN HYBRID PATTERN for reliable data collection:
-   * 1. AI extracts structured data from natural language
-   * 2. Session state is updated with extracted data
-   * 3. Completion is checked and stage advances when all required slots filled
-   * 4. Unified response builder generates contextual prompts
+   * Replaces the complex 5-field goals collection with streamlined approach:
+   * 1. Present clear goal options: Growth, Income, Both
+   * 2. User selects via buttons or natural language
+   * 3. Immediate advancement to amount & timeline stage
    * 
-   * REQUIRED SLOTS (5 total):
-   * - goal_type: growth|income|balanced|preservation|lump_sum
-   * - goal_amount: target dollar amount
-   * - horizon_years: investment timeline in years
-   * - risk_tolerance: low|medium|high
-   * - liquidity_needs: low|medium|high
+   * REQUIRED COLLECTION (1 field):
+   * - goal_type: 'growth' | 'income' | 'both'
    * 
-   * ADVANCEMENT CRITERIA: All 5 required slots completed
+   * ADVANCEMENT CRITERIA: Goal type selected
    */
   private async handleGoalsStage(session: SessionMemory, context: ConversationContext) {
-    console.log('🎯 HYBRID GOALS STAGE HANDLER START');
+    console.log('🎯 SIMPLIFIED GOAL SELECTION STAGE HANDLER START');
     
     // ========================================================================
-    // SAFETY: Initialize goals object if missing to prevent TypeErrors
+    // SAFETY: Initialize simplified goals object if missing
     // ========================================================================
-    if (!session.goals) {
-      console.log('🔧 Initializing goals object...');
-      session.goals = {};
+    if (!session.simplified_goals) {
+      console.log('🔧 Initializing simplified_goals object...');
+      session.simplified_goals = {};
     }
 
     // ========================================================================
-    // STEP 1: AI EXTRACTION - Parse user message into structured data
+    // STEP 1: DETECT GOAL SELECTION - Simple AI extraction for goal type only
     // ========================================================================
-    const aiExtraction = await this.aiExtractGoals(context.userMessage, session) || {};
-    console.log('🤖 AI Extraction Result:', aiExtraction);
+    const goalTypeExtraction = await this.aiExtractGoalType(context.userMessage) || {};
+    console.log('🤖 Goal Type Extraction Result:', goalTypeExtraction);
 
     // ========================================================================
-    // STEP 2: SESSION UPDATE - Merge extracted data safely
+    // STEP 2: SESSION UPDATE - Update goal type if detected
     // ========================================================================
-    if (aiExtraction && Object.keys(aiExtraction).length > 0) {
-      console.log('✅ Found new goals data, updating session...');
-      
-      // Update goals properties safely using spread operator
-      session.goals = { ...(session.goals || {}), ...aiExtraction };
-      
-      // Update slot tracking for progress display
-      this.updateGoalSlots(session);
+    if (goalTypeExtraction?.goal_type) {
+      console.log('✅ Goal type selected:', goalTypeExtraction.goal_type);
+      session.simplified_goals.goal_type = goalTypeExtraction.goal_type;
       sessionManager.updateSession(session.session_id, session);
-    }
 
-    // ========================================================================
-    // STEP 3: COMPLETION CHECK - Advance to portfolio stage when complete
-    // ========================================================================
-    if (this.isGoalsComplete(session.goals)) {
-      console.log('🎉 Goals collection complete! Advancing to portfolio stage...');
-      session.stage = 'portfolio';
+      // Advance to amount_timeline stage
+      session.stage = 'amount_timeline';
       sessionManager.updateSession(session.session_id, session);
       
-      // Return completion summary with encouraging message
       return {
         displaySpec: {
           blocks: [
             {
               type: "summary_bullets",
               content: JSON.stringify([
-                "🎉 Goals collection complete!",
-                `Investment type: ${session.goals.goal_type}`,
-                `Target amount: $${session.goals.goal_amount?.toLocaleString()}`,
-                `Time horizon: ${session.goals.horizon_years} years`
+                "✅ Investment Goal Selected!",
+                `Focus: ${goalTypeExtraction.goal_type.charAt(0).toUpperCase() + goalTypeExtraction.goal_type.slice(1)}`
               ])
             },
             {
               type: "conversation_text", 
-              content: JSON.stringify(["Perfect! I have all your investment goals. Now let's discuss your current portfolio allocation to see how it aligns with your objectives."])
+              content: JSON.stringify(["Great choice! Now let's talk about your target amount and timeline."])
             },
             {
               type: "cta_group",
-              content: JSON.stringify([{ label: "Continue to Portfolio Analysis", action: "continue" }])
+              content: JSON.stringify([{ label: "Continue", action: "continue" }])
             }
           ]
         },
@@ -300,17 +313,390 @@ export class FSMOrchestrator {
     }
 
     // ========================================================================
-    // STEP 4: UNIFIED RESPONSE - Generate contextual prompt for missing data
+    // STEP 3: DEFAULT RESPONSE - Show goal selection options
     // ========================================================================
-    return await this.buildUnifiedGoalsResponse(session, context);
+    return {
+      displaySpec: {
+        blocks: [
+          {
+            type: "summary_bullets",
+            content: JSON.stringify([
+              "Step 1 of 3: Investment Goal Selection 🎯",
+              "Choose your primary investment focus"
+            ])
+          },
+          {
+            type: "conversation_text",
+            content: JSON.stringify([
+              "What's your main investment goal? You can choose:\n\n" +
+              "• **Growth** - Build wealth over time through capital appreciation\n" +
+              "• **Income** - Generate regular dividends and interest payments\n" +
+              "• **Both** - Balanced approach combining growth and income\n\n" +
+              "Just say 'Growth', 'Income', or 'Both' to get started!"
+            ])
+          },
+          {
+            type: "cta_group",
+            content: JSON.stringify([
+              { label: "Growth", action: "growth" },
+              { label: "Income", action: "income" },
+              { label: "Both", action: "both" }
+            ])
+          }
+        ]
+      },
+      session,
+      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+    };
   }
 
   // ============================================================================
-  //                              AI EXTRACTION METHODS
+  //                              STEP 2: AMOUNT & TIMELINE HANDLER (SIMPLIFIED)
   // ============================================================================
   
   /**
-   * AI GOALS EXTRACTION - Parse natural language into structured goals data
+   * AMOUNT & TIMELINE STAGE - Collect target amount and investment timeline
+   * 
+   * Simplified approach collecting both values in one step:
+   * 1. Extract target amount and timeline from natural language
+   * 2. Single AI call for both values
+   * 3. Immediate advancement to portfolio stage
+   * 
+   * REQUIRED COLLECTION:
+   * - target_amount: Dollar amount goal
+   * - timeline_years: Investment horizon in years
+   * 
+   * ADVANCEMENT CRITERIA: Both amount and timeline extracted
+   */
+  private async handleAmountTimelineStage(session: SessionMemory, context: ConversationContext) {
+    console.log('🎯 AMOUNT & TIMELINE STAGE HANDLER START');
+    console.log('📥 Input Message:', context.userMessage);
+    
+    // ========================================================================
+    // SAFETY: Initialize simplified goals if missing
+    // ========================================================================
+    if (!session.simplified_goals) {
+      console.log('🔧 Initializing simplified_goals object...');
+      session.simplified_goals = {};
+    }
+
+    // ========================================================================
+    // STEP 1: AI EXTRACTION - Extract amount and timeline together
+    // ========================================================================
+    const amountTimelineExtraction = await this.aiExtractAmountTimeline(context.userMessage) || {};
+    console.log('🤖 Amount & Timeline Extraction Result:', amountTimelineExtraction);
+
+    // ========================================================================
+    // STEP 2: SESSION UPDATE - Update both values if detected
+    // ========================================================================
+    if (amountTimelineExtraction?.target_amount && amountTimelineExtraction?.timeline_years) {
+      console.log('✅ Amount and timeline extracted successfully');
+      session.simplified_goals.target_amount = amountTimelineExtraction.target_amount;
+      session.simplified_goals.timeline_years = amountTimelineExtraction.timeline_years;
+      sessionManager.updateSession(session.session_id, session);
+
+      // Advance to portfolio stage
+      session.stage = 'portfolio';
+      sessionManager.updateSession(session.session_id, session);
+      
+      return {
+        displaySpec: {
+          blocks: [
+            {
+              type: "summary_bullets",
+              content: JSON.stringify([
+                "✅ Target & Timeline Set!",
+                `Goal: $${amountTimelineExtraction.target_amount.toLocaleString()}`,
+                `Timeline: ${amountTimelineExtraction.timeline_years} years`
+              ])
+            },
+            {
+              type: "conversation_text", 
+              content: JSON.stringify(["Perfect! Now let's discuss your current portfolio to create a personalized investment strategy."])
+            },
+            {
+              type: "cta_group",
+              content: JSON.stringify([{ label: "Continue to Portfolio", action: "continue" }])
+            }
+          ]
+        },
+        session,
+        usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+      };
+    }
+
+    // ========================================================================
+    // STEP 3: DEFAULT RESPONSE - Ask for amount and timeline
+    // ========================================================================
+    return {
+      displaySpec: {
+        blocks: [
+          {
+            type: "summary_bullets",
+            content: JSON.stringify([
+              "Step 2 of 3: Target Amount & Timeline 💰",
+              `Investment goal: ${session.simplified_goals?.goal_type || 'Not set'}`
+            ])
+          },
+          {
+            type: "conversation_text",
+            content: JSON.stringify([
+              "What's your target amount and timeline?\n\n" +
+              "You can say things like:\n" +
+              "• \"I want $500K in 10 years\"\n" +
+              "• \"I need $1 million for retirement in 20 years\"\n" +
+              "• \"$100,000 within 5 years\"\n" +
+              "• \"I want to grow to $250K over 15 years\"\n\n" +
+              "Just tell me your goal amount and when you'd like to reach it!"
+            ])
+          }
+        ]
+      },
+      session,
+      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+    };
+  }
+
+  // ============================================================================
+  //                              SIMPLIFIED AI EXTRACTION METHODS
+  // ============================================================================
+  
+  /**
+   * SIMPLIFIED: AI GOAL TYPE EXTRACTION - Extract only goal type from user input
+   * 
+   * Simple extraction focused on just the goal type selection
+   * 
+   * @param userMessage - Raw user input to extract from
+   * @returns Goal type object or empty object
+   */
+  private async aiExtractGoalType(userMessage: string): Promise<Partial<SimplifiedGoalsData>> {
+    console.log('🤖 SIMPLIFIED GOAL TYPE EXTRACTION START');
+    console.log('  - User Message:', userMessage);
+    
+    try {
+      const prompt = `
+Extract investment goal type from this user message: "${userMessage}"
+
+Return ONLY a JSON object with goal type if found:
+{
+  "goal_type": "growth|income|both"
+}
+
+Examples:
+- "Growth" → {"goal_type": "growth"}
+- "I want growth" → {"goal_type": "growth"}
+- "Income" → {"goal_type": "income"}  
+- "I need income" → {"goal_type": "income"}
+- "Both" → {"goal_type": "both"}
+- "Growth and income" → {"goal_type": "both"}
+- "Balanced approach" → {"goal_type": "both"}
+
+Return {} if no goal type found.
+`;
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: prompt }],
+          response_format: { type: 'json_object' },
+          max_tokens: 50,
+          temperature: 0.1
+        })
+      });
+
+      if (!response.ok) {
+        console.error('❌ OpenAI API Error:', response.status);
+        return {};
+      }
+      
+      const data = await response.json();
+      const rawContent = data.choices?.[0]?.message?.content;
+      
+      if (!rawContent) {
+        console.log('❌ No content in AI response');
+        return {};
+      }
+      
+      const extracted = JSON.parse(rawContent || '{}');
+      console.log('🤖 Goal Type Extraction Result:', extracted);
+      
+      return extracted;
+    } catch (error) {
+      console.error('❌ Goal type extraction error:', error);
+      return {};
+    }
+  }
+
+  /**
+   * SIMPLIFIED: AI AMOUNT & TIMELINE EXTRACTION - Extract target amount and timeline
+   * 
+   * Simple extraction focused on target amount and investment timeline
+   * 
+   * @param userMessage - Raw user input to extract from
+   * @returns Amount and timeline object or empty object
+   */
+  private async aiExtractAmountTimeline(userMessage: string): Promise<Partial<SimplifiedGoalsData>> {
+    console.log('🤖 SIMPLIFIED AMOUNT & TIMELINE EXTRACTION START');
+    console.log('  - User Message:', userMessage);
+    
+    try {
+      const prompt = `
+Extract target amount and timeline from this user message: "${userMessage}"
+
+Return ONLY a JSON object with amount and timeline if found:
+{
+  "target_amount": number (in dollars),
+  "timeline_years": number (in years)
+}
+
+Examples:
+- "I want $500K in 10 years" → {"target_amount": 500000, "timeline_years": 10}
+- "I need $3,000 monthly income starting in 5 years" → {"target_amount": 3000, "timeline_years": 5}
+- "I want to grow to $1M over 15 years" → {"target_amount": 1000000, "timeline_years": 15}
+- "100k in 10 years" → {"target_amount": 100000, "timeline_years": 10}
+- "$250,000 by retirement in 20 years" → {"target_amount": 250000, "timeline_years": 20}
+- "half a million in 12 years" → {"target_amount": 500000, "timeline_years": 12}
+- "2 million dollars within 25 years" → {"target_amount": 2000000, "timeline_years": 25}
+
+PARSING RULES:
+- Convert "100k", "100K" → 100000
+- Convert "1M", "1 million" → 1000000
+- Convert "half a million" → 500000
+- Convert "quarter million" → 250000
+- Extract years from phrases like "in X years", "over X years", "within X years"
+- For monthly income, use the monthly amount as target_amount
+
+Return {} if no amount or timeline found.
+`;
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: prompt }],
+          response_format: { type: 'json_object' },
+          max_tokens: 100,
+          temperature: 0.1
+        })
+      });
+
+      if (!response.ok) {
+        console.error('❌ OpenAI API Error:', response.status);
+        return {};
+      }
+      
+      const data = await response.json();
+      const rawContent = data.choices?.[0]?.message?.content;
+      
+      if (!rawContent) {
+        console.log('❌ No content in AI response');
+        return {};
+      }
+      
+      const extracted = JSON.parse(rawContent || '{}');
+      console.log('🤖 Amount & Timeline Extraction Result:', extracted);
+      
+      return extracted;
+    } catch (error) {
+      console.error('❌ Amount & timeline extraction error:', error);
+      return {};
+    }
+  }
+
+  /**
+   * SIMPLIFIED: AI PORTFOLIO EXTRACTION - Extract portfolio value and holdings
+   * 
+   * Simple extraction focused on portfolio value and main holdings
+   * 
+   * @param userMessage - Raw user input to extract from
+   * @returns Portfolio data object or empty object
+   */
+  private async aiExtractSimplifiedPortfolio(userMessage: string): Promise<Partial<SimplifiedPortfolioData>> {
+    console.log('🤖 SIMPLIFIED PORTFOLIO EXTRACTION START');
+    console.log('  - User Message:', userMessage);
+    
+    try {
+      const prompt = `
+Extract portfolio information from this user message: "${userMessage}"
+
+Return ONLY a JSON object with portfolio data if found:
+{
+  "portfolio_value": number (total value in dollars),
+  "holdings": [{"name": string, "value": number}],
+  "new_investor": boolean
+}
+
+Examples:
+- "I have $100,000 total" → {"portfolio_value": 100000}
+- "My portfolio is worth $250K" → {"portfolio_value": 250000}
+- "I have $100K: $60K in Apple, $30K in bonds, $10K cash" → {"portfolio_value": 100000, "holdings": [{"name": "Apple", "value": 60000}, {"name": "bonds", "value": 30000}, {"name": "cash", "value": 10000}]}
+- "Portfolio value is 500k with Tesla and Microsoft" → {"portfolio_value": 500000, "holdings": [{"name": "Tesla", "value": 0}, {"name": "Microsoft", "value": 0}]}
+- "$250K total: mostly in ETFs and some individual stocks" → {"portfolio_value": 250000, "holdings": [{"name": "ETFs", "value": 0}, {"name": "stocks", "value": 0}]}
+- "I'm new to investing with $10K to start" → {"portfolio_value": 10000, "new_investor": true}
+- "I haven't started investing yet" → {"new_investor": true}
+- "I'm new to investing" → {"new_investor": true}
+- "No investments" → {"new_investor": true}
+- "I don't have a portfolio" → {"new_investor": true}
+
+PARSING RULES:
+- Convert "100k", "100K" → 100000
+- Convert "1M", "1 million" → 1000000
+- "quarter million" → 250000
+- "half million" → 500000
+- If holdings are mentioned without values, include them with value: 0
+
+Return {} if no portfolio data found.
+`;
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: prompt }],
+          response_format: { type: 'json_object' },
+          max_tokens: 200,
+          temperature: 0.1
+        })
+      });
+
+      if (!response.ok) {
+        console.error('❌ OpenAI API Error:', response.status);
+        return {};
+      }
+      
+      const data = await response.json();
+      const rawContent = data.choices?.[0]?.message?.content;
+      
+      if (!rawContent) {
+        console.log('❌ No content in AI response');
+        return {};
+      }
+      
+      const extracted = JSON.parse(rawContent || '{}');
+      console.log('🤖 Portfolio Extraction Result:', extracted);
+      
+      return extracted;
+    } catch (error) {
+      console.error('❌ Portfolio extraction error:', error);
+      return {};
+    }
+  }
+
+  /**
+   * LEGACY: AI GOALS EXTRACTION - Parse natural language into structured goals data
    * 
    * This method uses OpenAI GPT-4o-mini to extract investment goals from user messages.
    * It's designed to be robust and handle various ways users express their goals.
@@ -659,62 +1045,57 @@ Generate a single conversational response (2-3 sentences max):`;
   // ============================================================================
   
   /**
-   * PORTFOLIO STAGE - Collect portfolio data with special flows for new investors
+   * SIMPLIFIED PORTFOLIO STAGE - Collect portfolio value and holdings
    * 
-   * This stage handles multiple user types and scenarios:
-   * 1. EXISTING INVESTORS: Extract allocation percentages, currency, optional details
-   * 2. NEW INVESTORS: Detect "no investments" and create encouraging flow
-   * 3. ALLOCATION SUGGESTIONS: Handle "suggest allocation" requests
+   * Simplified approach focusing on:
+   * 1. Total portfolio value in dollars
+   * 2. Main holdings with dollar amounts (not percentages)
+   * 3. New investor detection for special flow
    * 
-   * SPECIAL FLOWS:
-   * - new_investor: Users who haven't started investing yet
-   * - suggest_default: Users requesting allocation recommendations
-   * - skip_optional: Users who want to proceed without optional details
+   * REQUIRED COLLECTION:
+   * - portfolio_value: Total value in dollars
+   * - holdings: Array of {name, value} or new_investor flag
    * 
-   * REQUIRED SLOTS (2 core + 2 optional):
-   * - allocations: Asset percentages that sum to ~100%
-   * - currency: USD, EUR, GBP, etc.
-   * - top_positions: Optional individual holdings
-   * - sectors: Optional sector exposure
-   * 
-   * ADVANCEMENT CRITERIA: Valid allocations + currency (optional details offered)
+   * ADVANCEMENT CRITERIA: Portfolio value provided OR new investor detected
    */
   private async handlePortfolioStage(session: SessionMemory, context: ConversationContext) {
-    console.log('🎯 HYBRID PORTFOLIO STAGE HANDLER START');
+    console.log('🎯 SIMPLIFIED PORTFOLIO STAGE HANDLER START');
     console.log('📥 Input Message:', context.userMessage);
 
     // ========================================================================
-    // SAFETY: Initialize portfolio object if missing to prevent TypeErrors
+    // SAFETY: Initialize simplified portfolio object if missing
     // ========================================================================
-    if (!session.portfolio) {
-      console.log('🔧 Initializing portfolio object...');
-      session.portfolio = {};
+    if (!session.simplified_portfolio) {
+      console.log('🔧 Initializing simplified_portfolio object...');
+      session.simplified_portfolio = {};
     }
 
     // ========================================================================
-    // STEP 1: AI EXTRACTION - Parse user message for portfolio data/flags
+    // STEP 1: AI EXTRACTION - Extract portfolio value and holdings
     // ========================================================================
-    const aiExtraction = await this.aiExtractPortfolio(context.userMessage) || {};
-    console.log('🤖 AI Extraction Result:', aiExtraction);
+    const portfolioExtraction = await this.aiExtractSimplifiedPortfolio(context.userMessage) || {};
+    console.log('🤖 Portfolio Extraction Result:', portfolioExtraction);
 
     // ========================================================================
-    // STEP 2: SESSION UPDATE - Handle different user types and data extraction
+    // STEP 2: SESSION UPDATE - Update portfolio data if detected
     // ========================================================================
-    if (aiExtraction && Object.keys(aiExtraction).length > 0) {
-      console.log('✅ Found new portfolio data, updating session...');
+    if (portfolioExtraction && Object.keys(portfolioExtraction).length > 0) {
+      console.log('✅ Found portfolio data, updating session...');
 
       // ======================================================================
-      // SPECIAL FLOW 1: NEW INVESTOR - Users who haven't started investing
+      // SPECIAL FLOW: NEW INVESTOR - Users who haven't started investing
       // ======================================================================
-      if ((aiExtraction as PortfolioData & { new_investor?: boolean; suggest_default?: boolean }).new_investor) {
+      if (portfolioExtraction.new_investor) {
         console.log('🆕 New investor detected - creating special flow');
-        session.portfolio.new_investor = true;
-        session.portfolio.allocations = { stocks: 0, bonds: 0, cash: 0 }; // Zero allocation
-        session.portfolio.currency = 'USD';
-        session.stage = 'analyze'; // Skip to analysis with special new investor handling
+        session.simplified_portfolio.new_investor = true;
+        session.simplified_portfolio.portfolio_value = 0;
+        session.simplified_portfolio.holdings = [];
         sessionManager.updateSession(session.session_id, session);
         
-        // Return encouraging message and advance to strategy creation
+        // Advance to analysis with new investor flag
+        session.stage = 'analyze';
+        sessionManager.updateSession(session.session_id, session);
+        
         return {
           displaySpec: {
             blocks: [
@@ -722,13 +1103,12 @@ Generate a single conversational response (2-3 sentences max):`;
                 type: "summary_bullets",
                 content: JSON.stringify([
                   "🌟 Perfect! You're ready to start your investment journey",
-                  "We'll create a personalized strategy based on your goals",
-                  "This analysis will help you understand what to invest in"
+                  "We'll create a personalized strategy based on your goals"
                 ])
               },
               {
                 type: "conversation_text", 
-                content: JSON.stringify(["No worries about not having investments yet! That's exactly why you're here. Based on your goals, I'll create a tailored investment strategy that shows you exactly what to invest in and why. Let me analyze the best approach for your situation."])
+                content: JSON.stringify(["No worries about not having investments yet! That's exactly why you're here. Based on your goals, I'll create a tailored investment strategy that shows you exactly what to invest in and why."])
               },
               {
                 type: "cta_group",
@@ -742,68 +1122,31 @@ Generate a single conversational response (2-3 sentences max):`;
       }
 
       // ======================================================================
-      // SPECIAL FLOW 2: ALLOCATION SUGGESTION - Users requesting recommendations
+      // NORMAL FLOW: Update portfolio value and holdings
       // ======================================================================
-      if ((aiExtraction as PortfolioData & { new_investor?: boolean; suggest_default?: boolean }).suggest_default) {
-        const defaultAllocation = this.getDefaultAllocation(session.goals);
-        session.portfolio.allocations = { ...(session.portfolio.allocations || {}), ...defaultAllocation };
-        session.portfolio.currency = session.portfolio.currency || 'USD'; // Set default currency
-        console.log('📊 Applied default allocation based on goals:', defaultAllocation);
-        console.log('💱 Set default currency: USD');
-      } 
-      // ======================================================================
-      // NORMAL FLOW: EXISTING INVESTORS - Extract allocation percentages
-      // ======================================================================
-      else if (aiExtraction.allocations) {
-        // Only update allocations if not already complete, or if it's a complete replacement
-        const currentAllocations = session.portfolio.allocations || {};
-        const isCurrentComplete = this.isValidAllocation(currentAllocations);
-        const isNewComplete = this.isValidAllocation(aiExtraction.allocations);
-        
-        if (!isCurrentComplete || isNewComplete) {
-          session.portfolio.allocations = { ...(session.portfolio.allocations || {}), ...aiExtraction.allocations };
-          console.log('📊 Updated allocations from user input:', aiExtraction.allocations);
-        } else {
-          console.log('📊 Skipping allocation update - current allocation already complete:', currentAllocations);
-        }
+      if (portfolioExtraction.portfolio_value !== undefined) {
+        session.simplified_portfolio.portfolio_value = portfolioExtraction.portfolio_value;
+        console.log('💰 Updated portfolio value:', portfolioExtraction.portfolio_value);
       }
 
-      if (aiExtraction.currency) {
-        session.portfolio.currency = aiExtraction.currency;
-        console.log('💱 Updated currency:', aiExtraction.currency);
+      if (portfolioExtraction.holdings && portfolioExtraction.holdings.length > 0) {
+        session.simplified_portfolio.holdings = portfolioExtraction.holdings;
+        console.log('📊 Updated holdings:', portfolioExtraction.holdings);
       }
 
-      // Handle optional fields (don't overwrite, just add/update)
-      if (aiExtraction.top_positions && aiExtraction.top_positions.length > 0) {
-        // Convert weight to percentage if needed
-        const topPositions = aiExtraction.top_positions.map((pos: { name: string; percentage?: number; weight?: number }) => ({
-          name: pos.name,
-          percentage: pos.percentage || pos.weight || 0
-        }));
-        session.portfolio.top_positions = topPositions;
-        console.log('📈 Updated top positions:', topPositions);
-      }
-
-      const extractionWithExtras = aiExtraction as Record<string, unknown>;
-      if (extractionWithExtras.sector_exposure && Array.isArray(extractionWithExtras.sector_exposure) && extractionWithExtras.sector_exposure.length > 0) {
-        session.portfolio.sector_exposure = extractionWithExtras.sector_exposure;
-        console.log('🏭 Updated sector exposure:', extractionWithExtras.sector_exposure);
-      }
-
-      if (extractionWithExtras.skip_optional) {
-        console.log('⏭️ User chose to skip optional details');
-      }
-
-      // Update slot tracking
-      this.updatePortfolioSlots(session);
       sessionManager.updateSession(session.session_id, session);
     }
 
-    // Step 3: Check completion and advance
-    if (this.isPortfolioComplete(session.portfolio)) {
+    // ========================================================================
+    // STEP 3: Check completion and advance
+    // ========================================================================
+    if (session.simplified_portfolio.portfolio_value !== undefined) {
       console.log('🎉 Portfolio collection complete! Advancing to analyze stage...');
       session.stage = 'analyze';
       sessionManager.updateSession(session.session_id, session);
+      
+      const totalValue = session.simplified_portfolio.portfolio_value;
+      const holdingsCount = session.simplified_portfolio.holdings?.length || 0;
       
       return {
         displaySpec: {
@@ -811,14 +1154,14 @@ Generate a single conversational response (2-3 sentences max):`;
             {
               type: "summary_bullets",
               content: JSON.stringify([
-                "🎉 Portfolio allocation complete!",
-                `Total allocation: ${Object.values(session.portfolio.allocations || {}).reduce((a: number, b: unknown) => a + (typeof b === 'number' ? b : 0), 0)}%`,
-                `Currency: ${session.portfolio.currency || 'USD'}`
+                "✅ Portfolio Information Complete!",
+                `Portfolio value: $${totalValue.toLocaleString()}`,
+                holdingsCount > 0 ? `${holdingsCount} holdings identified` : "Ready for analysis"
               ])
             },
             {
               type: "conversation_text", 
-              content: JSON.stringify(["Perfect! I have your complete portfolio allocation. Let me analyze this against your investment goals and market conditions."])
+              content: JSON.stringify(["Perfect! I have your portfolio information. Let me analyze this against your investment goals and current market conditions."])
             },
             {
               type: "cta_group",
@@ -831,8 +1174,37 @@ Generate a single conversational response (2-3 sentences max):`;
       };
     }
 
-    // Step 4: Generate unified response
-    return await this.buildUnifiedPortfolioResponse(session);
+    // ========================================================================
+    // STEP 4: DEFAULT RESPONSE - Ask for portfolio value
+    // ========================================================================
+    return {
+      displaySpec: {
+        blocks: [
+          {
+            type: "summary_bullets",
+            content: JSON.stringify([
+              "Step 3 of 3: Portfolio Information 💼",
+              `Goal: ${session.simplified_goals?.goal_type || 'Not set'} | Target: $${session.simplified_goals?.target_amount?.toLocaleString() || '0'} | Timeline: ${session.simplified_goals?.timeline_years || '0'} years`
+            ])
+          },
+          {
+            type: "conversation_text",
+            content: JSON.stringify([
+              "Now let's talk about your current investments. What's the total value of your portfolio?\n\n" +
+              "You can say things like:\n" +
+              "• \"I have $100,000 total\"\n" +
+              "• \"My portfolio is worth $250K\"\n" +
+              "• \"$100K: $60K in stocks, $30K in bonds, $10K cash\"\n" +
+              "• \"I haven't started investing yet\"\n" +
+              "• \"I'm new to investing with $10K to start\"\n\n" +
+              "Feel free to mention specific holdings with their dollar values if you'd like a more detailed analysis!"
+            ])
+          }
+        ]
+      },
+      session,
+      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+    };
   }
 
   private async handleDefaultStage(session: SessionMemory) {
@@ -861,298 +1233,7 @@ Generate a single conversational response (2-3 sentences max):`;
     };
   }
 
-  private async aiExtractPortfolio(userMessage: string): Promise<Partial<PortfolioData>> {
-    try {
-      console.log('🤖 Extracting portfolio data from:', userMessage);
-      
-      const prompt = `
-Extract portfolio data from this user message: "${userMessage}"
 
-Return ONLY a JSON object with any clearly identifiable values:
-{
-  "allocations": {
-    "stocks": 60,
-    "bonds": 30, 
-    "cash": 10,
-    "commodities": 0,
-    "real_estate": 0,
-    "alternatives": 0
-  },
-  "currency": "USD",
-  "top_positions": [
-    {"name": "Apple", "weight": 5.2},
-    {"name": "Microsoft", "weight": 4.8}
-  ],
-  "sectors": [
-    {"name": "Technology", "weight": 25.0},
-    {"name": "Healthcare", "weight": 15.0}
-  ],
-  "suggest_default": true,
-  "skip_optional": false,
-  "new_investor": false
-}
-
-IMPORTANT MAPPINGS:
-- crypto, cryptocurrency, bitcoin → alternatives
-- REIT, REITs → real_estate  
-- gold, silver, oil → commodities
-- equities → stocks
-- fixed income, treasury → bonds
-
-SPECIAL CASES - SET THESE FLAGS:
-- "suggest an allocation", "recommend allocation", "what should I invest in" → {"suggest_default": true}
-- "I don't have investments", "no portfolio", "never invested", "new to investing", "just starting" → {"new_investor": true}
-- "I have no money invested", "haven't started investing", "looking to start" → {"new_investor": true}
-- "skip" or "no thanks" or "proceed" → {"skip_optional": true}
-
-Examples:
-- "90% stocks, 5% crypto, 5% cash" → {"allocations": {"stocks": 90, "alternatives": 5, "cash": 5}, "currency": "USD"}
-- "My portfolio is 60% stocks, 30% bonds, 10% cash" → {"allocations": {"stocks": 60, "bonds": 30, "cash": 10}, "currency": "USD"}
-- "Can you suggest an allocation?" → {"suggest_default": true}
-- "I don't have any investments yet" → {"new_investor": true}
-- "I'm new to investing" → {"new_investor": true}
-- "What should I invest in?" → {"suggest_default": true}
-- "I haven't started investing" → {"new_investor": true}
-
-Return empty object {} if no portfolio data found.
-`;
-
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          response_format: { type: 'json_object' },
-          temperature: 0.1,
-          max_tokens: 500
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ OpenAI API error:', response.status, errorData);
-        return {};
-      }
-
-      const data = await response.json();
-      const content = data.choices?.[0]?.message?.content;
-      
-      if (!content) {
-        console.log('⚠️ No content from AI extraction');
-        return {};
-      }
-
-      const extracted = JSON.parse(content);
-      console.log('✅ AI extracted portfolio data:', extracted);
-      
-      return extracted || {};
-      
-    } catch (error) {
-      console.error('❌ Portfolio AI extraction error:', error);
-      return {};
-    }
-  }
-
-  // Portfolio helper methods (proven pattern)
-  private getCompletedPortfolioSlots(portfolio: unknown): string[] {
-    const completedSlots: string[] = [];
-    const portfolioData = portfolio as Record<string, unknown>;
-    
-    if (portfolioData?.allocations && this.isValidAllocation(portfolioData.allocations)) {
-      completedSlots.push('allocations');
-    }
-    if (portfolioData?.currency) {
-      completedSlots.push('currency');
-    }
-    if (portfolioData?.top_positions && Array.isArray(portfolioData.top_positions) && portfolioData.top_positions.length > 0) {
-      completedSlots.push('top_positions');
-    }
-    if (portfolioData?.sectors && Array.isArray(portfolioData.sectors) && portfolioData.sectors.length > 0) {
-      completedSlots.push('sectors');
-    }
-    return completedSlots;
-  }
-
-  private getCompletedPortfolioLabels(portfolio: unknown): string[] {
-    const completedSlots = this.getCompletedPortfolioSlots(portfolio);
-    const labelMap: Record<string, string> = {
-      'allocations': 'Portfolio allocation',
-      'currency': 'Currency',
-      'top_positions': 'Top holdings',
-      'sectors': 'Sector exposure'
-    };
-    return completedSlots.map(slot => labelMap[slot]).filter(Boolean);
-  }
-
-  private getMissingPortfolioSlots(portfolio: unknown): string[] {
-    const requiredSlots = ['allocations', 'currency'];
-    const optionalSlots = ['top_positions', 'sectors'];
-    const completedSlots = this.getCompletedPortfolioSlots(portfolio);
-    
-    // Required slots must be completed
-    const missingRequired = requiredSlots.filter(slot => !completedSlots.includes(slot));
-    
-    // Optional slots are collected if user provides them
-    const missingOptional = optionalSlots.filter(slot => !completedSlots.includes(slot));
-    
-    return [...missingRequired, ...missingOptional];
-  }
-
-  private isPortfolioComplete(portfolio: unknown): boolean {
-    // Require allocations and currency, then offer optional fields
-    const requiredSlots = ['allocations', 'currency'];
-    const completedSlots = this.getCompletedPortfolioSlots(portfolio);
-    const hasRequired = requiredSlots.every(slot => completedSlots.includes(slot));
-    
-    // If required slots complete but no optional data offered yet, don't complete
-    const portfolioData = portfolio as Record<string, unknown>;
-    if (hasRequired && !portfolioData.optional_offered) {
-      return false; // Will prompt for sectors/holdings first
-    }
-    
-    return hasRequired;
-  }
-
-  private isValidAllocation(allocations: unknown): boolean {
-    if (!allocations || typeof allocations !== 'object') return false;
-    
-    const total = Object.values(allocations as Record<string, unknown>).reduce((sum: number, val: unknown) => {
-      return sum + (typeof val === 'number' ? val : 0);
-    }, 0);
-    
-    // Allow some tolerance for rounding (98-102%)
-    return total >= 98 && total <= 102 && total > 0;
-  }
-
-  private updatePortfolioSlots(session: SessionMemory): void {
-    const portfolioSlots = ['allocations', 'currency'];
-    const currentCompleted = this.getCompletedPortfolioSlots(session.portfolio);
-    
-    // Update only portfolio-related slots, preserve others
-    const otherSlots = session.completed_slots.filter(slot => !portfolioSlots.includes(slot));
-    session.completed_slots = [...otherSlots, ...currentCompleted];
-    session.missing_slots = this.getMissingPortfolioSlots(session.portfolio);
-  }
-
-  private getDefaultAllocation(goals: unknown): Record<string, number> {
-    const goalsData = goals as Record<string, unknown>;
-    const riskLevel = goalsData?.risk_tolerance || 'medium';
-    const horizonValue = goalsData?.horizon_years;
-    const horizon = typeof horizonValue === 'number' ? horizonValue : 10;
-    
-    // Conservative defaults based on risk and time horizon
-    if (riskLevel === 'low' || horizon < 5) {
-      return { stocks: 40, bonds: 50, cash: 10 };
-    } else if (riskLevel === 'high' && horizon > 15) {
-      return { stocks: 80, bonds: 15, cash: 5 };
-    } else {
-      return { stocks: 60, bonds: 30, cash: 10 }; // Balanced default
-    }
-  }
-
-  // Unified response builder for portfolio stage
-  private async buildUnifiedPortfolioResponse(session: SessionMemory) {
-    const completedSlots = this.getCompletedPortfolioSlots(session.portfolio);
-    const missingSlots = this.getMissingPortfolioSlots(session.portfolio);
-    const completedLabels = this.getCompletedPortfolioLabels(session.portfolio);
-    
-    let promptText: string;
-    let showTable = false;
-    let tableData: Record<string, unknown> | null = null;
-
-    if (missingSlots.includes('allocations')) {
-      promptText = "Please share your current portfolio allocation as percentages. For example: 'My portfolio is 60% stocks, 30% bonds, 10% cash'. If you don't have investments yet, just say 'I'm new to investing' or 'suggest an allocation' for a recommendation.";
-    } else if (missingSlots.includes('currency')) {
-      promptText = "What currency is your portfolio in? For example: 'USD', 'EUR', or 'GBP'.";
-      
-      // Show current allocation table
-      if (session.portfolio?.allocations) {
-        showTable = true;
-        const allocations = session.portfolio.allocations || {};
-        tableData = {
-          title: "Current Portfolio Allocation",
-          columns: ["Asset Class", "Allocation"],
-          rows: Object.entries(allocations)
-            .filter(([, value]) => (value as number) > 0)
-            .map(([key, value]) => [
-              key.charAt(0).toUpperCase() + key.slice(1),
-              `${value}%`
-            ])
-        };
-      }
-    } else if (session.portfolio && !session.portfolio.optional_offered) {
-      // Required fields complete, now offer optional details
-      promptText = "Great! Now I'd like to get more details to provide better analysis. Can you share your top stock holdings (like 'Apple 8%, Microsoft 6%') or sector exposure (like 'Technology 30%, Healthcare 15%')? You can also say 'skip' to proceed with basic analysis.";
-      
-      // Mark that we've offered optional fields
-      session.portfolio.optional_offered = true;
-      sessionManager.updateSession(session.session_id, session);
-      
-      // Show current allocation table
-      showTable = true;
-      const allocations = session.portfolio?.allocations || {};
-      tableData = {
-        title: "Current Portfolio Allocation",
-        columns: ["Asset Class", "Allocation"],
-        rows: Object.entries(allocations)
-          .filter(([, value]) => (value as number) > 0)
-          .map(([key, value]) => [
-            key.charAt(0).toUpperCase() + key.slice(1),
-            `${value}%`
-          ])
-      };
-    } else {
-      promptText = "Perfect! I have your portfolio details. Ready to proceed with analysis?";
-    }
-
-    const blocks: Array<{
-      type: string;
-      content: string;
-    }> = [
-      {
-        type: "summary_bullets",
-        content: JSON.stringify([
-          `Progress: ${completedSlots.length}/3 portfolio details collected`,
-          ...(completedLabels.length > 0 ? [`✓ ${completedLabels.join(', ')}`] : [])
-        ])
-      }
-    ];
-
-    if (showTable && tableData) {
-      blocks.push({
-        type: "table",
-        content: JSON.stringify(tableData)
-      });
-    }
-
-    blocks.push({
-      type: "conversation_text",
-      content: JSON.stringify([promptText])
-    });
-
-    // Only add Continue button when complete
-    if (missingSlots.length === 0) {
-      blocks.push({
-        type: "cta_group",
-        content: JSON.stringify([{ label: "Continue", action: "continue" }])
-      });
-    }
-
-    return {
-      displaySpec: { blocks },
-      session: session,
-      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
-    };
-  }
 
   // ============================================================================
   //                              STAGE 4: ANALYZE HANDLER WITH WEB SEARCH
@@ -1180,19 +1261,22 @@ Return empty object {} if no portfolio data found.
     console.log('📊 Analyzing portfolio against goals with client-controlled market context...');
 
     // ========================================================================
-    // STEP 1: LOAD MARKET CONTEXT - Read from configuration file
+    // STEP 1: TRANSFORM SIMPLIFIED DATA TO LEGACY FORMAT FOR ANALYSIS
     // ========================================================================
-    console.log('🚀 STEP 1: Loading market context from configuration...');
+    const transformedGoals = this.transformSimplifiedGoals(session.simplified_goals || {});
+    const transformedPortfolio = this.transformSimplifiedPortfolio(session.simplified_portfolio || {});
+    
+    // ========================================================================
+    // STEP 2: LOAD MARKET CONTEXT - Read from configuration file
+    // ========================================================================
+    console.log('🚀 Loading market context from configuration...');
     const marketData = await this.gatherMarketData();
-    console.log('📋 STEP 1: Market context loaded:', JSON.stringify(marketData, null, 2));
-    
-    // Note: No search counting needed since we're using static context
-    console.log('📄 Using static market context - no API calls required');
+    console.log('📋 Market context loaded:', JSON.stringify(marketData, null, 2));
     
     // ========================================================================
-    // STEP 2: PORTFOLIO ANALYSIS - Generate insights using AI + static market context
+    // STEP 3: PORTFOLIO ANALYSIS - Generate insights using AI + static market context
     // ========================================================================
-    const analysis = await this.analyzePortfolioWithAI(session.goals || {}, session.portfolio || {}, marketData);
+    const analysis = await this.analyzePortfolioWithAI(transformedGoals, transformedPortfolio, marketData, session);
     
     // Store analysis in session
     session.analysis_result = analysis;
@@ -1200,30 +1284,49 @@ Return empty object {} if no portfolio data found.
     sessionManager.updateSession(session.session_id, session);
 
     // ========================================================================
-    // STEP 3: RETURN ANALYSIS RESULTS - Display insights and recommendations
+    // STEP 4: RETURN ANALYSIS RESULTS - Display Market/Portfolio/Goal Impact
     // ========================================================================
+    
+    // Extract key metrics from market data for the chart
+    const marketMetadata = (marketData as Record<string, unknown>)?.metadata as Record<string, unknown>;
+    const keyMetrics = marketMetadata?.keyMetrics as Record<string, unknown> || {};
+    
     return {
       displaySpec: {
         blocks: [
           {
             type: "summary_bullets",
             content: JSON.stringify([
-              "🎯 Portfolio Analysis Complete!",
-              `Risk Level: ${analysis.riskLevel}`,
-              `Market Context: ${analysis.marketContext}`
+              "🎯 Portfolio Analysis Complete!"
             ])
           },
           {
-            type: "conversation_text",
-            content: JSON.stringify([analysis.recommendation])
+            type: "table",
+            content: JSON.stringify(this.buildDynamicAnalysisTable(analysis, transformedGoals as Record<string, unknown>, transformedPortfolio as Record<string, unknown>, marketMetadata, session))
           },
           {
-            type: "table",
-            content: JSON.stringify({
-              title: "Key Metrics",
-              columns: ["Metric", "Your Portfolio", "Recommendation"],
-              rows: analysis.metrics || []
-            })
+            type: "conversation_text",
+            content: JSON.stringify(["Market Impact"])
+          },
+          {
+            type: "summary_bullets",
+            content: JSON.stringify(this.extractBulletPoints((analysis.marketImpact as string) || (analysis.marketContext as string) || "Market analysis unavailable"))
+          },
+          {
+            type: "conversation_text",
+            content: JSON.stringify(["Portfolio Impact"])
+          },
+          {
+            type: "summary_bullets",
+            content: JSON.stringify(this.extractBulletPoints((analysis.portfolioImpact as string) || "Portfolio impact analysis unavailable"))
+          },
+          {
+            type: "conversation_text",
+            content: JSON.stringify(["Goal Impact"])
+          },
+          {
+            type: "summary_bullets",
+            content: JSON.stringify(this.extractBulletPoints((analysis.goalImpact as string) || (analysis.recommendation as string) || "Goal impact analysis unavailable"))
           },
           {
             type: "cta_group",
@@ -1317,21 +1420,90 @@ Return empty object {} if no portfolio data found.
   }
 
   /**
-   * BUILD MARKET SEARCH QUERY - Create targeted search based on user profile
-   * 
-   * Generates specific search terms based on:
-   * - Investment goals and timeline
+   * TRANSFORM SIMPLIFIED GOALS TO LEGACY FORMAT
+   * Converts simplified 3-field collection to full goals structure for analysis
+   */
+  private transformSimplifiedGoals(simplifiedGoals: SimplifiedGoalsData): GoalsData {
+    // Infer risk tolerance and liquidity needs from goal type and timeline
+    let risk_tolerance: 'low' | 'medium' | 'high' = 'medium';
+    let liquidity_needs: 'low' | 'medium' | 'high' = 'medium';
+    
+    if (simplifiedGoals.goal_type === 'growth') {
+      risk_tolerance = 'medium';
+      liquidity_needs = 'low';
+    } else if (simplifiedGoals.goal_type === 'income') {
+      risk_tolerance = 'low';
+      liquidity_needs = 'medium';
+    } else if (simplifiedGoals.goal_type === 'both') {
+      risk_tolerance = 'medium';
+      liquidity_needs = 'medium';
     }
+    
+    // Adjust based on timeline
+    if (simplifiedGoals.timeline_years && simplifiedGoals.timeline_years < 5) {
+      risk_tolerance = 'low';
+      liquidity_needs = 'high';
+    } else if (simplifiedGoals.timeline_years && simplifiedGoals.timeline_years > 15) {
+      risk_tolerance = risk_tolerance === 'low' ? 'medium' : 'high';
+      liquidity_needs = 'low';
+    }
+    
+    return {
+      goal_type: simplifiedGoals.goal_type as any || 'balanced',
+      goal_amount: simplifiedGoals.target_amount || 100000,
+      horizon_years: simplifiedGoals.timeline_years || 10,
+      risk_tolerance,
+      liquidity_needs
+    };
   }
   
-  // Add specific portfolio context if available
-  const topPositions = portfolioData?.top_positions;
-  if (Array.isArray(topPositions) && topPositions.length > 0) {
-    const topHoldings = topPositions.slice(0, 3).map((pos: Record<string, unknown>) => pos.name).join(' ');
-    query += `${topHoldings} current performance `;
+  /**
+   * TRANSFORM SIMPLIFIED PORTFOLIO TO LEGACY FORMAT
+   * Converts dollar values to percentage allocations for analysis
+   */
+  private transformSimplifiedPortfolio(simplifiedPortfolio: SimplifiedPortfolioData): PortfolioData {
+    const totalValue = simplifiedPortfolio.portfolio_value || 0;
+    const holdings = simplifiedPortfolio.holdings || [];
+    
+    // Calculate allocations from holdings
+    let allocations = { stocks: 0, bonds: 0, cash: 0, commodities: 0, real_estate: 0, alternatives: 0 };
+    
+    if (totalValue > 0 && holdings.length > 0) {
+      holdings.forEach(holding => {
+        const percentage = (holding.value / totalValue) * 100;
+        const name = holding.name.toLowerCase();
+        
+        if (name.includes('stock') || name.includes('equity') || name.includes('apple') || name.includes('tesla') || name.includes('microsoft')) {
+          allocations.stocks += percentage;
+        } else if (name.includes('bond') || name.includes('treasury') || name.includes('fixed')) {
+          allocations.bonds += percentage;
+        } else if (name.includes('cash') || name.includes('money market')) {
+          allocations.cash += percentage;
+        } else if (name.includes('etf')) {
+          allocations.stocks += percentage; // Default ETFs to stocks
+        } else {
+          allocations.alternatives += percentage;
+        }
+      });
+    } else if (simplifiedPortfolio.new_investor) {
+      // New investor - no allocations yet
+      allocations = { stocks: 0, bonds: 0, cash: 100, commodities: 0, real_estate: 0, alternatives: 0 };
+    } else if (totalValue > 0) {
+      // Has value but no specific holdings - assume balanced
+      allocations = { stocks: 60, bonds: 30, cash: 10, commodities: 0, real_estate: 0, alternatives: 0 };
+    }
+    
+    return {
+      allocations,
+      currency: 'USD',
+      top_positions: holdings.map(h => ({ name: h.name, weight: (h.value / totalValue) * 100 }))
+    };
+  }
+  
+  /**
    * ANALYZE PORTFOLIO WITH AI - Generate comprehensive analysis using market data
    */
-  private async analyzePortfolioWithAI(goals: unknown, portfolio: unknown, marketData: unknown): Promise<Record<string, unknown>> {
+  private async analyzePortfolioWithAI(goals: unknown, portfolio: unknown, marketData: unknown, session: SessionMemory): Promise<Record<string, unknown>> {
     try {
       console.log('🧠 Performing AI portfolio analysis...');
       
@@ -1339,11 +1511,20 @@ Return empty object {} if no portfolio data found.
       const portfolioData = portfolio as Record<string, unknown>;
       const marketDataObj = marketData as Record<string, unknown>;
       
-      // Get user's top holdings for personalization
-      const topPositions = portfolioData?.top_positions;
-      const topHoldings = Array.isArray(topPositions) 
-        ? topPositions.slice(0, 3).map((pos: Record<string, unknown>) => pos.name).join(', ') 
-        : 'Not specified';
+      // Get actual user portfolio data from session
+      const actualPortfolioValue = this.getActualPortfolioValue();
+      const actualHoldings = this.getActualHoldingsDescription();
+      const portfolioType = this.getPortfolioType();
+      
+      // Store session context for analysis
+      this.currentSession = session;
+      
+      // Store for use in prompt
+      this.currentSessionData = {
+        portfolioValue: actualPortfolioValue,
+        holdings: actualHoldings,
+        portfolioType: portfolioType
+      };
       
       // Extract Clockwise portfolio information from market data
       // Note: These could be used for future sales narrative customization
@@ -1356,8 +1537,9 @@ You are a Clockwise Capital portfolio advisor analyzing a client's investment ap
 CLIENT PROFILE:
 - Goal: ${goalsData?.goal_type} of $${typeof goalsData?.goal_amount === 'number' ? goalsData.goal_amount.toLocaleString() : 'TBD'} over ${goalsData?.horizon_years} years
 - Risk Profile: ${goalsData?.risk_tolerance} risk tolerance, ${goalsData?.liquidity_needs} liquidity needs
-- Top Holdings: ${topHoldings}
-- Current Allocation: ${(portfolioData?.allocations as Record<string, number>)?.stocks || 0}% stocks, ${(portfolioData?.allocations as Record<string, number>)?.bonds || 0}% bonds, ${(portfolioData?.allocations as Record<string, number>)?.alternatives || 0}% alternatives
+- Portfolio Value: $${this.getActualPortfolioValue()} 
+- Holdings: ${this.getActualHoldingsDescription()}
+- Portfolio Type: ${this.getPortfolioType()}
 
 CURRENT MARKET REALITY:
 ${marketDataObj?.content || 'Standard market conditions'}
@@ -1377,17 +1559,18 @@ RESPONSE TONE: Optimistic about their potential success, but concerned about the
 
 IMPORTANT: Use the market context as background knowledge to inform your analysis, but write completely original responses. Do NOT copy text directly from the market context - synthesize it into personalized insights.
 
-Provide analysis in this JSON format that drives toward consultation booking:
+Provide analysis in this JSON format with three distinct impact sections:
 {
   "riskLevel": "Low/Medium/High",
   "beta": "Portfolio beta vs market",
   "volatility": "Annual volatility estimate", 
   "correlation_matrix": "Correlation with TIME/SPY",
   "sector_concentration": "Top sector concentration %",
-  "cycle_stage": "Current market cycle risks",
+  "cycle_stage": "Late-cycle/Mid-cycle/Early-cycle",
   "gap_to_goal": "Potential years behind target without optimization",
-  "marketContext": "Write a CUSTOM market summary using the provided context as background knowledge. Focus on how current conditions create risks for THEIR specific portfolio and goals. Make it personal and concerning.",
-  "recommendation": "Write a CUSTOM recommendation using market context as background. Create doubt about their current approach while positioning Clockwise solutions as the answer. Reference specific Clockwise portfolios but make the language original and tailored to their situation.",
+  "marketImpact": "Return as a string with bullet points separated by newlines. Start each point with '•'. Focus on: 1) Market highs and cycle position, 2) Valuation concerns especially in tech, 3) Rising risks and corrections. Make it concerning but factual. Example: '• Markets are hitting all-time highs, but beneath the surface we're in a late-cycle economy\n• Valuations—especially in tech—are stretched\n• The risk of sharp corrections is rising'",
+  "portfolioImpact": "Return as a string with bullet points separated by newlines. Start each point with '•'. IMPORTANT: Base analysis ONLY on the actual portfolio data provided. If they have specific holdings, analyze those. If they only provided total value, focus on diversification needs. If they're a new investor, focus on starting strategies. Do NOT assume allocations or holdings not explicitly mentioned. Make recommendations based on what they actually told you.",
+  "goalImpact": "Return as a string with bullet points separated by newlines. Start each point with '•'. Focus on: 1) How their goal amount/timeline could be derailed, 2) Risk tolerance vs strategy mismatch, 3) How diversifying with Clockwise keeps goals on track. Reference their specific numbers.",
   "metrics": [
     ["Current Risk Level", "X/10", "Needs professional management"],
     ["Market Timing", "Static approach", "Daily adaptation needed"], 
@@ -1444,6 +1627,140 @@ Provide analysis in this JSON format that drives toward consultation booking:
         ]
       };
     }
+  }
+  
+  /**
+   * BUILD DYNAMIC ANALYSIS TABLE - Create contextual table based on user inputs
+   */
+  private buildDynamicAnalysisTable(analysis: Record<string, unknown>, goals: Record<string, unknown>, portfolio: Record<string, unknown>, marketMetadata: Record<string, unknown>, session: SessionMemory) {
+    const keyMetrics = marketMetadata?.keyMetrics as Record<string, unknown> || {};
+    const cyclePosition = keyMetrics?.cyclePosition as Record<string, unknown> || {};
+    
+    // Calculate user-specific metrics
+    const targetAmount = goals?.goal_amount as number || 0;
+    const timelineYears = goals?.horizon_years as number || 0;
+    const riskLevel = analysis.riskLevel as string || "Medium";
+    const portfolioValue = this.calculatePortfolioValue(portfolio, session);
+    const gapToGoal = this.calculateGapToGoal(portfolioValue, targetAmount, timelineYears);
+    
+    const rows = [
+      ["Your Goal Progress", `$${portfolioValue.toLocaleString()} of $${targetAmount.toLocaleString()}`, gapToGoal > 0 ? "behind-target" : "on-track"],
+      ["Timeline Risk", `${timelineYears} years to goal`, timelineYears < 10 ? "high-urgency" : timelineYears > 20 ? "low-urgency" : "moderate-urgency"],
+      ["Portfolio Risk Level", riskLevel, riskLevel === "High" ? "elevated" : riskLevel === "Low" ? "conservative" : "moderate"],
+      ["Market Cycle Stage", cyclePosition?.debtCycle || "Late stage", "caution-advised"],
+      ["Current Inflation", keyMetrics?.inflation || "3%", "above-target"],
+      ["Market Valuation", keyMetrics?.marketValuation || "~25x earnings", "overvalued"]
+    ];
+    
+    return {
+      title: "Your Portfolio Analysis",
+      columns: ["Assessment", "Current Status", "Risk Level"],
+      rows
+    };
+  }
+  
+  /**
+   * CALCULATE PORTFOLIO VALUE - Extract total value from simplified portfolio data
+   */
+  private calculatePortfolioValue(portfolio: Record<string, unknown>, session: SessionMemory): number {
+    // First try to get from simplified portfolio data
+    if (session.simplified_portfolio?.portfolio_value) {
+      return session.simplified_portfolio.portfolio_value;
+    }
+    
+    // Fallback: try to get from allocations if available
+    const allocations = portfolio?.allocations as Record<string, number> || {};
+    const totalAllocation = Object.values(allocations).reduce((sum, val) => sum + val, 0);
+    
+    // Estimate based on typical portfolio values if allocations exist
+    if (totalAllocation > 0) {
+      return 100000; // Default estimate
+    }
+    
+    return 0;
+  }
+  
+  
+  /**
+   * CALCULATE GAP TO GOAL - Determine if user is behind target
+   */
+  private calculateGapToGoal(currentValue: number, targetAmount: number, timelineYears: number): number {
+    if (timelineYears <= 0 || targetAmount <= 0) return 0;
+    
+    // Simple calculation: what they need vs what they have
+    const requiredGrowthRate = Math.pow(targetAmount / Math.max(currentValue, 1), 1 / timelineYears) - 1;
+    const marketGrowthRate = 0.07; // Assume 7% market return
+    
+    return requiredGrowthRate > marketGrowthRate ? requiredGrowthRate - marketGrowthRate : 0;
+  }
+  
+  /**
+   * GET ACTUAL PORTFOLIO VALUE - Access real portfolio value from session
+   */
+  private getActualPortfolioValue(): string {
+    if (this.currentSession?.simplified_portfolio?.portfolio_value) {
+      return this.currentSession.simplified_portfolio.portfolio_value.toLocaleString();
+    }
+    return "Not specified";
+  }
+  
+  /**
+   * GET ACTUAL HOLDINGS DESCRIPTION - Describe real holdings from session
+   */
+  private getActualHoldingsDescription(): string {
+    if (this.currentSession?.simplified_portfolio?.holdings && this.currentSession.simplified_portfolio.holdings.length > 0) {
+      return this.currentSession.simplified_portfolio.holdings
+        .map((h: any) => `${h.name}: $${h.value.toLocaleString()}`)
+        .join(", ");
+    }
+    if (this.currentSession?.simplified_portfolio?.new_investor) {
+      return "New investor - no current holdings";
+    }
+    return "Portfolio value provided without specific holdings breakdown";
+  }
+  
+  /**
+   * GET PORTFOLIO TYPE - Determine investor type from session data
+   */
+  private getPortfolioType(): string {
+    if (this.currentSession?.simplified_portfolio?.new_investor) {
+      return "New investor";
+    }
+    if (this.currentSession?.simplified_portfolio?.holdings && this.currentSession.simplified_portfolio.holdings.length > 0) {
+      return "Existing investor with specific holdings";
+    }
+    if (this.currentSession?.simplified_portfolio?.portfolio_value) {
+      return "Existing investor with portfolio value only";
+    }
+    return "Portfolio information not provided";
+  }
+  
+  /**
+   * GET CURRENT SESSION - Access session context for analysis
+   */
+  private getCurrentSession(): SessionMemory | null {
+    return this.currentSession;
+  }
+  
+  /**
+   * EXTRACT BULLET POINTS - Convert text to array of bullet points for JSON structure
+   */
+  private extractBulletPoints(text: string): string[] {
+    // If already has bullet points, split and clean them
+    if (text.includes('•')) {
+      return text.split('\n')
+        .map(line => line.replace(/^•\s*/, '').trim())
+        .filter(line => line.length > 0);
+    }
+    
+    // Split by periods and create bullet array
+    const sentences = text.split('.').filter(s => s.trim().length > 0);
+    if (sentences.length > 1) {
+      return sentences.map(s => s.trim()).filter(s => s.length > 0);
+    }
+    
+    // Return as single item array
+    return [text.trim()];
   }
 }
 
