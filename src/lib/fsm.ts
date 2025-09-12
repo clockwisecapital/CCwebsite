@@ -1287,9 +1287,8 @@ Generate a single conversational response (2-3 sentences max):`;
     // STEP 4: RETURN ANALYSIS RESULTS - Display Market/Portfolio/Goal Impact
     // ========================================================================
     
-    // Extract key metrics from market data for the chart
+    // Extract market metadata for the chart
     const marketMetadata = (marketData as Record<string, unknown>)?.metadata as Record<string, unknown>;
-    const keyMetrics = marketMetadata?.keyMetrics as Record<string, unknown> || {};
     
     return {
       displaySpec: {
@@ -1449,7 +1448,7 @@ Generate a single conversational response (2-3 sentences max):`;
     }
     
     return {
-      goal_type: simplifiedGoals.goal_type as any || 'balanced',
+      goal_type: (simplifiedGoals.goal_type as 'growth' | 'income' | 'balanced' | 'preservation' | 'lump_sum') || 'balanced',
       goal_amount: simplifiedGoals.target_amount || 100000,
       horizon_years: simplifiedGoals.timeline_years || 10,
       risk_tolerance,
@@ -1508,7 +1507,7 @@ Generate a single conversational response (2-3 sentences max):`;
       console.log('🧠 Performing AI portfolio analysis...');
       
       const goalsData = goals as Record<string, unknown>;
-      const portfolioData = portfolio as Record<string, unknown>;
+      // Portfolio data is used in the prompt construction below
       const marketDataObj = marketData as Record<string, unknown>;
       
       // Get actual user portfolio data from session
@@ -1633,8 +1632,8 @@ Provide analysis in this JSON format with three distinct impact sections:
    * BUILD DYNAMIC ANALYSIS TABLE - Create contextual table based on user inputs
    */
   private buildDynamicAnalysisTable(analysis: Record<string, unknown>, goals: Record<string, unknown>, portfolio: Record<string, unknown>, marketMetadata: Record<string, unknown>, session: SessionMemory) {
-    const keyMetrics = marketMetadata?.keyMetrics as Record<string, unknown> || {};
-    const cyclePosition = keyMetrics?.cyclePosition as Record<string, unknown> || {};
+    const keyMetrics = (marketMetadata?.keyMetrics as Record<string, unknown>) || {};
+    const cyclePosition = (keyMetrics?.cyclePosition as Record<string, unknown>) || {};
     
     // Calculate user-specific metrics
     const targetAmount = goals?.goal_amount as number || 0;
@@ -1710,7 +1709,7 @@ Provide analysis in this JSON format with three distinct impact sections:
   private getActualHoldingsDescription(): string {
     if (this.currentSession?.simplified_portfolio?.holdings && this.currentSession.simplified_portfolio.holdings.length > 0) {
       return this.currentSession.simplified_portfolio.holdings
-        .map((h: any) => `${h.name}: $${h.value.toLocaleString()}`)
+        .map((h: { name: string; value: number }) => `${h.name}: $${h.value.toLocaleString()}`)
         .join(", ");
     }
     if (this.currentSession?.simplified_portfolio?.new_investor) {
