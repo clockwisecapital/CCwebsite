@@ -1309,7 +1309,7 @@ Generate a single conversational response (2-3 sentences max):`;
           },
           {
             type: "summary_bullets",
-            content: JSON.stringify(this.extractBulletPoints((analysis.marketImpact as string) || (analysis.marketContext as string) || "Market analysis unavailable"))
+            content: JSON.stringify(this.processImpactData(analysis.marketImpact || analysis.marketContext || "Market analysis unavailable"))
           },
           {
             type: "conversation_text",
@@ -1317,7 +1317,7 @@ Generate a single conversational response (2-3 sentences max):`;
           },
           {
             type: "summary_bullets",
-            content: JSON.stringify(this.extractBulletPoints((analysis.portfolioImpact as string) || "Portfolio impact analysis unavailable"))
+            content: JSON.stringify(this.processImpactData(analysis.portfolioImpact || "Portfolio impact analysis unavailable"))
           },
           {
             type: "conversation_text",
@@ -1325,7 +1325,7 @@ Generate a single conversational response (2-3 sentences max):`;
           },
           {
             type: "summary_bullets",
-            content: JSON.stringify(this.extractBulletPoints((analysis.goalImpact as string) || (analysis.recommendation as string) || "Goal impact analysis unavailable"))
+            content: JSON.stringify(this.processImpactData(analysis.goalImpact || analysis.recommendation || "Goal impact analysis unavailable"))
           },
           {
             type: "cta_group",
@@ -1567,9 +1567,9 @@ Provide analysis in this JSON format with three distinct impact sections:
   "sector_concentration": "Top sector concentration %",
   "cycle_stage": "Late-cycle/Mid-cycle/Early-cycle",
   "gap_to_goal": "Potential years behind target without optimization",
-  "marketImpact": "Return as a string with bullet points separated by newlines. Start each point with '•'. Focus on: 1) Market highs and cycle position, 2) Valuation concerns especially in tech, 3) Rising risks and corrections. Make it concerning but factual. Example: '• Markets are hitting all-time highs, but beneath the surface we're in a late-cycle economy\n• Valuations—especially in tech—are stretched\n• The risk of sharp corrections is rising'",
-  "portfolioImpact": "Return as a string with bullet points separated by newlines. Start each point with '•'. IMPORTANT: Base analysis ONLY on the actual portfolio data provided. If they have specific holdings, analyze those. If they only provided total value, focus on diversification needs. If they're a new investor, focus on starting strategies. Do NOT assume allocations or holdings not explicitly mentioned. Make recommendations based on what they actually told you.",
-  "goalImpact": "Return as a string with bullet points separated by newlines. Start each point with '•'. Focus on: 1) How their goal amount/timeline could be derailed, 2) Risk tolerance vs strategy mismatch, 3) How diversifying with Clockwise keeps goals on track. Reference their specific numbers.",
+  "marketImpact": "Return 3-4 bullet points (start with '•'). BE DYNAMIC AND SPECIFIC to their situation:\n- If they have $" + actualPortfolioValue + ": relate market risks to THEIR portfolio size\n- If they mentioned specific holdings (" + actualHoldings + "): connect market trends to THOSE holdings\n- If new investor: explain why THIS market is challenging for beginners\n- Always tie back to current late-cycle risks but make it PERSONAL to them\nExample for someone with tech holdings: '• Your Apple and Microsoft positions face headwinds as tech valuations reach extremes'\nExample for new investor: '• Starting your investment journey now means navigating one of the most complex market environments in decades'",
+  "portfolioImpact": "Return 3-4 bullet points (start with '•'). PERSONALIZE based on what they told you:\n- If they gave specific holdings: analyze THOSE exact holdings and their risks\n- If only gave total value: focus on what's MISSING from their portfolio\n- If new investor: explain what they NEED to consider starting out\n- Always position Clockwise TIME ETF or Diversified Portfolios as the solution to THEIR specific situation\nDO NOT make up allocations they didn't mention. BE SPECIFIC about their actual data.",
+  "goalImpact": "Return 3-4 bullet points (start with '•'). Make it DEEPLY PERSONAL using their exact numbers:\n- Calculate and mention specific: 'Your goal of $" + (goalsData?.goal_amount as number || 0).toLocaleString() + " in " + (goalsData?.horizon_years || 0) + " years...'\n- If portfolio value known: 'Your current $" + actualPortfolioValue + " needs X% annual growth...'\n- Create urgency: explain how THEIR specific timeline is at risk\n- Show how Clockwise solutions specifically address THEIR goal/timeline/risk profile\n- If new investor: focus on the importance of starting right with professional guidance\nMake them FEEL the gap between where they are and where they need to be.",
   "metrics": [
     ["Current Risk Level", "X/10", "Needs professional management"],
     ["Market Timing", "Static approach", "Daily adaptation needed"], 
@@ -1742,9 +1742,40 @@ Provide analysis in this JSON format with three distinct impact sections:
   }
   
   /**
+   * PROCESS IMPACT DATA - Handle both array and string responses from AI
+   */
+  private processImpactData(data: unknown): string[] {
+    // If it's already an array of strings, clean and return it
+    if (Array.isArray(data)) {
+      return data.map(item => {
+        if (typeof item === 'string') {
+          // Remove bullet point prefix if present
+          return item.replace(/^\s*•\s*/, '').trim();
+        }
+        return String(item);
+      }).filter(item => item.length > 0);
+    }
+    
+    // If it's a string, use the existing extractBulletPoints logic
+    if (typeof data === 'string') {
+      return this.extractBulletPoints(data);
+    }
+    
+    // Fallback for unexpected data types
+    console.warn('processImpactData received unexpected type:', typeof data, data);
+    return ['Analysis data unavailable'];
+  }
+  
+  /**
    * EXTRACT BULLET POINTS - Convert text to array of bullet points for JSON structure
    */
-  private extractBulletPoints(text: string): string[] {
+  private extractBulletPoints(text: string | unknown): string[] {
+    // Ensure we have a string to work with
+    if (!text || typeof text !== 'string') {
+      console.warn('extractBulletPoints received non-string:', typeof text, text);
+      return ['Analysis data unavailable'];
+    }
+    
     // If already has bullet points, split and clean them
     if (text.includes('•')) {
       return text.split('\n')
