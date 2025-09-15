@@ -40,16 +40,7 @@ interface PortfolioChatProps {
 
 export function PortfolioChat({}: PortfolioChatProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: `Hello! I'm your AI portfolio advisor from Clockwise Capital. I'll help you evaluate your investment portfolio and guide you through our systematic analysis process.
-
-Would you like to get started with your portfolio analysis?`,
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
@@ -69,6 +60,70 @@ Would you like to get started with your portfolio analysis?`,
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Initialize FSM conversation when chat opens
+  useEffect(() => {
+    if (isOpen && messages.length === 0) {
+      initializeFSMConversation();
+    }
+  }, [isOpen]);
+
+  const initializeFSMConversation = async () => {
+    setIsLoading(true);
+    try {
+      // Send initial request to FSM to get qualify stage
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: 'start', // Trigger the qualify stage
+          sessionId: sessionId,
+          conversationHistory: []
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to initialize FSM conversation');
+      }
+
+      const data = await response.json();
+      
+      // Update session info
+      if (data.session) {
+        setSessionInfo(data.session);
+      }
+      
+      const assistantMessage: Message = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        displaySpec: data.displaySpec,
+        sessionInfo: data.session,
+        timestamp: new Date(),
+      };
+
+      setMessages([assistantMessage]);
+    } catch (error) {
+      console.error('Error initializing FSM conversation:', error);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        displaySpec: {
+          blocks: [
+            {
+              type: 'summary_bullets',
+              content: JSON.stringify(['Welcome to Clockwise Capital! I apologize, but I encountered an error initializing our conversation. Please try refreshing or contact support if the issue persists.'])
+            }
+          ]
+        },
+        timestamp: new Date(),
+      };
+      setMessages([errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const sendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
@@ -233,13 +288,8 @@ Would you like to get started with your portfolio analysis?`,
         sendMessage();
         break;
       case 'restart':
-        // Reset session
-        setMessages([{
-          id: '1',
-          role: 'assistant',
-          content: `Hello! I'm your AI portfolio advisor from Clockwise Capital. Would you like to get started with your portfolio analysis?`,
-          timestamp: new Date(),
-        }]);
+        // Reset session and reinitialize FSM
+        setMessages([]);
         setSessionInfo({
           id: '',
           stage: 'qualify',
@@ -247,6 +297,8 @@ Would you like to get started with your portfolio analysis?`,
           missing_slots: [],
           key_facts: []
         });
+        // Reinitialize the FSM conversation
+        initializeFSMConversation();
         break;
       case 'schedule_consultation':
         window.open('/contact', '_blank');

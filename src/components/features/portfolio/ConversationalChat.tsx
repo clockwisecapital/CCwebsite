@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface Message {
   id: string;
@@ -39,16 +39,7 @@ interface ConversationalChatProps {
 }
 
 export function ConversationalChat({}: ConversationalChatProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: `Hello! I'm your AI portfolio advisor from Clockwise Capital. I'll help you evaluate your investment portfolio and guide you through our systematic analysis process.
-
-Would you like to get started with your portfolio analysis?`,
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
 
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -70,6 +61,70 @@ Would you like to get started with your portfolio analysis?`,
   // const scrollToBottom = () => {
   //   messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   // };
+
+  // Initialize FSM conversation when component mounts
+  useEffect(() => {
+    if (messages.length === 0) {
+      initializeFSMConversation();
+    }
+  }, []);
+
+  const initializeFSMConversation = async () => {
+    setIsLoading(true);
+    try {
+      // Send initial request to FSM to get qualify stage
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: 'start', // Trigger the qualify stage
+          sessionId: sessionId,
+          conversationHistory: []
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to initialize FSM conversation');
+      }
+
+      const data = await response.json();
+      
+      // Update session info
+      if (data.session) {
+        setSessionInfo(data.session);
+      }
+      
+      const assistantMessage: Message = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        displaySpec: data.displaySpec,
+        sessionInfo: data.session,
+        timestamp: new Date(),
+      };
+
+      setMessages([assistantMessage]);
+    } catch (error) {
+      console.error('Error initializing FSM conversation:', error);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        displaySpec: {
+          blocks: [
+            {
+              type: 'summary_bullets',
+              content: JSON.stringify(['Welcome to Clockwise Capital! I apologize, but I encountered an error initializing our conversation. Please try refreshing or contact support if the issue persists.'])
+            }
+          ]
+        },
+        timestamp: new Date(),
+      };
+      setMessages([errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Auto-resize textarea based on content
   const adjustTextareaHeight = () => {
@@ -343,57 +398,18 @@ Would you like to get started with your portfolio analysis?`,
       const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       setSessionId(newSessionId);
       
-      // Reset conversation state and go directly to goals stage
-      setMessages([{
-        id: '1',
-        role: 'assistant',
-        displaySpec: {
-          blocks: [
-            {
-              type: "summary_bullets",
-              content: JSON.stringify([
-                "Let's start fresh with your investment goals! 🎯",
-                "I'll help you define your financial objectives and create a personalized strategy."
-              ])
-            },
-            {
-              type: "conversation_text",
-              content: JSON.stringify([
-                "To provide you with the best portfolio recommendations, I need to understand your investment goals. Please tell me about your financial objectives - what are you hoping to achieve with your investments?"
-              ])
-            }
-          ]
-        },
-        timestamp: new Date(),
-      }]);
+      // Reset conversation state and reinitialize FSM
+      setMessages([]);
       setSessionInfo({
-        id: newSessionId,
-        stage: 'goals',
+        id: '',
+        stage: 'qualify',
         completed_slots: [],
-        missing_slots: ['goal_type', 'goal_amount', 'horizon_years', 'risk_tolerance', 'liquidity_needs'],
+        missing_slots: [],
         key_facts: []
       });
       
-      // Sync backend by sending an initial message to advance to goals stage
-      setTimeout(async () => {
-        try {
-          await fetch('/api/chat', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              message: 'start analysis',
-              sessionId: newSessionId,
-              conversationHistory: []
-            }),
-          });
-          console.log('Backend session synced to goals stage');
-        } catch (error) {
-          console.error('Failed to sync backend session:', error);
-        }
-      }, 100);
-      
+      // Reinitialize the FSM conversation
+      initializeFSMConversation();
       return;
     }
     

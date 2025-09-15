@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { openGleapChat } from "@/utils/gleap";
+import { useRouter } from "next/navigation";
 
 export default function TimedPopup() {
   const [show, setShow] = useState(false);
+  const router = useRouter();
 
   // show after 10 seconds on page
   useEffect(() => {
@@ -32,7 +33,7 @@ export default function TimedPopup() {
           className="inline-block px-4 py-2 bg-[#1FAAA3] hover:bg-[#159c8d] rounded-md text-sm font-medium transition-colors duration-200"
           onClick={() => {
             setShow(false);
-            openGleapChat();
+            router.push('/portfolio');
           }}
         >
           Chat now

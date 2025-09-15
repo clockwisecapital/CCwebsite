@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { openGleapChat } from '@/utils/gleap';
+import { useRouter } from 'next/navigation';
 
 // Single transparent-glass card wrapper
 interface OverlayCardProps {
@@ -25,7 +25,10 @@ const OverlayCard: React.FC<OverlayCardProps> = ({ title, summary, details }) =>
   );
 };
 
-const EconomicExplainers: React.FC = () => (
+const EconomicExplainers: React.FC = () => {
+  const router = useRouter();
+  
+  return (
   <section className="relative w-full min-h-screen overflow-hidden">
     {/* background video */}
     <video
@@ -102,7 +105,7 @@ const EconomicExplainers: React.FC = () => (
     {/* CTA outside cards */}
     <div className="relative z-10 mt-12 text-center">
       <button 
-        onClick={openGleapChat} 
+        onClick={() => router.push('/portfolio')} 
         className="group relative overflow-hidden bg-[#1FAAA3] text-white font-sans font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 inline-block"
       >
         <span className="absolute top-0 left-0 w-full h-full bg-white/20 transform -translate-x-full skew-x-12 group-hover:translate-x-full transition-transform duration-700 ease-out"></span>
@@ -115,6 +118,7 @@ const EconomicExplainers: React.FC = () => (
       </button>
     </div>
   </section>
-);
+  );
+};
 
 export default EconomicExplainers;

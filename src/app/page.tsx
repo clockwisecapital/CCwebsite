@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { openGleapChat } from '../utils/gleap';
+import { useRouter } from 'next/navigation';
 import { Meteors } from "@/components/ui/meteors";
 // Header is now in layout.tsx
 import MissionSection from "@/components/features/home/MissionSection";
@@ -20,6 +20,7 @@ import TimedPopup from "@/components/ui/TimedPopup";
 export default function Home() {
   // State to track if component is mounted - for animations
   const [mounted, setMounted] = useState(false);
+  const router = useRouter();
   
   useEffect(() => {
     setMounted(true);
@@ -103,7 +104,7 @@ export default function Home() {
           {/* Buttons with enhanced hover effects */}
           <div className={`flex flex-col sm:flex-row justify-center md:justify-start gap-4 mt-6 transition-all duration-1000 delay-1200 transform ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
             <button 
-              onClick={openGleapChat} 
+              onClick={() => router.push('/portfolio')} 
               className="group relative overflow-hidden bg-[#1FAAA3] text-white font-sans font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300"
             >
               <span className="absolute top-0 left-0 w-full h-full transform -translate-x-full bg-white/5 skew-x-12 group-hover:translate-x-full transition-transform duration-700 ease-in-out"></span>
@@ -114,7 +115,7 @@ export default function Home() {
                 <span>Find An Advisor</span>
               </span>
             </button>
-            <button onClick={openGleapChat} className="group relative overflow-hidden bg-transparent text-white border-2 border-white font-sans font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300">
+            <button onClick={() => router.push('/portfolio')} className="group relative overflow-hidden bg-transparent text-white border-2 border-white font-sans font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300">
               <span className="absolute top-0 left-0 w-full h-full transform -translate-x-full bg-white/5 skew-x-12 group-hover:translate-x-full transition-transform duration-700 ease-out"></span>
               <span className="relative flex items-center justify-center space-x-2">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { openGleapChat } from '@/utils/gleap';
+import { useRouter } from 'next/navigation';
 
 export default function Header(): React.JSX.Element {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const router = useRouter();
 
 
   useEffect(() => {
@@ -78,13 +79,6 @@ export default function Header(): React.JSX.Element {
             Advisors
           </Link>
           <Link 
-            href="/portfolio" 
-            className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
-          >
-            <span className="absolute bottom-0 left-0 h-0.5 bg-[#E3B23C] w-0 group-hover:w-full transition-all duration-300"></span>
-            Portfolio AI
-          </Link>
-          <Link 
             href="https://clockwisefunds.com/" 
             className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
             target="_blank"
@@ -110,7 +104,7 @@ export default function Header(): React.JSX.Element {
 
           {/* Ask AI Button with enhanced hover effect */}
           <button 
-            onClick={openGleapChat}
+            onClick={() => router.push('/portfolio')}
             className="ml-5 relative overflow-hidden bg-[#E3B23C] text-white px-5 py-2 rounded-md font-sans font-medium group transition-all duration-300"
           >
             {/* Button shine effect */}
@@ -179,18 +173,10 @@ export default function Header(): React.JSX.Element {
               Advisors
             </Link>
             <Link 
-              href="/portfolio" 
-              className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
-              onClick={() => setIsMenuOpen(false)}
-              style={{ transitionDelay: '125ms' }}
-            >
-              Portfolio AI
-            </Link>
-            <Link 
               href="https://clockwisefunds.com/" 
               className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
               onClick={() => setIsMenuOpen(false)}
-              style={{ transitionDelay: '150ms' }}
+              style={{ transitionDelay: '125ms' }}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -218,7 +204,7 @@ export default function Header(): React.JSX.Element {
             className="mt-4 px-3 py-1.5 text-base font-medium text-black bg-[#E3B23C] hover:bg-[#c89b33] rounded-full transition-all duration-300 flex items-center gap-1.5"
             onClick={() => {
               setIsMenuOpen(false);
-              openGleapChat();
+              router.push('/portfolio');
             }}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
