@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { SignJWT, jwtVerify } from 'jose'
+import { SignJWT } from 'jose'
 
 // Admin credentials (in production, use environment variables)
 const ADMIN_USERNAME = 'clockwiseadmin'
