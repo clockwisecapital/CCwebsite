@@ -72,23 +72,3 @@ export async function DELETE() {
   
   return response
 }
-
-/**
- * Verify admin token middleware (internal use only)
- */
-async function verifyAdminToken(request: NextRequest): Promise<boolean> {
-  try {
-    const token = request.cookies.get('admin-token')?.value
-    
-    if (!token) {
-      return false
-    }
-
-    const { payload } = await jwtVerify(token, JWT_SECRET)
-    
-    return payload.username === ADMIN_USERNAME && payload.role === 'admin'
-  } catch (error) {
-    console.error('Token verification error:', error)
-    return false
-  }
-}
