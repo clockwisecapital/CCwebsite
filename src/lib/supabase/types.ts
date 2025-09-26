@@ -19,7 +19,7 @@ export interface Database {
       conversations: {
         Row: {
           id: string
-          user_email: string
+          user_email: string | null
           session_id: string
           created_at: string
           updated_at: string
@@ -27,7 +27,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          user_email: string
+          user_email: string | null
           session_id: string
           created_at?: string
           updated_at?: string
@@ -35,7 +35,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          user_email?: string
+          user_email?: string | null
           session_id?: string
           created_at?: string
           updated_at?: string
@@ -51,6 +51,7 @@ export interface Database {
           content: string | null
           display_spec: Json | null
           created_at: string
+          seq?: number | null
           metadata?: Json
         }
         Insert: {
@@ -60,6 +61,7 @@ export interface Database {
           content?: string | null
           display_spec?: Json | null
           created_at?: string
+          seq?: number | null
           metadata?: Json
         }
         Update: {
@@ -69,6 +71,7 @@ export interface Database {
           content?: string | null
           display_spec?: Json | null
           created_at?: string
+          seq?: number | null
           metadata?: Json
         }
         Relationships: [

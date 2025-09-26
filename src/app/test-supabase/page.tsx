@@ -4,7 +4,8 @@ import { useState } from 'react'
 
 export default function TestSupabasePage() {
   const [isLoading, setIsLoading] = useState(false)
-  const [result, setResult] = useState<any>(null)
+  type ApiResult = { success: boolean; message: string; error?: string; timestamp?: string }
+  const [result, setResult] = useState<ApiResult | null>(null)
 
   const runTest = async () => {
     setIsLoading(true)

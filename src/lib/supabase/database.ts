@@ -5,10 +5,8 @@
  * Integrates with existing FSM system and session management
  */
 
-import { createServerSupabaseClient, createAdminSupabaseClient } from './server'
-import { createClient } from './client'
+import { createAdminSupabaseClient } from './server'
 import type { 
-  Database, 
   Conversation, 
   ConversationInsert,
   Message, 
@@ -30,15 +28,15 @@ import type {
 export async function createConversation(data: {
   userEmail?: string
   sessionId: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }): Promise<Conversation | null> {
   try {
     const supabase = createAdminSupabaseClient()
     
     const conversationData: ConversationInsert = {
-      user_email: (data.userEmail ?? null) as any,
+      user_email: data.userEmail ?? null,
       session_id: data.sessionId,
-      metadata: data.metadata || {}
+      metadata: (data.metadata as Json) || {}
     }
 
     const { data: conversation, error } = await supabase
@@ -93,7 +91,7 @@ export async function getConversationBySessionId(sessionId: string): Promise<Con
  */
 export async function updateConversation(
   conversationId: string,
-  updates: { metadata?: Record<string, any>; user_email?: string }
+  updates: { metadata?: Json; user_email?: string }
 ): Promise<boolean> {
   try {
     const supabase = createAdminSupabaseClient()
@@ -126,8 +124,8 @@ export async function saveMessage(data: {
   conversationId: string
   role: 'user' | 'assistant'
   content?: string
-  displaySpec?: DisplaySpec
-  metadata?: Record<string, any>
+  displaySpec?: DisplaySpec | { blocks: Array<{ type: string; content: string }> }
+  metadata?: Record<string, unknown>
 }): Promise<Message | null> {
   try {
     const supabase = createAdminSupabaseClient()
@@ -140,7 +138,7 @@ export async function saveMessage(data: {
       role: data.role,
       content: ensuredContent,
       display_spec: (data.displaySpec as unknown as Json) || null,
-      metadata: data.metadata || {}
+      metadata: (data.metadata as Json) || {}
     }
 
     const { data: message, error } = await supabase
@@ -198,7 +196,7 @@ export async function saveUserData(data: {
   conversationId: string
   goals?: SessionData['goals']
   portfolio?: SessionData['portfolio']
-  analysis?: SessionData['analysis']
+  analysis?: SessionData['analysis'] | Record<string, unknown>
 }): Promise<UserData | null> {
   try {
     const supabase = createAdminSupabaseClient()
@@ -212,9 +210,9 @@ export async function saveUserData(data: {
 
     const userData = {
       conversation_id: data.conversationId,
-      goals: data.goals || null,
-      portfolio_data: data.portfolio || null,
-      analysis_results: data.analysis || null
+      goals: (data.goals as Json) || null,
+      portfolio_data: (data.portfolio as Json) || null,
+      analysis_results: (data.analysis as unknown as Json) || null
     }
 
     if (existing) {
@@ -317,7 +315,7 @@ export async function initializeSession(sessionId: string, userEmail?: string): 
       if (userEmail && conversation.user_email !== userEmail) {
         await updateConversation(conversation.id, { user_email: userEmail })
         // refresh conversation entity minimally
-        conversation.user_email = userEmail as any
+        conversation.user_email = userEmail
       }
       userData = await getUserData(conversation.id)
       messages = await getConversationMessages(conversation.id)
@@ -348,11 +346,11 @@ export async function saveSessionState(data: {
   stage: string
   goals?: SessionData['goals']
   portfolio?: SessionData['portfolio']
-  analysis?: SessionData['analysis']
+  analysis?: SessionData['analysis'] | Record<string, unknown>
   lastMessage?: {
     role: 'user' | 'assistant'
     content?: string
-    displaySpec?: DisplaySpec
+    displaySpec?: DisplaySpec | { blocks: Array<{ type: string; content: string }> }
   }
 }): Promise<boolean> {
   try {
@@ -375,15 +373,15 @@ export async function saveSessionState(data: {
     // Update email if provided later
     if (data.userEmail && conversation.user_email !== data.userEmail) {
       await updateConversation(conversation.id, { user_email: data.userEmail })
-      conversation.user_email = data.userEmail as any
+      conversation.user_email = data.userEmail
     }
 
     // Update conversation metadata with current stage
     await updateConversation(conversation.id, {
-      metadata: { 
+      metadata: ({ 
         stage: data.stage,
         last_updated: new Date().toISOString()
-      }
+      } as unknown) as Json
     })
 
     // Save user data if provided

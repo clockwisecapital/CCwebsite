@@ -14,6 +14,7 @@ import {
   HiCheckCircle,
   HiArrowDownTray
 } from 'react-icons/hi2'
+import type { DisplaySpec, DisplayBlock } from '@/lib/supabase/types'
 
 interface DashboardData {
   stats: {
@@ -39,6 +40,18 @@ interface DashboardData {
     lastActivity: string
   }>
   lastUpdated: string
+}
+
+type TimelineItem = { timestamp: string; event: string; description?: string }
+type MessageItem = { id: string; role: 'user' | 'assistant'; created_at: string; content: string | null; display_spec?: unknown }
+type LeadScore = number | { total: number; breakdown?: Record<string, number> }
+type ConversationDetail = {
+  id: string
+  user_email: string | null
+  created_at: string
+  leadScore: LeadScore
+  timeline: TimelineItem[]
+  messages: MessageItem[]
 }
 
 export default function AdminDashboardPage() {
@@ -81,7 +94,7 @@ export default function AdminDashboardPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState('')
-  const [detail, setDetail] = useState<any | null>(null)
+  const [detail, setDetail] = useState<ConversationDetail | null>(null)
 
   const openConversation = async (id: string) => {
     setIsDetailOpen(true)
@@ -122,45 +135,44 @@ export default function AdminDashboardPage() {
   }) || []
 
   // Helper: render a DisplaySpec block array into readable HTML
-  const renderDisplaySpec = (spec: any) => {
-    if (!spec || !Array.isArray(spec.blocks)) {
+  const renderDisplaySpec = (spec: unknown) => {
+    const ds = spec as Partial<DisplaySpec> | null
+    if (!ds || !Array.isArray(ds.blocks)) {
       return (
         <pre className="text-xs text-gray-500 bg-gray-50 p-3 rounded border border-gray-100 overflow-x-auto">
-          {JSON.stringify(spec, null, 2)}
+          {JSON.stringify(spec as unknown, null, 2)}
         </pre>
       )
     }
     return (
       <div className="space-y-3">
-        {spec.blocks.map((block: any, idx: number) => {
-          const type = block?.type
+        {ds.blocks.map((block: Partial<DisplayBlock>, idx: number) => {
+          const type = (block as Partial<DisplayBlock>)?.type as DisplayBlock['type'] | undefined
           // Content is typically stored as JSON string; parse safely
-          let parsed: any = undefined
+          let parsed: unknown = undefined
           try {
-            parsed = typeof block.content === 'string' ? JSON.parse(block.content) : block.content
+            parsed = typeof block?.content === 'string' ? JSON.parse(block.content) : block?.content
           } catch (_) {
-            parsed = block.content
+            parsed = block?.content
           }
           if (type === 'summary_bullets' && Array.isArray(parsed)) {
             return (
               <ul key={idx} className="list-disc ml-5 text-sm text-gray-800">
-                {parsed.map((item: any, i: number) => (
-                  <li key={i}>{String(item)}</li>
-                ))}
+                {(parsed as unknown[]).map((item, i) => <li key={i}>{String(item)}</li>)}
               </ul>
             )
           }
           if (type === 'conversation_text' && Array.isArray(parsed)) {
             return (
               <div key={idx} className="text-sm text-gray-800 whitespace-pre-wrap">
-                {parsed.join('\n')}
+                {(parsed as unknown[]).map(String).join('\n')}
               </div>
             )
           }
           if (type === 'cta_group' && Array.isArray(parsed)) {
             return (
               <div key={idx} className="flex flex-wrap gap-2">
-                {parsed.map((btn: any, i: number) => (
+                {(parsed as Array<{ label?: string }>).map((btn, i) => (
                   <span key={i} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
                     {btn?.label || 'CTA'}
                   </span>
@@ -179,7 +191,7 @@ export default function AdminDashboardPage() {
     )
   }
 
-  const renderMessageBody = (m: any) => {
+  const renderMessageBody = (m: { content?: string | null; display_spec?: unknown }) => {
     if (m?.content) {
       return (
         <div className="mt-2 text-sm text-gray-900 whitespace-pre-wrap break-words">{m.content}</div>
@@ -539,21 +551,21 @@ export default function AdminDashboardPage() {
                       <h3 className="text-sm font-semibold text-gray-700 mb-2">Lead Score</h3>
                       <div
                         className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${
-                          ((detail.leadScore?.total ?? detail.leadScore) as number) >= 80
+                          ((typeof detail.leadScore === 'number' ? detail.leadScore : (detail.leadScore?.total ?? 0)) as number) >= 80
                             ? 'bg-emerald-100 text-emerald-800'
-                            : ((detail.leadScore?.total ?? detail.leadScore) as number) >= 60
+                            : ((typeof detail.leadScore === 'number' ? detail.leadScore : (detail.leadScore?.total ?? 0)) as number) >= 60
                             ? 'bg-amber-100 text-amber-800'
                             : 'bg-red-100 text-red-800'
                         }`}
                       >
-                        {(detail.leadScore?.total ?? detail.leadScore) ?? 0}
+                        {(typeof detail.leadScore === 'number' ? detail.leadScore : (detail.leadScore?.total ?? 0)) ?? 0}
                       </div>
-                      {detail.leadScore?.breakdown && (
+                      {(typeof detail.leadScore === 'object' && detail.leadScore?.breakdown) && (
                         <ul className="mt-3 space-y-1 text-sm text-gray-700">
-                          {Object.entries(detail.leadScore.breakdown).map(([k, v]: any) => (
+                          {Object.entries(detail.leadScore.breakdown as Record<string, number>).map(([k, v]) => (
                             <li key={k} className="flex justify-between">
                               <span>{k}</span>
-                              <span className="font-medium">{v as number}</span>
+                              <span className="font-medium">{v}</span>
                             </li>
                           ))}
                         </ul>
@@ -562,7 +574,7 @@ export default function AdminDashboardPage() {
                     <div>
                       <h3 className="text-sm font-semibold text-gray-700 mb-2">Timeline</h3>
                       <ol className="space-y-3">
-                        {(detail.timeline || []).map((t: any, idx: number) => (
+                        {(detail.timeline || []).map((t: TimelineItem, idx: number) => (
                           <li key={idx} className="text-sm">
                             <div className="text-gray-900">{t.event}</div>
                             <div className="text-gray-500">{new Date(t.timestamp).toLocaleString()}</div>
@@ -575,26 +587,26 @@ export default function AdminDashboardPage() {
                   <div className="md:col-span-2 p-6 max-h-[70vh] overflow-y-auto">
                     <h3 className="text-sm font-semibold text-gray-700 mb-4">Messages</h3>
                     <div className="space-y-4">
-                      {(detail.messages || []).map((m: any) => (
-                        <div
-                          key={m.id}
-                          className={`p-3 rounded-lg border ${
-                            m.role === 'user' ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-200'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span
-                              className={`text-xs font-medium ${
-                                m.role === 'user' ? 'text-blue-700' : 'text-gray-700'
-                              }`}
-                            >
-                              {m.role === 'user' ? 'User' : 'Assistant'}
-                            </span>
-                            <span className="text-xs text-gray-500">{new Date(m.created_at).toLocaleString()}</span>
-                          </div>
-                          <div className="mt-2 text-sm text-gray-900 whitespace-pre-wrap break-words">{m.content}</div>
+                    {(detail.messages || []).map((m: MessageItem) => (
+                      <div
+                        key={m.id}
+                        className={`p-3 rounded-lg border ${
+                          m.role === 'user' ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-200'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span
+                            className={`text-xs font-medium ${
+                              m.role === 'user' ? 'text-blue-700' : 'text-gray-700'
+                            }`}
+                          >
+                            {m.role === 'user' ? 'User' : 'Assistant'}
+                          </span>
+                          <span className="text-xs text-gray-500">{new Date(m.created_at).toLocaleString()}</span>
                         </div>
-                      ))}
+                        {renderMessageBody(m)}
+                      </div>
+                    ))}
                     </div>
                   </div>
                 </div>

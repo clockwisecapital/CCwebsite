@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { testSupabaseIntegration } from '@/lib/supabase/test-connection'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     console.log('🚀 Starting Supabase integration test via API...')
     
@@ -39,6 +39,6 @@ export async function GET(request: NextRequest) {
 }
 
 // Also support POST for flexibility
-export async function POST(request: NextRequest) {
-  return GET(request)
+export async function POST(_request: NextRequest) {
+  return GET(_request)
 }
