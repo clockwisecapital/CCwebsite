@@ -39,20 +39,20 @@ interface DashboardData {
     hasAnalysis: boolean
     lastActivity: string
   }>
-  lastUpdated: string
+  lastUpdated?: string
 }
 
 type TimelineItem = { timestamp: string; event: string; description?: string }
 type MessageItem = { id: string; role: 'user' | 'assistant'; created_at: string; content: string | null; display_spec?: unknown }
-type LeadScore = number | { total: number; breakdown?: Record<string, number> }
-type ConversationDetail = {
-  id: string
-  user_email: string | null
-  created_at: string
-  leadScore: LeadScore
-  timeline: TimelineItem[]
-  messages: MessageItem[]
-}
+// type LeadScore = number | { total: number; breakdown?: Record<string, number> } // Unused type
+// interface ConversationDetail {
+//   id: string
+//   user_email: string | null
+//   created_at: string
+//   leadScore: LeadScore
+//   timeline: TimelineItem[]
+//   messages: MessageItem[]
+// }
 
 export default function AdminDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
@@ -60,10 +60,15 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState('')
   const [timeframe, setTimeframe] = useState('week')
   const [sortBy, setSortBy] = useState('leadScore')
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [detail, setDetail] = useState<Record<string, unknown> | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState('')
   const router = useRouter()
 
   useEffect(() => {
     fetchDashboardData()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeframe])
 
   const fetchDashboardData = async () => {
@@ -83,18 +88,12 @@ export default function AdminDashboardPage() {
       } else {
         setError(result.message || 'Failed to fetch data')
       }
-    } catch (error) {
+    } catch {
       setError('Network error. Please try again.')
     } finally {
       setIsLoading(false)
     }
   }
-
-  // Conversation detail modal state and handlers
-  const [isDetailOpen, setIsDetailOpen] = useState(false)
-  const [detailLoading, setDetailLoading] = useState(false)
-  const [detailError, setDetailError] = useState('')
-  const [detail, setDetail] = useState<ConversationDetail | null>(null)
 
   const openConversation = async (id: string) => {
     setIsDetailOpen(true)
@@ -109,7 +108,7 @@ export default function AdminDashboardPage() {
       } else {
         setDetailError(json.message || 'Failed to load conversation')
       }
-    } catch (e) {
+    } catch {
       setDetailError('Network error. Please try again.')
     } finally {
       setDetailLoading(false)
@@ -121,14 +120,20 @@ export default function AdminDashboardPage() {
     setDetail(null)
   }
 
-  const sortedConversations = data?.conversations.sort((a, b) => {
+  interface ConversationItem {
+    leadScore: number
+    created_at: string
+    portfolio?: { value?: number }
+  }
+
+  const sortedConversations = data?.conversations.sort((a: ConversationItem, b: ConversationItem) => {
     switch (sortBy) {
       case 'leadScore':
         return b.leadScore - a.leadScore
       case 'created_at':
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       case 'portfolioValue':
-        return (b.portfolio.value || 0) - (a.portfolio.value || 0)
+        return (b.portfolio?.value || 0) - (a.portfolio?.value || 0)
       default:
         return b.leadScore - a.leadScore
     }
@@ -137,7 +142,7 @@ export default function AdminDashboardPage() {
   // Helper: render a DisplaySpec block array into readable HTML
   const renderDisplaySpec = (spec: unknown) => {
     const ds = spec as Partial<DisplaySpec> | null
-    if (!ds || !Array.isArray(ds.blocks)) {
+    if (!ds || !Array.isArray(ds?.blocks)) {
       return (
         <pre className="text-xs text-gray-500 bg-gray-50 p-3 rounded border border-gray-100 overflow-x-auto">
           {JSON.stringify(spec as unknown, null, 2)}
@@ -152,7 +157,7 @@ export default function AdminDashboardPage() {
           let parsed: unknown = undefined
           try {
             parsed = typeof block?.content === 'string' ? JSON.parse(block.content) : block?.content
-          } catch (_) {
+          } catch {
             parsed = block?.content
           }
           if (type === 'summary_bullets' && Array.isArray(parsed)) {
@@ -207,6 +212,7 @@ export default function AdminDashboardPage() {
     )
   }
 
+  // Main component render logic
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -521,10 +527,10 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between px-6 py-4 border-b">
                 <div>
                   <h2 id="conv-title" className="text-xl font-semibold text-gray-900">
-                    {(detail?.user_email || 'Conversation')} • {detail?.id?.slice(0, 8) || ''}
+                    {(detail?.user_email as string || 'Conversation')} • {(detail?.id as string)?.slice(0, 8) || ''}
                   </h2>
                   <p className="text-sm text-gray-500">
-                    {detail?.created_at ? `Started ${new Date(detail.created_at).toLocaleString()}` : ''}
+                    {detail?.created_at ? `Started ${new Date(detail.created_at as string).toLocaleString()}` : ''}
                   </p>
                 </div>
                 <button
@@ -551,30 +557,39 @@ export default function AdminDashboardPage() {
                       <h3 className="text-sm font-semibold text-gray-700 mb-2">Lead Score</h3>
                       <div
                         className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${
-                          ((typeof detail.leadScore === 'number' ? detail.leadScore : (detail.leadScore?.total ?? 0)) as number) >= 80
+                          ((typeof detail.leadScore === 'number' ? detail.leadScore : ((detail.leadScore as Record<string, unknown>)?.total ?? 0)) as number) >= 80
                             ? 'bg-emerald-100 text-emerald-800'
-                            : ((typeof detail.leadScore === 'number' ? detail.leadScore : (detail.leadScore?.total ?? 0)) as number) >= 60
+                            : ((typeof detail.leadScore === 'number' ? detail.leadScore : ((detail.leadScore as Record<string, unknown>)?.total ?? 0)) as number) >= 60
                             ? 'bg-amber-100 text-amber-800'
                             : 'bg-red-100 text-red-800'
                         }`}
                       >
-                        {(typeof detail.leadScore === 'number' ? detail.leadScore : (detail.leadScore?.total ?? 0)) ?? 0}
+                        {String((typeof detail.leadScore === 'number' ? detail.leadScore : ((detail.leadScore as Record<string, unknown>)?.total ?? 0)) ?? 0)}
                       </div>
-                      {(typeof detail.leadScore === 'object' && detail.leadScore?.breakdown) && (
-                        <ul className="mt-3 space-y-1 text-sm text-gray-700">
-                          {Object.entries(detail.leadScore.breakdown as Record<string, number>).map(([k, v]) => (
-                            <li key={k} className="flex justify-between">
-                              <span>{k}</span>
-                              <span className="font-medium">{v}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                      {(() => {
+                        if (typeof detail.leadScore === 'object' && detail.leadScore !== null) {
+                          const leadScoreObj = detail.leadScore as Record<string, unknown>;
+                          const breakdown = leadScoreObj.breakdown;
+                          if (breakdown && typeof breakdown === 'object') {
+                            return (
+                              <ul className="mt-3 space-y-1 text-sm text-gray-700">
+                                {Object.entries(breakdown as Record<string, number>).map(([k, v]) => (
+                                  <li key={k} className="flex justify-between">
+                                    <span>{k}</span>
+                                    <span className="font-medium">{v}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            );
+                          }
+                        }
+                        return null;
+                      })()}
                     </div>
                     <div>
                       <h3 className="text-sm font-semibold text-gray-700 mb-2">Timeline</h3>
                       <ol className="space-y-3">
-                        {(detail.timeline || []).map((t: TimelineItem, idx: number) => (
+                        {((detail.timeline as TimelineItem[]) || []).map((t: TimelineItem, idx: number) => (
                           <li key={idx} className="text-sm">
                             <div className="text-gray-900">{t.event}</div>
                             <div className="text-gray-500">{new Date(t.timestamp).toLocaleString()}</div>
@@ -587,7 +602,7 @@ export default function AdminDashboardPage() {
                   <div className="md:col-span-2 p-6 max-h-[70vh] overflow-y-auto">
                     <h3 className="text-sm font-semibold text-gray-700 mb-4">Messages</h3>
                     <div className="space-y-4">
-                    {(detail.messages || []).map((m: MessageItem) => (
+                      {((detail?.messages as MessageItem[]) || []).map((m: MessageItem) => (
                       <div
                         key={m.id}
                         className={`p-3 rounded-lg border ${

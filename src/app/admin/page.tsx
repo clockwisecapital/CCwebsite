@@ -22,7 +22,7 @@ export default function AdminRootPage() {
           // User is not authenticated, redirect to login
           router.push('/admin/login')
         }
-      } catch (error) {
+      } catch {
         // Error occurred, redirect to login
         router.push('/admin/login')
       }

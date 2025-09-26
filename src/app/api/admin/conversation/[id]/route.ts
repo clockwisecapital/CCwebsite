@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdminToken } from '../../auth/route'
+import { verifyAdminToken } from '@/lib/auth/admin'
 import { createAdminSupabaseClient } from '@/lib/supabase/index'
 
 export async function GET(
@@ -46,7 +46,7 @@ export async function GET(
     // GET ALL MESSAGES
     // ========================================================================
     
-    const { data: messages, error: messagesError } = await supabase
+    const { data: messages } = await supabase
       .from('messages')
       .select('*')
       .eq('conversation_id', conversationId)
@@ -57,7 +57,7 @@ export async function GET(
     // GET USER DATA
     // ========================================================================
     
-    const { data: userData, error: userDataError } = await supabase
+    const { data: userData } = await supabase
       .from('user_data')
       .select('*')
       .eq('conversation_id', conversationId)
@@ -83,8 +83,35 @@ export async function GET(
         created_at: userData.created_at,
         updated_at: userData.updated_at
       } : null,
-      leadScore: calculateDetailedLeadScore(conversation, userData, safeMessages),
-      timeline: generateConversationTimeline(conversation, safeMessages, userData)
+      leadScore: calculateLeadScore(
+        { 
+          ...conversation, 
+          metadata: conversation.metadata && typeof conversation.metadata === 'object' 
+            ? (conversation.metadata as Record<string, unknown>) 
+            : undefined
+        }, 
+        userData ? {
+          goals: userData.goals as Record<string, unknown> | undefined,
+          portfolio_data: userData.portfolio_data as { portfolio_value?: number } | undefined,
+          analysis_results: userData.analysis_results as Record<string, unknown> | undefined
+        } : null, 
+        safeMessages
+      ),
+      timeline: generateConversationTimeline(
+        { 
+          ...conversation, 
+          metadata: conversation.metadata && typeof conversation.metadata === 'object' 
+            ? (conversation.metadata as Record<string, unknown>) 
+            : undefined
+        }, 
+        safeMessages, 
+        userData ? {
+          goals: userData.goals as Record<string, unknown> | undefined,
+          portfolio_data: userData.portfolio_data as { portfolio_value?: number } | undefined,
+          analysis_results: userData.analysis_results as Record<string, unknown> | undefined,
+          created_at: userData.created_at,
+          updated_at: userData.updated_at
+        } : null)
     }
 
     return NextResponse.json({
@@ -105,10 +132,33 @@ export async function GET(
 // HELPER FUNCTIONS
 // ============================================================================
 
-function calculateDetailedLeadScore(conversation: any, userData: any, messages: any[]): {
+type ConversationData = {
+  id: string
+  user_email: string | null
+  created_at: string
+  updated_at: string
+  session_id: string
+  metadata?: Record<string, unknown>
+}
+
+type UserDataRecord = {
+  goals?: Record<string, unknown>
+  portfolio_data?: { portfolio_value?: number }
+  analysis_results?: Record<string, unknown>
+}
+
+type MessageRecord = {
+  id: string
+  role: 'user' | 'assistant'
+  content: string | null
+  display_spec?: unknown
+  created_at: string
+}
+
+const calculateLeadScore = (conversation: ConversationData, userData: UserDataRecord | null, messages: MessageRecord[]): {
   total: number
   breakdown: Record<string, number>
-} {
+} => {
   const breakdown: Record<string, number> = {
     'Email Provided': 0,
     'Goals Completed': 0,
@@ -148,7 +198,7 @@ function calculateDetailedLeadScore(conversation: any, userData: any, messages: 
   return { total, breakdown }
 }
 
-function generateConversationTimeline(conversation: any, messages: any[], userData: any): Array<{
+function generateConversationTimeline(conversation: ConversationData, messages: MessageRecord[], userData: (UserDataRecord & { created_at: string; updated_at: string }) | null): Array<{
   timestamp: string
   event: string
   description: string
@@ -203,7 +253,7 @@ function generateConversationTimeline(conversation: any, messages: any[], userDa
     }
 
     if (userData.portfolio_data) {
-      const portfolio = userData.portfolio_data
+      const portfolio = userData.portfolio_data as { portfolio_value?: number; new_investor?: boolean }
       timeline.push({
         timestamp: userData.created_at,
         event: 'Portfolio Data',

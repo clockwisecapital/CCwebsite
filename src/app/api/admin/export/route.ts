@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdminToken } from '../auth/route'
+import { verifyAdminToken } from '@/lib/auth/admin'
 import { createAdminSupabaseClient } from '@/lib/supabase/index'
 
 export async function GET(request: NextRequest) {
@@ -78,9 +78,16 @@ export async function GET(request: NextRequest) {
     
     const enrichedData = conversations?.map(conversation => {
       const userInfo = userData?.find(u => u.conversation_id === conversation.id)
-      const goals = userInfo?.goals as any
-      const portfolio = userInfo?.portfolio_data as any
-      const analysis = userInfo?.analysis_results as any
+      const goals = userInfo?.goals as Record<string, unknown>
+      const portfolio = userInfo?.portfolio_data as Record<string, unknown>
+      const analysis = userInfo?.analysis_results as Record<string, unknown>
+
+      // Transform userInfo to match expected type
+      const transformedUserData = userInfo ? {
+        goals: userInfo.goals || undefined,
+        portfolio_data: userInfo.portfolio_data ? (userInfo.portfolio_data as { portfolio_value?: number }) : undefined,
+        analysis_results: userInfo.analysis_results || undefined
+      } : null
 
       return {
         // Basic Info
@@ -98,15 +105,15 @@ export async function GET(request: NextRequest) {
         // Portfolio
         portfolio_value: portfolio?.portfolio_value || '',
         new_investor: portfolio?.new_investor ? 'Yes' : 'No',
-        holdings_count: portfolio?.holdings?.length || 0,
+        holdings_count: Array.isArray(portfolio?.holdings) ? portfolio.holdings.length : 0,
         
         // Analysis Status
         has_analysis: analysis ? 'Yes' : 'No',
         analysis_completed_at: userInfo?.updated_at || '',
         
         // Lead Scoring
-        lead_score: calculateLeadScore(conversation, userInfo),
-        status: getConversationStatus(conversation, userInfo)
+        lead_score: calculateLeadScore(conversation, transformedUserData),
+        status: getConversationStatus(conversation, transformedUserData)
       }
     }) || []
 
@@ -164,7 +171,7 @@ function getTimeframeDate(timeframe: string): Date {
   }
 }
 
-function calculateLeadScore(conversation: any, userData: any): number {
+function calculateLeadScore(conversation: { user_email?: string | null; updated_at: string }, userData: { goals?: unknown; portfolio_data?: { portfolio_value?: number }; analysis_results?: unknown } | null): number {
   let score = 0
   
   if (conversation.user_email) score += 20
@@ -182,7 +189,7 @@ function calculateLeadScore(conversation: any, userData: any): number {
   return Math.min(score, 100)
 }
 
-function getConversationStatus(conversation: any, userData: any): string {
+function getConversationStatus(conversation: { user_email?: string | null }, userData: { goals?: unknown; portfolio_data?: unknown; analysis_results?: unknown } | null): string {
   if (userData?.analysis_results) return 'Completed'
   if (userData?.portfolio_data) return 'Portfolio Collected'
   if (userData?.goals) return 'Goals Collected'
@@ -190,13 +197,18 @@ function getConversationStatus(conversation: any, userData: any): string {
   return 'In Progress'
 }
 
-function generateCSV(data: any[]): string {
+function escapeCSVField(field: unknown): string {
+  if (typeof field === 'number') return field.toFixed(2)
+  if (typeof field === 'string') return field.replace(/"/g, '""')
+  return ''
+}
+
+function generateCSV(data: Array<Record<string, unknown>>): string {
   if (data.length === 0) return 'No data available'
 
   // CSV Headers
   const headers = [
     'Conversation ID',
-    'Email',
     'Session ID',
     'Created At',
     'Updated At',
@@ -213,7 +225,7 @@ function generateCSV(data: any[]): string {
   ]
 
   // CSV Rows
-  const rows = data.map(row => [
+  const rows = data.map((row: Record<string, unknown>) => [
     row.conversation_id,
     row.email,
     row.session_id,
@@ -233,7 +245,7 @@ function generateCSV(data: any[]): string {
 
   // Combine headers and rows
   const csvContent = [headers, ...rows]
-    .map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
+    .map(row => row.map(field => `"${escapeCSVField(field)}"`).join(','))
     .join('\n')
 
   return csvContent

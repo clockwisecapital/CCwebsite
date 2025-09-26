@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdminToken } from '../auth/route'
+import { verifyAdminToken } from '@/lib/auth/admin'
 import { createAdminSupabaseClient } from '@/lib/supabase/index'
 
 export async function GET(request: NextRequest) {
@@ -98,26 +98,30 @@ export async function GET(request: NextRequest) {
     const enrichedConversations = conversations?.map(conversation => {
       const userInfo = userData?.find(u => u.conversation_id === conversation.id)
       
-      // Calculate lead score
-      const leadScore = calculateLeadScore(conversation, userInfo)
+      // Calculate lead score - transform userInfo to expected format
+      const transformedUserInfo = userInfo ? {
+        goals: userInfo.goals,
+        portfolio_data: userInfo.portfolio_data as { portfolio_value?: number } | undefined,
+        analysis_results: userInfo.analysis_results
+      } : null
+      const leadScore = calculateLeadScore(conversation, transformedUserInfo)
       
       // Extract key metrics
-      const goals = userInfo?.goals as any
-      const portfolio = userInfo?.portfolio_data as any
-      const analysis = userInfo?.analysis_results as any
-      
+      const goals = userInfo?.goals as Record<string, unknown>
+      const portfolio = userInfo?.portfolio_data as Record<string, unknown> & { portfolio_value?: number; holdings?: unknown[]; new_investor?: boolean }
+      const analysis = userInfo?.analysis_results as Record<string, unknown> | null
       return {
         ...conversation,
         leadScore,
-        status: getConversationStatus(conversation, userInfo),
+        status: getConversationStatus(conversation, userInfo || null),
         goals: {
-          type: goals?.goal_type,
-          amount: goals?.target_amount,
-          timeline: goals?.timeline_years
+          type: (goals?.goal_type || goals?.type || null) as string | null,
+          amount: (goals?.goal_amount || goals?.amount || null) as number | null,
+          timeline: (goals?.horizon_years || goals?.timeline || null) as number | null
         },
         portfolio: {
           value: portfolio?.portfolio_value,
-          holdings: portfolio?.holdings?.length || 0,
+          holding: portfolio?.holdings?.length || 0,
           newInvestor: portfolio?.new_investor
         },
         hasAnalysis: !!analysis,
@@ -194,7 +198,7 @@ function getTimeframeDate(timeframe: string): Date {
   }
 }
 
-function calculateLeadScore(conversation: any, userData: any): number {
+function calculateLeadScore(conversation: { user_email?: string | null; updated_at: string }, userData: { goals?: unknown; portfolio_data?: { portfolio_value?: number }; analysis_results?: unknown } | null): number {
   let score = 0
   
   // Email provided (+20 points)
@@ -221,7 +225,7 @@ function calculateLeadScore(conversation: any, userData: any): number {
   return Math.min(score, 100) // Cap at 100
 }
 
-function getConversationStatus(conversation: any, userData: any): string {
+function getConversationStatus(conversation: { user_email?: string | null }, userData: { goals?: unknown; portfolio_data?: unknown; analysis_results?: unknown } | null): string {
   if (userData?.analysis_results) return 'Completed'
   if (userData?.portfolio_data) return 'Portfolio Collected'
   if (userData?.goals) return 'Goals Collected'
@@ -229,7 +233,34 @@ function getConversationStatus(conversation: any, userData: any): string {
   return 'In Progress'
 }
 
-function getGoalTypeDistribution(conversations: any[]): Record<string, number> {
+// Unused helper function - commented out for now
+// function getGoalTypeLabel(type: string | undefined | null): string {
+//   switch (type) {
+//     case 'Retirement':
+//       return 'Retirement'
+//     case 'Wealth Creation':
+//       return 'Wealth Creation'
+//     case 'Education':
+//       return 'Education'
+//     case 'Major Purchase':
+//       return 'Major Purchase'
+//     case 'Business':
+//       return 'Business'
+//     default:
+//       return 'Unknown'
+//   }
+// }
+
+// Unused helper function - commented out for now
+// function getPortfolioSizeRange(value: number | undefined | null): string {
+//   if (value === undefined || value === null) return 'Unknown'
+//   if (value < 50000) return '$1-$50k'
+//   if (value < 250000) return '$50k-$250k'
+//   if (value < 1000000) return '$250k-$1M'
+//   return '$1M+'
+// }
+
+function getGoalTypeDistribution(conversations: Array<{ goals?: { type?: string | null } }>): Record<string, number> {
   const distribution: Record<string, number> = {}
   conversations.forEach(c => {
     const goalType = c.goals?.type || 'Unknown'
@@ -238,9 +269,9 @@ function getGoalTypeDistribution(conversations: any[]): Record<string, number> {
   return distribution
 }
 
-function getPortfolioSizeDistribution(conversations: any[]): Record<string, number> {
+function getPortfolioSizeDistribution(conversations: Array<{ portfolio?: { value?: number; newInvestor?: boolean } }>): Record<string, number> {
   const distribution: Record<string, number> = {
-    'New Investor': 0,
+    'Newinvestor': 0,
     '$1-$50k': 0,
     '$50k-$250k': 0,
     '$250k-$1M': 0,

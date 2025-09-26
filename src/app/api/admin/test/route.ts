@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdminToken } from '../auth/route'
+import { verifyAdminToken } from '@/lib/auth/admin'
 
 export async function GET(request: NextRequest) {
   try {

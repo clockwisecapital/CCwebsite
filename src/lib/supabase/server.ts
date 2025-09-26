@@ -6,7 +6,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
+// import { cookies } from 'next/headers' // Not used currently
 import type { Database } from './types.js'
 
 // Validate environment variables

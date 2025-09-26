@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdminToken } from '../auth/route'
+import { verifyAdminToken } from '@/lib/auth/admin'
 import { createAdminSupabaseClient } from '@/lib/supabase/index'
 
 export async function GET(request: NextRequest) {
@@ -66,9 +66,16 @@ export async function GET(request: NextRequest) {
     // CHECK TABLE STRUCTURE
     // ========================================================================
     
-    const { data: tables, error: tablesError } = await supabase
-      .rpc('get_table_info')
-      .catch(() => ({ data: null, error: 'RPC not available' }))
+    // Try to get table info (may not be available)
+    let tables = null
+    let tablesError: string | null = null
+    try {
+      const result = await supabase.rpc('get_table_info' as never)
+      tables = result.data
+      tablesError = result.error?.message || null
+    } catch {
+      tablesError = 'RPC not available'
+    }
 
     return NextResponse.json({
       success: true,

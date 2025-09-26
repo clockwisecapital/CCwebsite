@@ -1,16 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+// import { useRouter } from 'next/navigation' // Removed unused import
 
 export default function AdminLoginPage() {
   const [credentials, setCredentials] = useState({ username: '', password: '' })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const router = useRouter()
+  // const router = useRouter() // Removed unused router
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async () => {
     setIsLoading(true)
     setError('')
 
@@ -37,15 +36,12 @@ export default function AdminLoginPage() {
         
         if (testData.success) {
           console.log('Authentication verified, redirecting to dashboard')
-          window.location.href = '/admin/dashboard'
         } else {
           setError('Authentication failed after login. Please try again.')
         }
       } else {
         setError(data.message || 'Login failed')
       }
-    } catch (error) {
-      setError('Network error. Please try again.')
     } finally {
       setIsLoading(false)
     }

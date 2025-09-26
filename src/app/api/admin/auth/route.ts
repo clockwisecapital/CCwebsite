@@ -63,22 +63,20 @@ export async function POST(request: NextRequest) {
 }
 
 // Logout endpoint
-export async function DELETE(request: NextRequest) {
+export async function DELETE() {
   const response = NextResponse.json({
     success: true,
     message: 'Logged out successfully'
   })
-
-  // Clear the admin token cookie
   response.cookies.delete('admin-token')
   
   return response
 }
 
 /**
- * Verify admin token middleware
+ * Verify admin token middleware (internal use only)
  */
-export async function verifyAdminToken(request: NextRequest): Promise<boolean> {
+async function verifyAdminToken(request: NextRequest): Promise<boolean> {
   try {
     const token = request.cookies.get('admin-token')?.value
     

@@ -25,7 +25,7 @@ export function useAdmin() {
       } else {
         setIsAdmin(false)
       }
-    } catch (error) {
+    } catch {
       setIsAdmin(false)
     } finally {
       setIsLoading(false)
@@ -40,8 +40,8 @@ export function useAdmin() {
       })
       setIsAdmin(false)
       router.push('/admin/login')
-    } catch (error) {
-      console.error('Logout error:', error)
+    } catch (_error) {
+      console.error('Logout error:', _error)
     }
   }
 

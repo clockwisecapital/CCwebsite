@@ -61,11 +61,12 @@ export function PortfolioChat({}: PortfolioChatProps) {
     scrollToBottom();
   }, [messages]);
 
-  // Initialize FSM conversation when chat opens
+  // Initialize FSM conversation when component mounts
   useEffect(() => {
-    if (isOpen && messages.length === 0) {
+    if (messages.length === 0 && isOpen) {
       initializeFSMConversation();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   const initializeFSMConversation = async () => {

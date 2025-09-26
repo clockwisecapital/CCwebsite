@@ -24,6 +24,7 @@ FLOW DESIGN:
 
 import { SessionMemory, sessionManager } from './session';
 import { saveSessionState } from './supabase/index';
+import type { DisplaySpec } from './supabase/types';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -212,7 +213,7 @@ export class FSMOrchestrator {
     // PERSIST: Save the ASSISTANT reply (DisplaySpec) to Supabase
     // ============================================================================
     try {
-      const assistantPlain = this.flattenDisplaySpecToText(result.displaySpec as any)
+      const assistantPlain = this.flattenDisplaySpecToText(result.displaySpec as DisplaySpec)
       await saveSessionState({
         sessionId: session.session_id,
         userEmail: session.user_email,
@@ -221,7 +222,7 @@ export class FSMOrchestrator {
           role: 'assistant',
           // Store both structured and plaintext for search/export
           content: assistantPlain || undefined,
-          displaySpec: result.displaySpec as any
+          displaySpec: result.displaySpec as DisplaySpec
         }
       });
     } catch (e) {
@@ -1520,15 +1521,15 @@ Return {} if no valid email found.
   /**
    * Flatten DisplaySpec into a readable plaintext string for storage in messages.content
    */
-  private flattenDisplaySpecToText(spec: any): string {
+  private flattenDisplaySpecToText(spec: DisplaySpec | { blocks: Array<{ type: string; content: string }> }): string {
     if (!spec || !Array.isArray(spec.blocks)) return ''
     const lines: string[] = []
     for (const block of spec.blocks) {
       const type = block?.type
-      let parsed: any
+      let parsed: unknown
       try {
         parsed = typeof block?.content === 'string' ? JSON.parse(block.content) : block?.content
-      } catch (_) {
+      } catch {
         parsed = block?.content
       }
       if (type === 'summary_bullets' && Array.isArray(parsed)) {
@@ -1536,7 +1537,7 @@ Return {} if no valid email found.
       } else if (type === 'conversation_text' && Array.isArray(parsed)) {
         lines.push(String(parsed.join('\n')))
       } else if (type === 'cta_group' && Array.isArray(parsed)) {
-        const labels = parsed.map((b: any) => b?.label).filter(Boolean).join(', ')
+        const labels = parsed.map((b: unknown) => (b as Record<string, unknown>)?.label).filter(Boolean).join(', ')
         if (labels) lines.push(`CTAs: ${labels}`)
       } else if (type === 'table') {
         lines.push('[table omitted]')
@@ -1617,7 +1618,7 @@ Return {} if no valid email found.
             ...analysis,
             completed_at: new Date().toISOString(),
             market_context: marketData
-          } as any
+          } as Record<string, unknown>
         });
         console.log('✅ Analysis results saved to Supabase');
       } catch (error) {

@@ -4,10 +4,10 @@
  * GET /api/test-supabase - Run integration tests
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { testSupabaseIntegration } from '@/lib/supabase/test-connection'
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     console.log('🚀 Starting Supabase integration test via API...')
     
@@ -39,6 +39,6 @@ export async function GET(_request: NextRequest) {
 }
 
 // Also support POST for flexibility
-export async function POST(_request: NextRequest) {
-  return GET(_request)
+export async function POST() {
+  return GET()
 }

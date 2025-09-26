@@ -21,7 +21,7 @@ export async function testSupabaseIntegration() {
     // Test 1: Basic Connection
     console.log('1️⃣ Testing basic connection...')
     const supabase = createAdminSupabaseClient()
-    const { data, error } = await supabase.from('conversations').select('count').limit(1)
+    const { error } = await supabase.from('conversations').select('count').limit(1)
     
     if (error) {
       console.error('❌ Connection failed:', error.message)
@@ -104,7 +104,7 @@ export async function testSupabaseIntegration() {
     }
     console.log('✅ User data saved:', testUserData.id)
     console.log('   Goals:', testUserData.goals)
-    console.log('   Portfolio value:', (testUserData.portfolio_data as any)?.portfolio_value, '\n')
+    console.log('   Portfolio value:', (testUserData.portfolio_data as Record<string, unknown>)?.portfolio_value, '\n')
 
     // Test 5: Retrieve Conversation
     console.log('5️⃣ Testing conversation retrieval...')

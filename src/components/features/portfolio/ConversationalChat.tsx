@@ -67,6 +67,7 @@ export function ConversationalChat({}: ConversationalChatProps) {
     if (messages.length === 0) {
       initializeFSMConversation();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const initializeFSMConversation = async () => {
