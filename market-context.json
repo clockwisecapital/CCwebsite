@@ -1,28 +1,31 @@
 {
   "version": "1.0",
-  "lastUpdated": "2025-09-09",
+  "lastUpdated": "2025-09-22",
   "updatedBy": "Client",
-  "marketContext": "As of September 2025, markets sit at all-time highs, buoyed by expected Fed rate cuts but shadowed by stagflationary pressures—slowing growth, sticky 3% inflation, and weakening jobs—leaving valuations stretched at ~25x earnings. Through Clockwise AI's economic cycle lens, we are late in both the short- and long-term debt cycles, where policy easing delivers diminishing returns and systemic fragility rises. The technology cycle places us in the deployment phase of the AI revolution: real productivity gains are emerging, but they remain insufficient to justify euphoric pricing. Meanwhile, the company cycle framework warns that today's dominant firms may struggle to sustain leadership as creative destruction accelerates. Taken together, markets can grind higher, but with narrowing room for error, rising tail risks, and a paradoxical mix of easy-money optimism, debt-driven fragility, and technology-fueled disruption. This backdrop supports a growth-oriented stance, but highlights the dangers of concentration risk.",
+  "marketContext": "As of Week 22-September 2025, markets set fresh all-time highs this week, driven largely by tech and AI enthusiasm, even as the macro backdrop showed signs of strain. The AI trade remains the dominant force: foreign investment headlines from the UK and OpenAI's deeper entrenchment in the semiconductor ecosystem fueled optimism. Beyond those factors, little has changed—core inflation ticked higher, consumer delinquencies crept up, and valuations stretched further into uncharted territory. Beneath the surface, concerns linger around the 'circular' nature of semi investments (e.g., NVDA funding partners who then purchase its GPUs), while the government's role in shaping many of these headlines remains front and center. For every bullish driver, there are equally pressing risks: Bull Case - AI remains in the early innings, Street estimates may be systematically too low, and if so, today's valuations could look cheaper in hindsight. Bear Case / Tail Risks - Valuations are pressing near dot-com bubble peaks (~25x vs. 27.5x in 2000), earnings in the frothiest sectors have largely met, not beaten, expectations, and geopolitical and sovereign credit risks are mounting, with yields rising across the U.S., Japan, U.K., Germany, and France. At current levels, much of the future opportunity looks priced in. Upside risks include continued retail momentum (now over 40% of flows), new government-brokered deals, and potential rotation of $7T+ in money-market assets into equities—though historically, such shifts have been rare near market peaks.",
   "keyMetrics": {
-    "marketValuation": "~25x earnings",
-    "inflation": "3%",
+    "marketValuation": "~25x earnings (near dot-com peaks of 27.5x)",
+    "inflation": "Core inflation ticking higher",
     "cyclePosition": {
-      "debtCycle": "Late stage",
-      "technologyCycle": "AI deployment phase",
-      "companyCycle": "Creative destruction acceleration"
+      "debtCycle": "Late stage with rising sovereign risks",
+      "technologyCycle": "AI early innings with circular investment patterns",
+      "companyCycle": "Tech dominance with government influence"
     }
   },
-  "investmentTheme": "Growth-oriented with concentration risk awareness",
+  "investmentTheme": "AI-driven growth with extreme valuation sensitivity",
   "riskFactors": [
-    "Stretched valuations",
-    "Stagflationary pressures", 
-    "Debt cycle fragility",
-    "Policy effectiveness declining"
+    "Valuations near dot-com bubble peaks",
+    "Circular semiconductor investment patterns", 
+    "Rising geopolitical and sovereign credit risks",
+    "Consumer delinquencies creeping up",
+    "Earnings meeting but not beating expectations"
   ],
   "opportunities": [
-    "AI productivity gains",
-    "Fed rate cut support",
-    "Technology disruption"
+    "AI still in early innings",
+    "Retail momentum over 40% of flows",
+    "Potential $7T money-market rotation",
+    "Government-brokered investment deals",
+    "Foreign investment in AI infrastructure"
   ],
   "clockwisePortfolios": {
     "singleETF": {

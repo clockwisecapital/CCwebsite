@@ -23,6 +23,7 @@ FLOW DESIGN:
 */
 
 import { SessionMemory, sessionManager } from './session';
+import { saveSessionState } from './supabase/index';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -154,6 +155,24 @@ export class FSMOrchestrator {
     console.log('  - Missing Slots:', session.missing_slots);
     console.log('  - Goals Data:', session.goals);
 
+    // ============================================================================
+    // PERSIST: Save the incoming USER message to Supabase immediately
+    // This ensures we capture the full transcript even before email capture.
+    // ============================================================================
+    try {
+      await saveSessionState({
+        sessionId: session.session_id,
+        userEmail: session.user_email, // may be undefined at this point
+        stage: session.stage,
+        lastMessage: {
+          role: 'user',
+          content: context.userMessage
+        }
+      });
+    } catch (e) {
+      console.warn('⚠️ Failed to persist user message (non-blocking):', e);
+    }
+
     console.log(`\n🔀 Routing to ${session.stage.toUpperCase()} stage handler...`);
 
     // ============================================================================
@@ -173,6 +192,9 @@ export class FSMOrchestrator {
       case 'portfolio':
         result = await this.handlePortfolioStage(session, context);
         break;
+      case 'email_capture':
+        result = await this.handleEmailCaptureStage(session, context);
+        break;
       case 'analyze':
         result = await this.handleAnalyzeStage(session);
         break;
@@ -185,6 +207,26 @@ export class FSMOrchestrator {
       blocksCount: result.displaySpec?.blocks?.length,
       completedSlots: result.session?.completed_slots?.length
     });
+
+    // ============================================================================
+    // PERSIST: Save the ASSISTANT reply (DisplaySpec) to Supabase
+    // ============================================================================
+    try {
+      const assistantPlain = this.flattenDisplaySpecToText(result.displaySpec as any)
+      await saveSessionState({
+        sessionId: session.session_id,
+        userEmail: session.user_email,
+        stage: result.session?.stage || session.stage,
+        lastMessage: {
+          role: 'assistant',
+          // Store both structured and plaintext for search/export
+          content: assistantPlain || undefined,
+          displaySpec: result.displaySpec as any
+        }
+      });
+    } catch (e) {
+      console.warn('⚠️ Failed to persist assistant message (non-blocking):', e);
+    }
 
     return result;
   }
@@ -1092,8 +1134,8 @@ Generate a single conversational response (2-3 sentences max):`;
         session.simplified_portfolio.holdings = [];
         sessionManager.updateSession(session.session_id, session);
         
-        // Advance to analysis with new investor flag
-        session.stage = 'analyze';
+        // Advance to email capture with new investor flag
+        session.stage = 'email_capture';
         sessionManager.updateSession(session.session_id, session);
         
         return {
@@ -1141,8 +1183,8 @@ Generate a single conversational response (2-3 sentences max):`;
     // STEP 3: Check completion and advance
     // ========================================================================
     if (session.simplified_portfolio.portfolio_value !== undefined) {
-      console.log('🎉 Portfolio collection complete! Advancing to analyze stage...');
-      session.stage = 'analyze';
+      console.log('🎉 Portfolio collection complete! Advancing to email capture stage...');
+      session.stage = 'email_capture';
       sessionManager.updateSession(session.session_id, session);
       
       const totalValue = session.simplified_portfolio.portfolio_value;
@@ -1207,6 +1249,248 @@ Generate a single conversational response (2-3 sentences max):`;
     };
   }
 
+  // ============================================================================
+  //                              EMAIL CAPTURE STAGE HANDLER
+  // ============================================================================
+  
+  /**
+   * EMAIL CAPTURE STAGE - Collect user email before analysis
+   * 
+   * This stage is positioned right before analysis to maximize conversion:
+   * - Users have already invested time sharing goals and portfolio
+   * - They're curious about the analysis results
+   * - Value-first approach increases email capture rate
+   * 
+   * REQUIRED COLLECTION:
+   * - user_email: Valid email address
+   * 
+   * ADVANCEMENT CRITERIA: Valid email provided
+   */
+  private async handleEmailCaptureStage(session: SessionMemory, context: ConversationContext) {
+    console.log('📧 EMAIL CAPTURE STAGE HANDLER START');
+    console.log('📥 Input Message:', context.userMessage);
+
+    // ========================================================================
+    // STEP 1: AI EXTRACTION - Extract email from user input
+    // ========================================================================
+    const emailExtraction = await this.aiExtractEmail(context.userMessage) || {};
+    console.log('🤖 Email Extraction Result:', emailExtraction);
+
+    // ========================================================================
+    // STEP 2: SESSION UPDATE - Update email if detected and valid
+    // ========================================================================
+    if (emailExtraction?.email && this.isValidEmail(emailExtraction.email)) {
+      console.log('✅ Valid email captured:', emailExtraction.email);
+      session.user_email = emailExtraction.email;
+      sessionManager.updateSession(session.session_id, session);
+
+      // Create Supabase conversation with collected data
+      console.log('💾 Creating Supabase conversation...');
+      try {
+        await saveSessionState({
+          sessionId: session.session_id,
+          userEmail: emailExtraction.email,
+          stage: 'email_capture',
+          goals: session.simplified_goals,
+          portfolio: session.simplified_portfolio,
+          lastMessage: {
+            role: 'user',
+            content: context.userMessage,
+            displaySpec: {
+              blocks: [
+                {
+                  type: 'summary_bullets',
+                  content: JSON.stringify(['Email captured successfully'])
+                }
+              ]
+            }
+          }
+        });
+        console.log('✅ Supabase conversation created successfully');
+      } catch (error) {
+        console.error('❌ Failed to create Supabase conversation:', error);
+        // Continue anyway - don't block the user flow
+      }
+
+      // Advance to analysis stage
+      session.stage = 'analyze';
+      sessionManager.updateSession(session.session_id, session);
+      
+      return {
+        displaySpec: {
+          blocks: [
+            {
+              type: "summary_bullets",
+              content: JSON.stringify([
+                "✅ Email Confirmed!",
+                `Contact: ${emailExtraction.email}`,
+                "Starting your personalized portfolio analysis..."
+              ])
+            },
+            {
+              type: "conversation_text", 
+              content: JSON.stringify([
+                "Perfect! I have everything I need to create your personalized analysis. Let me analyze your portfolio against your goals and current market conditions. This will just take a moment..."
+              ])
+            },
+            {
+              type: "cta_group",
+              content: JSON.stringify([{ label: "Generate Analysis", action: "continue" }])
+            }
+          ]
+        },
+        session,
+        usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+      };
+    }
+
+    // ========================================================================
+    // STEP 3: VALIDATION ERROR - Invalid email provided
+    // ========================================================================
+    if (emailExtraction?.email && !this.isValidEmail(emailExtraction.email)) {
+      console.log('❌ Invalid email format:', emailExtraction.email);
+      
+      return {
+        displaySpec: {
+          blocks: [
+            {
+              type: "summary_bullets",
+              content: JSON.stringify([
+                "⚠️ Invalid Email Format",
+                "Please provide a valid email address"
+              ])
+            },
+            {
+              type: "conversation_text",
+              content: JSON.stringify([
+                `"${emailExtraction.email}" doesn't look like a valid email address. Please provide a valid email like: john@example.com`
+              ])
+            }
+          ]
+        },
+        session,
+        usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+      };
+    }
+
+    // ========================================================================
+    // STEP 4: DEFAULT RESPONSE - Request email with value proposition
+    // ========================================================================
+    const goalSummary = session.simplified_goals ? 
+      `${session.simplified_goals.goal_type} goal of $${session.simplified_goals.target_amount?.toLocaleString()} in ${session.simplified_goals.timeline_years} years` : 
+      'your investment goals';
+    
+    const portfolioSummary = session.simplified_portfolio?.portfolio_value ? 
+      `$${session.simplified_portfolio.portfolio_value.toLocaleString()} portfolio` : 
+      'your portfolio information';
+
+    return {
+      displaySpec: {
+        blocks: [
+          {
+            type: "summary_bullets",
+            content: JSON.stringify([
+              "🎯 Ready for Your Personalized Analysis!",
+              `✓ Goals: ${goalSummary}`,
+              `✓ Portfolio: ${portfolioSummary}`
+            ])
+          },
+          {
+            type: "conversation_text",
+            content: JSON.stringify([
+              "Excellent! I have everything I need to create your personalized investment analysis.\n\n" +
+              "To proceed with your analysis, please provide your email address:\n\n" +
+              "• View your personalized portfolio analysis\n" +
+              "• Get detailed market insights and recommendations\n" +
+              "• Save your session for future reference\n\n" +
+              "Just type your email address (e.g., john@example.com)"
+            ])
+          }
+        ]
+      },
+      session,
+      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+    };
+  }
+
+  /**
+   * AI EMAIL EXTRACTION - Extract email address from user input
+   * 
+   * @param userMessage - Raw user input to extract from
+   * @returns Email object or empty object
+   */
+  private async aiExtractEmail(userMessage: string): Promise<{ email?: string }> {
+    console.log('🤖 AI EMAIL EXTRACTION START');
+    console.log('  - User Message:', userMessage);
+    
+    try {
+      const prompt = `
+Extract email address from this user message: "${userMessage}"
+
+Return ONLY a JSON object with email if found:
+{
+  "email": "user@example.com"
+}
+
+Examples:
+- "john@example.com" → {"email": "john@example.com"}
+- "My email is sarah.smith@gmail.com" → {"email": "sarah.smith@gmail.com"}
+- "Contact me at mike123@yahoo.com" → {"email": "mike123@yahoo.com"}
+- "test@test.co.uk" → {"email": "test@test.co.uk"}
+- "user+tag@domain.org" → {"email": "user+tag@domain.org"}
+
+Return {} if no valid email found.
+`;
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: prompt }],
+          response_format: { type: 'json_object' },
+          max_tokens: 50,
+          temperature: 0.1
+        })
+      });
+
+      if (!response.ok) {
+        console.error('❌ OpenAI API Error:', response.status);
+        return {};
+      }
+      
+      const data = await response.json();
+      const rawContent = data.choices?.[0]?.message?.content;
+      
+      if (!rawContent) {
+        console.log('❌ No content in AI response');
+        return {};
+      }
+      
+      const extracted = JSON.parse(rawContent || '{}');
+      console.log('🤖 Email Extraction Result:', extracted);
+      
+      return extracted;
+    } catch (error) {
+      console.error('❌ Email extraction error:', error);
+      return {};
+    }
+  }
+
+  /**
+   * EMAIL VALIDATION - Check if email format is valid
+   * 
+   * @param email - Email string to validate
+   * @returns Boolean indicating if email is valid
+   */
+  private isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
   private async handleDefaultStage(session: SessionMemory) {
     return {
       displaySpec: {
@@ -1231,6 +1515,42 @@ Generate a single conversational response (2-3 sentences max):`;
       session: session,
       usage: response.usage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
     };
+  }
+
+  /**
+   * Flatten DisplaySpec into a readable plaintext string for storage in messages.content
+   */
+  private flattenDisplaySpecToText(spec: any): string {
+    if (!spec || !Array.isArray(spec.blocks)) return ''
+    const lines: string[] = []
+    for (const block of spec.blocks) {
+      const type = block?.type
+      let parsed: any
+      try {
+        parsed = typeof block?.content === 'string' ? JSON.parse(block.content) : block?.content
+      } catch (_) {
+        parsed = block?.content
+      }
+      if (type === 'summary_bullets' && Array.isArray(parsed)) {
+        for (const item of parsed) lines.push(`• ${String(item)}`)
+      } else if (type === 'conversation_text' && Array.isArray(parsed)) {
+        lines.push(String(parsed.join('\n')))
+      } else if (type === 'cta_group' && Array.isArray(parsed)) {
+        const labels = parsed.map((b: any) => b?.label).filter(Boolean).join(', ')
+        if (labels) lines.push(`CTAs: ${labels}`)
+      } else if (type === 'table') {
+        lines.push('[table omitted]')
+      } else if (type === 'stat_group') {
+        lines.push('[stats omitted]')
+      } else if (type === 'chart') {
+        lines.push('[chart omitted]')
+      } else if (type === 'sources') {
+        lines.push('[sources included]')
+      } else if (parsed) {
+        lines.push(String(typeof parsed === 'string' ? parsed : JSON.stringify(parsed)))
+      }
+    }
+    return lines.join('\n').trim()
   }
 
 
@@ -1282,6 +1602,29 @@ Generate a single conversational response (2-3 sentences max):`;
     session.analysis_result = analysis;
     session.stage = 'explain';
     sessionManager.updateSession(session.session_id, session);
+
+    // Save analysis results to Supabase if we have user email
+    if (session.user_email) {
+      console.log('💾 Saving analysis results to Supabase...');
+      try {
+        await saveSessionState({
+          sessionId: session.session_id,
+          userEmail: session.user_email,
+          stage: 'analyze',
+          goals: session.simplified_goals,
+          portfolio: session.simplified_portfolio,
+          analysis: {
+            ...analysis,
+            completed_at: new Date().toISOString(),
+            market_context: marketData
+          } as any
+        });
+        console.log('✅ Analysis results saved to Supabase');
+      } catch (error) {
+        console.error('❌ Failed to save analysis to Supabase:', error);
+        // Continue anyway - don't block the user flow
+      }
+    }
 
     // ========================================================================
     // STEP 4: RETURN ANALYSIS RESULTS - Display Market/Portfolio/Goal Impact

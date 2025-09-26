@@ -1,6 +1,6 @@
 // Session memory management for FSM state and slot tracking
 
-export type Stage = 'qualify' | 'goals' | 'amount_timeline' | 'portfolio' | 'analyze' | 'explain' | 'cta' | 'end';
+export type Stage = 'qualify' | 'goals' | 'amount_timeline' | 'portfolio' | 'email_capture' | 'analyze' | 'explain' | 'cta' | 'end';
 
 export interface SessionMemory {
   // Working header (sent every turn)
@@ -10,6 +10,7 @@ export interface SessionMemory {
   key_facts: string[];
   
   // Session data (server side)
+  user_email?: string;
   simplified_goals?: {
     goal_type?: 'growth' | 'income' | 'both';
     target_amount?: number;
@@ -231,7 +232,8 @@ Search Budget: ${session.search_count}/5 (${session.search_budget_exceeded ? 'EX
       'qualify': 'goals',
       'goals': 'amount_timeline',
       'amount_timeline': 'portfolio',
-      'portfolio': 'analyze',
+      'portfolio': 'email_capture',
+      'email_capture': 'analyze',
       'analyze': 'explain',
       'explain': 'cta',
       'cta': 'end',

@@ -4,11 +4,14 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useAdmin } from '@/hooks/useAdmin';
+import { HiArrowRightOnRectangle } from 'react-icons/hi2';
 
 export default function Header(): React.JSX.Element {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const router = useRouter();
+  const { isAdmin, logout } = useAdmin();
 
 
   useEffect(() => {
@@ -116,6 +119,20 @@ export default function Header(): React.JSX.Element {
               <span className="text-sm">Ask AI</span>
             </span>
           </button>
+
+          {/* Admin Logout Button - Only visible to logged-in admins */}
+          {isAdmin && (
+            <button 
+              onClick={logout}
+              className="ml-3 relative overflow-hidden bg-red-600 text-white px-4 py-2 rounded-md font-sans font-medium group transition-all duration-300 hover:bg-red-700"
+              title="Admin Logout"
+            >
+              <span className="relative flex items-center space-x-1">
+                <HiArrowRightOnRectangle className="h-3.5 w-3.5" />
+                <span className="text-sm">Admin</span>
+              </span>
+            </button>
+          )}
         </nav>
 
         {/* Mobile Menu Button */}
@@ -212,6 +229,20 @@ export default function Header(): React.JSX.Element {
             </svg>
             <span className="text-sm">Ask AI</span>
           </button>
+
+          {/* Admin Logout Button (Mobile) - Only visible to logged-in admins */}
+          {isAdmin && (
+            <button 
+              className="mt-2 px-3 py-1.5 text-base font-medium text-white bg-red-600 hover:bg-red-700 rounded-full transition-all duration-300 flex items-center gap-1.5"
+              onClick={() => {
+                setIsMenuOpen(false);
+                logout();
+              }}
+            >
+              <HiArrowRightOnRectangle className="h-3.5 w-3.5" />
+              <span className="text-sm">Admin Logout</span>
+            </button>
+          )}
         </div>
       </nav>
     </div>
