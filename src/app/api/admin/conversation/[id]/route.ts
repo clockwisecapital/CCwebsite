@@ -10,7 +10,7 @@ import { createAdminSupabaseClient } from '@/lib/supabase/index'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify admin authentication
@@ -22,13 +22,14 @@ export async function GET(
       )
     }
 
+    const { id } = await params
+    console.log('Getting conversation details for ID:', id)
     const supabase = createAdminSupabaseClient()
-    const conversationId = params.id
+    const conversationId = id
 
     // ========================================================================
     // GET CONVERSATION DETAILS
     // ========================================================================
-    
     const { data: conversation, error: conversationError } = await supabase
       .from('conversations')
       .select('*')
@@ -113,14 +114,13 @@ export async function GET(
           updated_at: userData.updated_at
         } : null)
     }
-
     return NextResponse.json({
       success: true,
       data: enrichedConversation
     })
 
   } catch (error) {
-    console.error('Conversation detail API error:', error)
+    console.error('Failed to fetch conversation details:', error)
     return NextResponse.json(
       { success: false, message: 'Failed to fetch conversation details' },
       { status: 500 }
