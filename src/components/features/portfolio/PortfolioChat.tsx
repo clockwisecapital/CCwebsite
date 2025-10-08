@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface Message {
   id: string;
@@ -39,6 +40,7 @@ interface PortfolioChatProps {
 }
 
 export function PortfolioChat({}: PortfolioChatProps) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -246,10 +248,10 @@ export function PortfolioChat({}: PortfolioChatProps) {
               
               {block.type === 'cta_group' && (
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {content.map((button: { label: string; action: string; payload?: unknown }, i: number) => (
+                  {content.map((button: { label: string; action: string; payload?: unknown; url?: string }, i: number) => (
                     <button
                       key={i}
-                      onClick={() => handleCTAClick(button.action, button.payload)}
+                      onClick={() => handleCTAClick(button.action, button)}
                       className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors"
                     >
                       {button.label}
@@ -280,7 +282,44 @@ export function PortfolioChat({}: PortfolioChatProps) {
     );
   };
 
-  const handleCTAClick = (action: string, payload?: unknown) => {
+  const handleCTAClick = (action: string, button?: { label: string; action: string; payload?: unknown; url?: string }) => {
+    console.log('CTA clicked:', action, button);
+    
+    // Handle special actions that don't require chat messages
+    if (action === 'external_link' && button?.url) {
+      // Open external link in new tab
+      window.open(button.url, '_blank');
+      return;
+    }
+    
+    if (action === 'navigate_to' && button?.url) {
+      // Navigate to internal page
+      console.log('Navigating to:', button.url);
+      // Check if should open in new tab
+      if ((button as { target?: string }).target === '_blank') {
+        window.open(button.url, '_blank');
+      } else {
+        router.push(button.url);
+      }
+      return;
+    }
+    
+    if (action === 'restart_conversation') {
+      // Reset session and reinitialize FSM
+      setMessages([]);
+      setSessionInfo({
+        id: '',
+        stage: 'qualify',
+        completed_slots: [],
+        missing_slots: [],
+        key_facts: []
+      });
+      // Reinitialize the FSM conversation
+      initializeFSMConversation();
+      return;
+    }
+    
+    // Handle legacy actions
     switch (action) {
       case 'start_analysis':
       case 'view_summary':
@@ -298,14 +337,13 @@ export function PortfolioChat({}: PortfolioChatProps) {
           missing_slots: [],
           key_facts: []
         });
-        // Reinitialize the FSM conversation
         initializeFSMConversation();
         break;
       case 'schedule_consultation':
         window.open('/contact', '_blank');
         break;
       default:
-        console.log('CTA clicked:', action, payload);
+        console.log('CTA clicked:', action, button);
     }
   };
 

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface Message {
   id: string;
@@ -39,6 +40,7 @@ interface ConversationalChatProps {
 }
 
 export function ConversationalChat({}: ConversationalChatProps) {
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
 
   const [inputMessage, setInputMessage] = useState('');
@@ -391,6 +393,18 @@ export function ConversationalChat({}: ConversationalChatProps) {
     if (action === 'external_link' && button?.url) {
       // Open external link in new tab
       window.open(button.url, '_blank');
+      return;
+    }
+    
+    if (action === 'navigate_to' && button?.url) {
+      // Navigate to internal page
+      console.log('Navigating to:', button.url);
+      // Check if should open in new tab
+      if ((button as { target?: string }).target === '_blank') {
+        window.open(button.url, '_blank');
+      } else {
+        router.push(button.url);
+      }
       return;
     }
     

@@ -1681,6 +1681,12 @@ Return {} if no valid email found.
                 target: "_blank"
               },
               { 
+                label: "Test My Portfolio in Market Scenarios", 
+                action: "navigate_to",
+                url: "/scenario-testing-lab",
+                target: "_blank"
+              },
+              { 
                 label: "Start Over", 
                 action: "restart_conversation" 
               }
