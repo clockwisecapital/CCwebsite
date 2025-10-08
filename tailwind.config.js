@@ -41,6 +41,16 @@ module.exports = {
         'float': 'float 6s ease-in-out infinite',
         'meteor': 'meteor 5s linear infinite',
       },
+      animationDelay: {
+        '75': '75ms',
+        '100': '100ms',
+        '150': '150ms',
+        '200': '200ms',
+        '300': '300ms',
+        '500': '500ms',
+        '700': '700ms',
+        '1000': '1000ms',
+      },
       keyframes: {
         fadeIn: {
           '0%': { opacity: '0' },
