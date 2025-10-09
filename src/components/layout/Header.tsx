@@ -107,7 +107,7 @@ export default function Header(): React.JSX.Element {
 
           {/* Ask AI Button with enhanced hover effect */}
           <button 
-            onClick={() => router.push('/portfolio')}
+            onClick={() => router.push('/scenario-testing-lab')}
             className="ml-5 relative overflow-hidden bg-[#E3B23C] text-white px-5 py-2 rounded-md font-sans font-medium group transition-all duration-300"
           >
             {/* Button shine effect */}
@@ -221,7 +221,7 @@ export default function Header(): React.JSX.Element {
             className="mt-4 px-3 py-1.5 text-base font-medium text-black bg-[#E3B23C] hover:bg-[#c89b33] rounded-full transition-all duration-300 flex items-center gap-1.5"
             onClick={() => {
               setIsMenuOpen(false);
-              router.push('/portfolio');
+              router.push('/scenario-testing-lab');
             }}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

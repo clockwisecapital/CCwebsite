@@ -1,9 +1,12 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { FiTrendingUp, FiActivity, FiBarChart2 } from 'react-icons/fi';
 
 export default function ScenarioTestingLab() {
+  const router = useRouter();
+  
   // Set body background color for this page
   React.useEffect(() => {
     document.body.style.backgroundColor = '#1A3A5F';
@@ -40,7 +43,10 @@ export default function ScenarioTestingLab() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <button className="group relative px-10 py-5 bg-secondary-teal hover:bg-secondary-teal/90 text-white font-bold text-lg rounded-xl transition-all duration-300 shadow-2xl hover:shadow-secondary-teal/40 hover:scale-105 hover:-translate-y-0.5 min-w-[280px] sm:min-w-[320px]">
+            <button 
+              onClick={() => router.push('/portfolio')}
+              className="group relative px-10 py-5 bg-secondary-teal hover:bg-secondary-teal/90 text-white font-bold text-lg rounded-xl transition-all duration-300 shadow-2xl hover:shadow-secondary-teal/40 hover:scale-105 hover:-translate-y-0.5 min-w-[280px] sm:min-w-[320px]"
+            >
               <span className="relative z-10">Scenario Test My Portfolio</span>
               <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-secondary-teal to-secondary-teal/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </button>
@@ -142,7 +148,11 @@ export default function ScenarioTestingLab() {
               <p className="text-xs md:text-sm text-white/80 mb-6 max-w-2xl mx-auto leading-relaxed">
                 Your portfolio is slightly behind TIME ETF cycle alignment.
               </p>
-              <button className="group relative px-8 py-3 text-white font-bold text-sm rounded-xl transition-all duration-300 shadow-2xl hover:scale-105 hover:-translate-y-1" style={{ backgroundColor: '#E3B23C' }}>
+              <button 
+                onClick={() => router.push('/portfolio')}
+                className="group relative px-8 py-3 text-white font-bold text-sm rounded-xl transition-all duration-300 shadow-2xl hover:scale-105 hover:-translate-y-1" 
+                style={{ backgroundColor: '#E3B23C' }}
+              >
                 <span className="relative z-10 flex items-center justify-center gap-3">
                   Get Detailed Analysis
                   <span className="inline-block group-hover:translate-x-2 transition-transform duration-300">→</span>
@@ -318,7 +328,11 @@ export default function ScenarioTestingLab() {
           </p>
 
           {/* CTA Button */}
-          <button className="group relative px-10 py-4 text-white font-bold text-base md:text-lg rounded-xl transition-all duration-300 shadow-2xl hover:scale-110 hover:-translate-y-2" style={{ backgroundColor: '#E3B23C' }}>
+          <button 
+            onClick={() => router.push('/portfolio')}
+            className="group relative px-10 py-4 text-white font-bold text-base md:text-lg rounded-xl transition-all duration-300 shadow-2xl hover:scale-110 hover:-translate-y-2" 
+            style={{ backgroundColor: '#E3B23C' }}
+          >
             <span className="relative z-10 flex items-center justify-center gap-4">
               Start Testing Your Portfolio
               <span className="inline-block group-hover:translate-x-3 transition-transform duration-300 text-2xl">→</span>
