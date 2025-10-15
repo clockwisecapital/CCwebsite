@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
         portfolio: {
           portfolio_value: 0, // Not tracked in dashboard format
           holdings: Object.entries(transformedData.portfolio.allocations as Record<string, number>)
-            .filter(([_, value]) => value > 0)
+            .filter(([, value]) => value > 0)
             .map(([name, value]) => ({ name, value })),
         },
         analysis: {
@@ -280,7 +280,6 @@ async function analyzePortfolioWithAI(
 ): Promise<Record<string, unknown>> {
   try {
     const portfolioAllocations = portfolio.allocations as Record<string, number>;
-    const portfolioSum = Object.values(portfolioAllocations).reduce((sum, val) => sum + val, 0);
     
     // ✅ NEW: Extract portfolio data matching FSM format
     const portfolioValue = (portfolio.portfolio_value as number) || 0;

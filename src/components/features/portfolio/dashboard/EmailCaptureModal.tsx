@@ -132,7 +132,7 @@ export default function EmailCaptureModal({ onSubmit, onCancel }: EmailCaptureMo
             {/* Privacy Notice */}
             <div className="bg-gray-50 rounded-lg p-4 mt-4">
               <p className="text-xs text-gray-600">
-                We'll email your personalized cycle analysis and portfolio review. 
+                We&apos;ll email your personalized cycle analysis and portfolio review. 
                 We never sell your data.{' '}
                 <a href="/privacy-policy" className="text-teal-600 hover:underline" target="_blank">
                   Privacy Policy
