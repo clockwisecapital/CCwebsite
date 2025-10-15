@@ -26,14 +26,10 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showHoldings, setShowHoldings] = useState(false);
 
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);
-      if (initialData.specificHoldings && initialData.specificHoldings.length > 0) {
-        setShowHoldings(true);
-      }
     }
   }, [initialData]);
 
@@ -53,32 +49,6 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
     }));
   };
 
-  const addHolding = () => {
-    setFormData(prev => ({
-      ...prev,
-      specificHoldings: [
-        ...(prev.specificHoldings || []),
-        { name: '', ticker: '', percentage: 0 }
-      ]
-    }));
-  };
-
-  const removeHolding = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      specificHoldings: prev.specificHoldings?.filter((_, i) => i !== index)
-    }));
-  };
-
-  const updateHolding = (index: number, field: 'name' | 'ticker' | 'percentage', value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      specificHoldings: prev.specificHoldings?.map((holding, i) => 
-        i === index ? { ...holding, [field]: value } : holding
-      )
-    }));
-  };
-
   const handleReset = () => {
     setFormData({
       experienceLevel: 'Intermediate',
@@ -95,11 +65,18 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
       specificHoldings: [],
     });
     setErrors({});
-    setShowHoldings(false);
   };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+
+    if (!formData.age) {
+      newErrors.age = 'Age is required';
+    }
+
+    if (!formData.portfolio.totalValue) {
+      newErrors.totalValue = 'Total Portfolio Value is required';
+    }
 
     if (!isPortfolioValid) {
       newErrors.portfolio = `Portfolio allocations must sum to 100% (currently ${portfolioSum.toFixed(1)}%)`;
@@ -128,7 +105,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-2">
-              Age (Optional)
+              Age <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
@@ -139,7 +116,11 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
               onChange={(e) => setFormData(prev => ({ ...prev, age: parseInt(e.target.value) || undefined }))}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               placeholder="35"
+              required
             />
+            {errors.age && (
+              <p className="mt-1 text-sm text-red-600">{errors.age}</p>
+            )}
           </div>
 
           <div>
@@ -180,9 +161,9 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                   const tolerance = value === 0 ? 'low' : value === 1 ? 'medium' : 'high';
                   setFormData(prev => ({ ...prev, riskTolerance: tolerance }));
                 }}
-                className="w-full h-2 bg-gradient-to-r from-green-400 via-yellow-400 to-red-400 rounded-lg appearance-none cursor-pointer slider-thumb"
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer slider-thumb"
                 style={{
-                  background: 'linear-gradient(to right, #86efac 0%, #86efac 33%, #fbbf24 33%, #fbbf24 66%, #f87171 66%, #f87171 100%)'
+                  background: 'linear-gradient(to right, #ef4444 0%, #f97316 20%, #fbbf24 50%, #a3e635 80%, #22c55e 100%)'
                 }}
               />
               <style jsx>{`
@@ -210,19 +191,19 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
 
             {/* Labels */}
             <div className="flex justify-between text-xs font-medium px-2">
-              <span className={`flex items-center gap-1 transition-colors ${formData.riskTolerance === 'low' ? 'text-green-600' : 'text-gray-400'}`}>
+              <span className={`flex items-center gap-1 transition-colors ${formData.riskTolerance === 'low' ? 'text-red-600' : 'text-gray-400'}`}>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
                 Conservative
               </span>
-              <span className={`flex items-center gap-1 transition-colors ${formData.riskTolerance === 'medium' ? 'text-yellow-600' : 'text-gray-400'}`}>
+              <span className={`flex items-center gap-1 transition-colors ${formData.riskTolerance === 'medium' ? 'text-amber-600' : 'text-gray-400'}`}>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
                 </svg>
                 Moderate
               </span>
-              <span className={`flex items-center gap-1 transition-colors ${formData.riskTolerance === 'high' ? 'text-red-600' : 'text-gray-400'}`}>
+              <span className={`flex items-center gap-1 transition-colors ${formData.riskTolerance === 'high' ? 'text-green-600' : 'text-gray-400'}`}>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
@@ -248,7 +229,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                 {formData.riskTolerance === 'high' && (
                   <>
                     <strong>Aggressive:</strong> Maximize growth potential. Comfortable with significant 
-                    short-term volatility for long-term gains.
+                    short-term volatility for <strong>potential</strong> long-term gains.
                   </>
                 )}
               </p>
@@ -306,7 +287,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
       <div className="space-y-6 pt-6 border-t border-gray-200">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-1">Current Portfolio Allocation</h3>
-          <p className="text-sm text-gray-500">Enter percentage allocations across asset classes (must total 100%)</p>
+          <p className="text-sm text-gray-500">Enter percentage allocations across asset classes (must total 100%) (Auto-calculate from Holdings)</p>
         </div>
 
         {/* Portfolio Value Field */}
@@ -315,7 +296,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
             <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Total Portfolio Value (Optional but Recommended)
+            Total Portfolio Value (Mandatory) <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <span className="absolute left-4 top-2 text-gray-500">$</span>
@@ -334,12 +315,31 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
               }))}
               className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               placeholder="100,000"
+              required
             />
           </div>
+          {errors.totalValue && (
+            <p className="mt-1 text-sm text-red-600">{errors.totalValue}</p>
+          )}
           <p className="mt-2 text-xs text-gray-600">
             <strong>Why provide this?</strong> Knowing your portfolio value enables more personalized analysis, 
-            including specific growth calculations needed to reach your goals and dollar-based recommendations.
+            including specific growth calculations needed to reach your goals.
           </p>
+        </div>
+
+        {/* Portfolio Description */}
+        <div>
+          <label htmlFor="portfolioDescription" className="block text-sm font-medium text-gray-700 mb-2">
+            Portfolio Description (Optional)
+          </label>
+          <textarea
+            id="portfolioDescription"
+            rows={3}
+            value={formData.portfolioDescription || ''}
+            onChange={(e) => setFormData(prev => ({ ...prev, portfolioDescription: e.target.value }))}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            placeholder="Describe your current holdings, investment strategy, or any other relevant details..."
+          />
         </div>
 
         {/* Portfolio Sum Indicator */}
@@ -459,109 +459,6 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
         {errors.portfolio && (
           <p className="text-sm text-red-600">{errors.portfolio}</p>
         )}
-
-        <div>
-          <label htmlFor="portfolioDescription" className="block text-sm font-medium text-gray-700 mb-2">
-            Portfolio Description (Optional)
-          </label>
-          <textarea
-            id="portfolioDescription"
-            rows={3}
-            value={formData.portfolioDescription || ''}
-            onChange={(e) => setFormData(prev => ({ ...prev, portfolioDescription: e.target.value }))}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            placeholder="Describe your current holdings, investment strategy, or any other relevant details..."
-          />
-        </div>
-
-        {/* Specific Holdings Section */}
-        <div className="border-t border-gray-200 pt-4">
-          <button
-            type="button"
-            onClick={() => setShowHoldings(!showHoldings)}
-            className="flex items-center gap-2 text-sm font-medium text-teal-600 hover:text-teal-700"
-          >
-            {showHoldings ? '▼' : '▶'} Add Specific Holdings (Optional)
-          </button>
-          <p className="text-xs text-gray-500 mt-1">
-            Get even more personalized analysis by listing specific stocks, ETFs, or funds you own
-          </p>
-
-          {showHoldings && (
-            <div className="mt-4 space-y-4">
-              {formData.specificHoldings && formData.specificHoldings.length > 0 ? (
-                formData.specificHoldings.map((holding, index) => (
-                  <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <span className="text-sm font-medium text-gray-700">Holding #{index + 1}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeHolding(index)}
-                        className="text-red-600 hover:text-red-700 text-sm"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">
-                          Name
-                        </label>
-                        <input
-                          type="text"
-                          value={holding.name}
-                          onChange={(e) => updateHolding(index, 'name', e.target.value)}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-                          placeholder="Apple"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">
-                          Ticker (Optional)
-                        </label>
-                        <input
-                          type="text"
-                          value={holding.ticker || ''}
-                          onChange={(e) => updateHolding(index, 'ticker', e.target.value)}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-                          placeholder="AAPL"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">
-                          % of Portfolio
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="0.1"
-                          value={holding.percentage}
-                          onChange={(e) => updateHolding(index, 'percentage', parseFloat(e.target.value) || 0)}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-                          placeholder="20"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500 italic">No specific holdings added yet</p>
-              )}
-
-              <button
-                type="button"
-                onClick={addHolding}
-                className="w-full px-4 py-2 bg-white border-2 border-dashed border-gray-300 text-gray-700 rounded-lg hover:border-teal-500 hover:text-teal-600 transition-colors flex items-center justify-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Add Holding
-              </button>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Action Buttons */}
