@@ -38,8 +38,8 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
   }, [initialData]);
 
   // Calculate portfolio sum excluding totalValue
-  const { totalValue: _totalValue, ...allocations } = formData.portfolio;
-  const portfolioSum = Object.values(allocations).reduce((sum, val) => sum + val, 0);
+  const { stocks, bonds, cash, realEstate, commodities, alternatives } = formData.portfolio;
+  const portfolioSum = stocks + bonds + cash + realEstate + commodities + alternatives;
   const isPortfolioValid = portfolioSum === 100;
 
   const handlePortfolioChange = (field: keyof typeof formData.portfolio, value: string) => {
