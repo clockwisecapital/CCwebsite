@@ -9,23 +9,23 @@ export default function ScenarioTestingLab() {
   
   // Set body background color for this page
   React.useEffect(() => {
-    document.body.style.backgroundColor = '#1A3A5F';
+    document.body.style.backgroundColor = '#1e3a8a';
     return () => {
       document.body.style.backgroundColor = '';
     };
   }, []);
 
   return (
-    <div className="min-h-screen w-full" style={{ backgroundColor: '#1A3A5F', minHeight: '100vh' }}>
+    <div className="min-h-screen w-full bg-gradient-to-br from-blue-900 via-teal-800 to-teal-900 pt-20">
       {/* Hero Section */}
       <section className="relative pt-12 sm:pt-16 lg:pt-20 pb-6 sm:pb-8 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Background Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-secondary-teal/5 via-transparent to-accent-gold/5 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 via-transparent to-blue-500/5 pointer-events-none" />
         <div className="max-w-6xl mx-auto text-center relative z-10">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm hover:bg-[#E3B23C]/15 transition-all duration-300 group mb-8" style={{ backgroundColor: 'rgba(227, 178, 60, 0.1)', borderWidth: '1px', borderStyle: 'solid', borderColor: 'rgba(227, 178, 60, 0.3)' }}>
-            <FiActivity className="w-3.5 h-3.5 group-hover:animate-pulse" style={{ color: '#E3B23C' }} />
-            <span className="text-xs font-semibold tracking-wide" style={{ color: '#E3B23C' }}>AI-Powered Cycle Intelligence</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-500/10 border border-teal-500/30 backdrop-blur-sm hover:bg-teal-500/15 transition-all duration-300 group mb-8">
+            <FiActivity className="w-3.5 h-3.5 text-teal-400 group-hover:animate-pulse" />
+            <span className="text-xs font-semibold tracking-wide text-teal-400">AI-Powered Cycle Intelligence</span>
           </div>
 
           {/* Main Heading */}
@@ -36,8 +36,8 @@ export default function ScenarioTestingLab() {
           {/* Description */}
           <p className="text-sm sm:text-base md:text-lg text-gray-300 mb-8 max-w-4xl mx-auto leading-relaxed">
             The world moves in cycles – both deterministic and random. TIME AI observes these
-            patterns in <span className="text-secondary-teal font-bold">Economies</span> and{' '}
-            <span className="text-accent-gold font-bold">Companies</span> to reveal how they impact markets, portfolios,
+            patterns in <span className="text-teal-300 font-bold">Economies</span> and{' '}
+            <span className="text-teal-400 font-bold">Companies</span> to reveal how they impact markets, portfolios,
             and your financial goals.
           </p>
 
@@ -45,21 +45,21 @@ export default function ScenarioTestingLab() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <button 
               onClick={() => router.push('/portfolio')}
-              className="group relative px-10 py-5 bg-secondary-teal hover:bg-secondary-teal/90 text-white font-bold text-lg rounded-xl transition-all duration-300 shadow-2xl hover:shadow-secondary-teal/40 hover:scale-105 hover:-translate-y-0.5 min-w-[280px] sm:min-w-[320px]"
+              className="group relative px-10 py-5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-lg rounded-xl transition-all duration-300 shadow-2xl hover:shadow-teal-600/40 hover:scale-105 hover:-translate-y-0.5 min-w-[280px] sm:min-w-[320px]"
             >
               <span className="relative z-10">Scenario Test My Portfolio</span>
-              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-secondary-teal to-secondary-teal/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-teal-600 to-teal-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </button>
-            <button className="group px-10 py-5 bg-white hover:bg-gray-50 text-primary-blue font-bold text-lg rounded-xl transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 hover:-translate-y-0.5 border-2 border-transparent hover:border-secondary-teal/20 min-w-[280px] sm:min-w-[320px]">
+            <button className="group px-10 py-5 bg-white hover:bg-gray-50 text-blue-900 font-bold text-lg rounded-xl transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 hover:-translate-y-0.5 border-2 border-transparent hover:border-teal-500/20 min-w-[280px] sm:min-w-[320px]">
               Watch Demo
             </button>
           </div>
 
           {/* Subtle Decorative Element */}
           <div className="mt-20 flex justify-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-secondary-teal/30 animate-pulse" />
-            <div className="w-2 h-2 rounded-full bg-secondary-teal/50 animate-pulse" style={{ animationDelay: '150ms' }} />
-            <div className="w-2 h-2 rounded-full bg-secondary-teal animate-pulse" style={{ animationDelay: '300ms' }} />
+            <div className="w-2 h-2 rounded-full bg-teal-500/30 animate-pulse" />
+            <div className="w-2 h-2 rounded-full bg-teal-500/50 animate-pulse" style={{ animationDelay: '150ms' }} />
+            <div className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" style={{ animationDelay: '300ms' }} />
           </div>
         </div>
       </section>
@@ -70,16 +70,16 @@ export default function ScenarioTestingLab() {
           {/* Card 1 - White */}
           <div className="group relative bg-white rounded-2xl p-6 text-center hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 overflow-hidden">
             <div className="relative z-10">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110" style={{ backgroundColor: '#1A3A5F' }}>
+              <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-blue-900 flex items-center justify-center transition-all duration-300 group-hover:scale-110">
                 <FiActivity className="w-6 h-6 text-white group-hover:scale-110 transition-transform duration-300" />
               </div>
-              <div className="text-4xl lg:text-5xl font-bold mb-2 tracking-tight group-hover:scale-105 transition-transform duration-300" style={{ color: '#1A3A5F' }}>47+</div>
+              <div className="text-4xl lg:text-5xl font-bold text-blue-900 mb-2 tracking-tight group-hover:scale-105 transition-transform duration-300">47+</div>
               <div className="text-xs font-semibold text-gray-700">Market Cycles Tracked</div>
             </div>
           </div>
 
-          {/* Card 2 - Gold */}
-          <div className="group relative rounded-2xl p-6 text-center hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 overflow-hidden" style={{ backgroundColor: '#E3B23C' }}>
+          {/* Card 2 - Teal */}
+          <div className="group relative bg-teal-600 rounded-2xl p-6 text-center hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 overflow-hidden">
             <div className="relative z-10">
               <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-white/20 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:bg-white/30">
                 <FiBarChart2 className="w-6 h-6 text-white group-hover:scale-110 transition-transform duration-300" />
@@ -89,10 +89,10 @@ export default function ScenarioTestingLab() {
             </div>
           </div>
 
-          {/* Card 3 - Blue */}
-          <div className="group relative rounded-2xl p-6 text-center hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 overflow-hidden border-2" style={{ backgroundColor: '#1A3A5F', borderColor: '#E3B23C' }}>
+          {/* Card 3 - Blue with Teal Border */}
+          <div className="group relative bg-blue-900 rounded-2xl p-6 text-center hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 overflow-hidden border-2 border-teal-500">
             <div className="relative z-10">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110" style={{ backgroundColor: '#E3B23C' }}>
+              <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-teal-600 flex items-center justify-center transition-all duration-300 group-hover:scale-110">
                 <FiTrendingUp className="w-6 h-6 text-white group-hover:scale-110 transition-transform duration-300" />
               </div>
               <div className="text-4xl lg:text-5xl font-bold text-white mb-2 tracking-tight group-hover:scale-105 transition-transform duration-300">+23%</div>
@@ -108,7 +108,7 @@ export default function ScenarioTestingLab() {
           {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#E3B23C' }}>
+              <div className="w-12 h-12 rounded-xl bg-teal-600 flex items-center justify-center">
                 <FiTrendingUp className="w-6 h-6 text-white" />
               </div>
               <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white tracking-tight">Rate My Portfolio</h2>
@@ -121,14 +121,14 @@ export default function ScenarioTestingLab() {
             {/* Your Portfolio Card */}
             <div className="group relative bg-white rounded-2xl p-5 md:p-6 hover:shadow-2xl transition-all duration-300 overflow-hidden">
               <div className="relative z-10">
-                <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#1A3A5F' }}>Your Portfolio</div>
-                <div className="text-6xl md:text-7xl font-bold mb-2 tracking-tighter group-hover:scale-105 transition-transform duration-300" style={{ color: '#1A3A5F' }}>72</div>
+                <div className="text-xs font-bold uppercase tracking-widest text-blue-900 mb-2">Your Portfolio</div>
+                <div className="text-6xl md:text-7xl font-bold text-blue-900 mb-2 tracking-tighter group-hover:scale-105 transition-transform duration-300">72</div>
                 <div className="text-sm md:text-base font-semibold text-gray-600">Cycle Sync Score</div>
               </div>
             </div>
 
             {/* TIME ETF Benchmark Card */}
-            <div className="group relative rounded-2xl p-5 md:p-6 hover:shadow-2xl transition-all duration-300 overflow-hidden" style={{ backgroundColor: '#E3B23C' }}>
+            <div className="group relative bg-teal-600 rounded-2xl p-5 md:p-6 hover:shadow-2xl transition-all duration-300 overflow-hidden">
               <div className="relative z-10">
                 <div className="text-xs font-bold uppercase tracking-widest text-white/70 mb-2">TIME ETF Benchmark</div>
                 <div className="text-6xl md:text-7xl font-bold text-white mb-2 tracking-tighter group-hover:scale-105 transition-transform duration-300">78</div>
@@ -150,8 +150,7 @@ export default function ScenarioTestingLab() {
               </p>
               <button 
                 onClick={() => router.push('/portfolio')}
-                className="group relative px-8 py-3 text-white font-bold text-sm rounded-xl transition-all duration-300 shadow-2xl hover:scale-105 hover:-translate-y-1" 
-                style={{ backgroundColor: '#E3B23C' }}
+                className="group relative px-8 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm rounded-xl transition-all duration-300 shadow-2xl hover:scale-105 hover:-translate-y-1"
               >
                 <span className="relative z-10 flex items-center justify-center gap-3">
                   Get Detailed Analysis
@@ -178,8 +177,8 @@ export default function ScenarioTestingLab() {
           <div className="bg-gradient-to-br from-gray-800/70 to-gray-900/70 backdrop-blur-md border border-gray-700 rounded-2xl p-4 md:p-6">
             {/* Cycle Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 pb-6 border-b border-gray-700">
-              <div className="w-12 h-12 rounded-2xl bg-secondary-teal/20 flex items-center justify-center flex-shrink-0 border border-secondary-teal/30">
-                <FiActivity className="w-6 h-6 text-secondary-teal" />
+              <div className="w-12 h-12 rounded-2xl bg-teal-500/20 flex items-center justify-center flex-shrink-0 border border-teal-500/30">
+                <FiActivity className="w-6 h-6 text-teal-400" />
               </div>
               <div className="flex-1">
                 <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-white mb-2 tracking-tight">Macro Cycle Clock Sync Score: 72 / 100</h3>
@@ -197,15 +196,15 @@ export default function ScenarioTestingLab() {
             <div className="mb-6">
               <h4 className="text-lg md:text-xl font-bold text-white mb-4">Phase: Late Debt Supercycle</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="group bg-gray-800/70 rounded-2xl p-5 border-2 border-secondary-teal/30 hover:border-secondary-teal/50 transition-all duration-300 hover:shadow-xl hover:shadow-secondary-teal/20">
-                  <div className="text-xs font-bold uppercase tracking-widest text-secondary-teal mb-3">Signal</div>
+                <div className="group bg-gray-800/70 rounded-2xl p-5 border-2 border-teal-500/30 hover:border-teal-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-teal-500/20">
+                  <div className="text-xs font-bold uppercase tracking-widest text-teal-400 mb-3">Signal</div>
                   <div className="text-sm md:text-base text-gray-200 leading-relaxed">
                     High debt-to-GDP, aging demographics, slower productivity.
                   </div>
                 </div>
 
-                <div className="group bg-gray-800/70 rounded-2xl p-5 border-2 hover:border-accent-gold/50 transition-all duration-300 hover:shadow-xl hover:shadow-accent-gold/20" style={{ borderColor: 'rgba(227, 178, 60, 0.3)' }}>
-                  <div className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#E3B23C' }}>Example</div>
+                <div className="group bg-gray-800/70 rounded-2xl p-5 border-2 border-teal-500/30 hover:border-teal-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-teal-500/20">
+                  <div className="text-xs font-bold uppercase tracking-widest text-teal-400 mb-3">Example</div>
                   <div className="text-sm md:text-base text-gray-200 leading-relaxed">
                     Developed Economies — elevated public debt, reverse labor pressure.
                   </div>
@@ -242,8 +241,8 @@ export default function ScenarioTestingLab() {
           <div className="bg-gradient-to-br from-gray-800/70 to-gray-900/70 backdrop-blur-md border border-gray-700 rounded-2xl p-4 md:p-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start gap-4 mb-8">
-              <div className="w-12 h-12 rounded-2xl bg-secondary-teal/20 flex items-center justify-center flex-shrink-0 border border-secondary-teal/30">
-                <FiBarChart2 className="w-6 h-6 text-secondary-teal" />
+              <div className="w-12 h-12 rounded-2xl bg-teal-500/20 flex items-center justify-center flex-shrink-0 border border-teal-500/30">
+                <FiBarChart2 className="w-6 h-6 text-teal-400" />
               </div>
               <div className="flex-1">
                 <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-white mb-3 tracking-tight">Extended Government Shutdown Scenario</h3>
@@ -256,8 +255,8 @@ export default function ScenarioTestingLab() {
             {/* Chart Placeholder */}
             <div className="bg-gradient-to-br from-gray-900/90 to-gray-950/90 rounded-2xl p-8 mb-6 h-48 flex items-center justify-center border-2 border-gray-700 backdrop-blur-sm">
               <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-secondary-teal/20 flex items-center justify-center border border-secondary-teal/30">
-                  <FiBarChart2 className="w-8 h-8 text-secondary-teal" />
+                <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-teal-500/20 flex items-center justify-center border border-teal-500/30">
+                  <FiBarChart2 className="w-8 h-8 text-teal-400" />
                 </div>
                 <p className="text-lg font-bold text-gray-300 mb-2">Interactive Chart Visualization</p>
                 <p className="text-sm text-gray-400">Portfolio performance comparison over time</p>
@@ -267,8 +266,8 @@ export default function ScenarioTestingLab() {
             {/* Metrics Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* User Upside */}
-              <div className="group relative bg-gradient-to-br from-gray-800/90 to-gray-900/90 border-2 border-gray-700 rounded-xl p-4 text-center hover:border-secondary-teal/50 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-secondary-teal/20 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-secondary-teal/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="group relative bg-gradient-to-br from-gray-800/90 to-gray-900/90 border-2 border-gray-700 rounded-xl p-4 text-center hover:border-teal-500/50 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-teal-500/20 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <div className="relative z-10">
                   <div className="text-4xl md:text-5xl font-bold text-white mb-1 tracking-tight group-hover:scale-105 transition-transform duration-300">+15%</div>
                   <div className="text-xs md:text-sm font-semibold text-gray-300 group-hover:text-white transition-colors">User Upside</div>
@@ -309,12 +308,12 @@ export default function ScenarioTestingLab() {
       {/* Final CTA Section */}
       <section className="relative py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Subtle Background Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-secondary-teal/5 via-transparent to-accent-gold/5 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 via-transparent to-teal-600/5 pointer-events-none" />
         
         <div className="max-w-5xl mx-auto text-center relative z-10">
           {/* Icon Badge */}
-          <div className="w-24 h-24 mx-auto mb-10 rounded-3xl flex items-center justify-center backdrop-blur-sm border-2" style={{ backgroundColor: 'rgba(31, 170, 163, 0.2)', borderColor: '#E3B23C' }}>
-            <FiBarChart2 className="w-12 h-12 text-secondary-teal" />
+          <div className="w-24 h-24 mx-auto mb-10 rounded-3xl bg-teal-500/20 flex items-center justify-center backdrop-blur-sm border-2 border-teal-500">
+            <FiBarChart2 className="w-12 h-12 text-teal-400" />
           </div>
 
           {/* Heading */}
@@ -330,8 +329,7 @@ export default function ScenarioTestingLab() {
           {/* CTA Button */}
           <button 
             onClick={() => router.push('/portfolio')}
-            className="group relative px-10 py-4 text-white font-bold text-base md:text-lg rounded-xl transition-all duration-300 shadow-2xl hover:scale-110 hover:-translate-y-2" 
-            style={{ backgroundColor: '#E3B23C' }}
+            className="group relative px-10 py-4 bg-teal-600 hover:bg-teal-700 text-white font-bold text-base md:text-lg rounded-xl transition-all duration-300 shadow-2xl hover:scale-110 hover:-translate-y-2"
           >
             <span className="relative z-10 flex items-center justify-center gap-4">
               Start Testing Your Portfolio
@@ -341,9 +339,9 @@ export default function ScenarioTestingLab() {
 
           {/* Decorative Elements */}
           <div className="mt-12 flex justify-center gap-3">
-            <div className="w-3 h-3 rounded-full bg-secondary-teal/50 animate-pulse" />
-            <div className="w-3 h-3 rounded-full bg-secondary-teal/70 animate-pulse" style={{ animationDelay: '200ms' }} />
-            <div className="w-3 h-3 rounded-full bg-secondary-teal animate-pulse" style={{ animationDelay: '400ms' }} />
+            <div className="w-3 h-3 rounded-full bg-teal-500/50 animate-pulse" />
+            <div className="w-3 h-3 rounded-full bg-teal-500/70 animate-pulse" style={{ animationDelay: '200ms' }} />
+            <div className="w-3 h-3 rounded-full bg-teal-500 animate-pulse" style={{ animationDelay: '400ms' }} />
           </div>
         </div>
       </section>
