@@ -74,8 +74,8 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
       newErrors.age = 'Age is required';
     }
 
-    if (!formData.portfolio.totalValue) {
-      newErrors.totalValue = 'Total Portfolio Value is required';
+    if (!formData.portfolioDescription || formData.portfolioDescription.trim() === '') {
+      newErrors.portfolioDescription = 'Portfolio Description is required';
     }
 
     if (!isPortfolioValid) {
@@ -95,8 +95,154 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Section 1: Personal Information */}
+      {/* Section 1: Current Portfolio Allocation */}
       <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-1">Current Portfolio Allocation</h3>
+          <p className="text-sm text-gray-500">Enter percentage allocations across asset classes (must total 100%) (Auto-calculate from Holdings)</p>
+        </div>
+
+        {/* Portfolio Description */}
+        <div>
+          <label htmlFor="portfolioDescription" className="block text-sm font-medium text-gray-700 mb-2">
+            Portfolio Description <span className="text-red-500">*</span>
+          </label>
+          <textarea
+            id="portfolioDescription"
+            rows={4}
+            value={formData.portfolioDescription || ''}
+            onChange={(e) => setFormData(prev => ({ ...prev, portfolioDescription: e.target.value }))}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            placeholder="Describe your current holdings with specific dollar amounts, investment strategy, and any other relevant details..."
+            required
+          />
+          {errors.portfolioDescription && (
+            <p className="mt-1 text-sm text-red-600">{errors.portfolioDescription}</p>
+          )}
+          <p className="mt-1 text-xs text-gray-500">Include total portfolio value and specific holdings to enable more accurate analysis</p>
+        </div>
+
+        {/* Portfolio Sum Indicator */}
+        <div className={`p-4 rounded-lg border-2 ${
+          isPortfolioValid 
+            ? 'bg-green-50 border-green-500' 
+            : portfolioSum > 0 
+              ? 'bg-yellow-50 border-yellow-500' 
+              : 'bg-gray-50 border-gray-300'
+        }`}>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-700">Total Allocation:</span>
+            <span className={`text-2xl font-bold ${
+              isPortfolioValid 
+                ? 'text-green-600' 
+                : portfolioSum > 0 
+                  ? 'text-yellow-600' 
+                  : 'text-gray-600'
+            }`}>
+              {portfolioSum.toFixed(1)}%
+            </span>
+          </div>
+          {!isPortfolioValid && portfolioSum > 0 && (
+            <p className="mt-2 text-xs text-yellow-700">
+              {portfolioSum > 100 
+                ? `Reduce by ${(portfolioSum - 100).toFixed(1)}% to reach 100%` 
+                : `Add ${(100 - portfolioSum).toFixed(1)}% to reach 100%`}
+            </p>
+          )}
+          {isPortfolioValid && (
+            <p className="mt-2 text-xs text-green-700 flex items-center gap-1">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              Portfolio allocation is valid
+            </p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[
+            { 
+              key: 'stocks' as const, 
+              label: 'Stocks (%)', 
+              icon: (
+                <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              )
+            },
+            { 
+              key: 'bonds' as const, 
+              label: 'Bonds (%)', 
+              icon: (
+                <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              )
+            },
+            { 
+              key: 'cash' as const, 
+              label: 'Cash (%)', 
+              icon: (
+                <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              )
+            },
+            { 
+              key: 'realEstate' as const, 
+              label: 'Real Estate (%)', 
+              icon: (
+                <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+              )
+            },
+            { 
+              key: 'commodities' as const, 
+              label: 'Commodities (%)', 
+              icon: (
+                <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+              )
+            },
+            { 
+              key: 'alternatives' as const, 
+              label: 'Alternatives (%)', 
+              icon: (
+                <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              )
+            },
+          ].map(({ key, label, icon }) => (
+            <div key={key}>
+              <label htmlFor={key} className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                {icon}
+                {label}
+              </label>
+              <input
+                type="number"
+                id={key}
+                min="0"
+                max="100"
+                step="0.1"
+                value={formData.portfolio[key]}
+                onChange={(e) => handlePortfolioChange(key, e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="0"
+              />
+            </div>
+          ))}
+        </div>
+
+        {errors.portfolio && (
+          <p className="text-sm text-red-600">{errors.portfolio}</p>
+        )}
+      </div>
+
+      {/* Section 2: Personal Information */}
+      <div className="space-y-6 pt-6 border-t border-gray-200">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-1">Personal Information</h3>
           <p className="text-sm text-gray-500">Help us understand your investment background</p>
@@ -238,7 +384,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
         </div>
       </div>
 
-      {/* Section 2: Investment Goals */}
+      {/* Section 3: Investment Goals */}
       <div className="space-y-6 pt-6 border-t border-gray-200">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-1">Investment Goals</h3>
@@ -248,7 +394,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label htmlFor="incomeGoal" className="block text-sm font-medium text-gray-700 mb-2">
-              Income Goal (Annual)
+              Current Income Goal
             </label>
             <div className="relative">
               <span className="absolute left-4 top-2 text-gray-500">$</span>
@@ -263,12 +409,12 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                 placeholder="120,000"
               />
             </div>
-            <p className="mt-1 text-xs text-gray-500">Optional – target annual income from your portfolio</p>
+            <p className="mt-1 text-xs text-gray-500">Target current annual income from your portfolio</p>
           </div>
 
           <div>
             <label htmlFor="accumulationGoal" className="block text-sm font-medium text-gray-700 mb-2">
-              Accumulation Goal
+              Future Wealth Goal
             </label>
             <input
               type="text"
@@ -278,187 +424,9 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               placeholder="$2,000,000 by 2030"
             />
-            <p className="mt-1 text-xs text-gray-500">Optional – total net worth / portfolio value target and timeline</p>
+            <p className="mt-1 text-xs text-gray-500">Target future income or future value and timeline</p>
           </div>
         </div>
-      </div>
-
-      {/* Section 3: Current Portfolio */}
-      <div className="space-y-6 pt-6 border-t border-gray-200">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">Current Portfolio Allocation</h3>
-          <p className="text-sm text-gray-500">Enter percentage allocations across asset classes (must total 100%) (Auto-calculate from Holdings)</p>
-        </div>
-
-        {/* Portfolio Value Field */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <label htmlFor="totalValue" className="flex items-center gap-2 text-sm font-medium text-gray-900 mb-2">
-            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Total Portfolio Value (Mandatory) <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <span className="absolute left-4 top-2 text-gray-500">$</span>
-            <input
-              type="number"
-              id="totalValue"
-              min="0"
-              step="1000"
-              value={formData.portfolio.totalValue || ''}
-              onChange={(e) => setFormData(prev => ({
-                ...prev,
-                portfolio: {
-                  ...prev.portfolio,
-                  totalValue: parseInt(e.target.value) || undefined
-                }
-              }))}
-              className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              placeholder="100,000"
-              required
-            />
-          </div>
-          {errors.totalValue && (
-            <p className="mt-1 text-sm text-red-600">{errors.totalValue}</p>
-          )}
-          <p className="mt-2 text-xs text-gray-600">
-            <strong>Why provide this?</strong> Knowing your portfolio value enables more personalized analysis, 
-            including specific growth calculations needed to reach your goals.
-          </p>
-        </div>
-
-        {/* Portfolio Description */}
-        <div>
-          <label htmlFor="portfolioDescription" className="block text-sm font-medium text-gray-700 mb-2">
-            Portfolio Description (Optional)
-          </label>
-          <textarea
-            id="portfolioDescription"
-            rows={3}
-            value={formData.portfolioDescription || ''}
-            onChange={(e) => setFormData(prev => ({ ...prev, portfolioDescription: e.target.value }))}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            placeholder="Describe your current holdings, investment strategy, or any other relevant details..."
-          />
-        </div>
-
-        {/* Portfolio Sum Indicator */}
-        <div className={`p-4 rounded-lg border-2 ${
-          isPortfolioValid 
-            ? 'bg-green-50 border-green-500' 
-            : portfolioSum > 0 
-              ? 'bg-yellow-50 border-yellow-500' 
-              : 'bg-gray-50 border-gray-300'
-        }`}>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">Total Allocation:</span>
-            <span className={`text-2xl font-bold ${
-              isPortfolioValid 
-                ? 'text-green-600' 
-                : portfolioSum > 0 
-                  ? 'text-yellow-600' 
-                  : 'text-gray-600'
-            }`}>
-              {portfolioSum.toFixed(1)}%
-            </span>
-          </div>
-          {!isPortfolioValid && portfolioSum > 0 && (
-            <p className="mt-2 text-xs text-yellow-700">
-              {portfolioSum > 100 
-                ? `Reduce by ${(portfolioSum - 100).toFixed(1)}% to reach 100%` 
-                : `Add ${(100 - portfolioSum).toFixed(1)}% to reach 100%`}
-            </p>
-          )}
-          {isPortfolioValid && (
-            <p className="mt-2 text-xs text-green-700 flex items-center gap-1">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              Portfolio allocation is valid
-            </p>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[
-            { 
-              key: 'stocks' as const, 
-              label: 'Stocks (%)', 
-              icon: (
-                <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-              )
-            },
-            { 
-              key: 'bonds' as const, 
-              label: 'Bonds (%)', 
-              icon: (
-                <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              )
-            },
-            { 
-              key: 'cash' as const, 
-              label: 'Cash (%)', 
-              icon: (
-                <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              )
-            },
-            { 
-              key: 'realEstate' as const, 
-              label: 'Real Estate (%)', 
-              icon: (
-                <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-              )
-            },
-            { 
-              key: 'commodities' as const, 
-              label: 'Commodities (%)', 
-              icon: (
-                <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              )
-            },
-            { 
-              key: 'alternatives' as const, 
-              label: 'Alternatives (%)', 
-              icon: (
-                <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-              )
-            },
-          ].map(({ key, label, icon }) => (
-            <div key={key}>
-              <label htmlFor={key} className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                {icon}
-                {label}
-              </label>
-              <input
-                type="number"
-                id={key}
-                min="0"
-                max="100"
-                step="0.1"
-                value={formData.portfolio[key]}
-                onChange={(e) => handlePortfolioChange(key, e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="0"
-              />
-            </div>
-          ))}
-        </div>
-
-        {errors.portfolio && (
-          <p className="text-sm text-red-600">{errors.portfolio}</p>
-        )}
       </div>
 
       {/* Action Buttons */}
