@@ -71,7 +71,7 @@ export default function AIAvatarSection() {
                         </svg>
                       </div>
                       <p className="text-gray-300">
-                        <span className="font-semibold text-white">Stress Test Scenarios</span>
+                        <span className="font-semibold text-white">Scenario Stress-Tests</span>
                       </p>
                     </div>
                   </div>

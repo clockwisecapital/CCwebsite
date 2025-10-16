@@ -143,7 +143,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
       <div className="space-y-6">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-1">Current Portfolio Allocation</h3>
-          <p className="text-sm text-gray-500">Enter percentage allocations across asset classes (must total 100%) (Auto-calculate from Holdings)</p>
+          <p className="text-sm text-gray-500">Enter your portfolio positions and amounts (must total 100%)</p>
         </div>
 
         {/* Portfolio Description with AI Parsing */}
