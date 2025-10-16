@@ -26,6 +26,10 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isParsing, setIsParsing] = useState(false);
+  const [showExampleModal, setShowExampleModal] = useState(false);
+  const [parseNotes, setParseNotes] = useState('');
+  const [allocationsParsed, setAllocationsParsed] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -49,6 +53,52 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
     }));
   };
 
+  const handleParseDescription = async () => {
+    if (!formData.portfolioDescription || formData.portfolioDescription.trim() === '') {
+      setErrors({ portfolioDescription: 'Please enter a portfolio description first' });
+      return;
+    }
+
+    setIsParsing(true);
+    setErrors({});
+
+    try {
+      const response = await fetch('/api/portfolio/parse-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: formData.portfolioDescription })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to parse portfolio');
+      }
+
+      // Update allocations with AI-parsed values
+      setFormData(prev => ({
+        ...prev,
+        portfolio: {
+          ...prev.portfolio,
+          totalValue: data.allocations.totalValue || prev.portfolio.totalValue,
+          stocks: data.allocations.stocks,
+          bonds: data.allocations.bonds,
+          cash: data.allocations.cash,
+          realEstate: data.allocations.realEstate,
+          commodities: data.allocations.commodities,
+          alternatives: data.allocations.alternatives,
+        }
+      }));
+
+      setParseNotes(data.notes);
+      setAllocationsParsed(true);
+    } catch (error) {
+      setErrors({ portfolioDescription: error instanceof Error ? error.message : 'Failed to parse portfolio' });
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
   const handleReset = () => {
     setFormData({
       experienceLevel: 'Intermediate',
@@ -65,6 +115,8 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
       specificHoldings: [],
     });
     setErrors({});
+    setAllocationsParsed(false);
+    setParseNotes('');
   };
 
   const validateForm = (): boolean => {
@@ -78,7 +130,9 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
       newErrors.portfolioDescription = 'Portfolio Description is required';
     }
 
-    if (!isPortfolioValid) {
+    if (!allocationsParsed) {
+      newErrors.portfolio = 'Please click "Parse Portfolio" to analyze your holdings';
+    } else if (!isPortfolioValid) {
       newErrors.portfolio = `Portfolio allocations must sum to 100% (currently ${portfolioSum.toFixed(1)}%)`;
     }
 
@@ -102,24 +156,76 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           <p className="text-sm text-gray-500">Enter percentage allocations across asset classes (must total 100%) (Auto-calculate from Holdings)</p>
         </div>
 
-        {/* Portfolio Description */}
+        {/* Portfolio Description with AI Parsing */}
         <div>
-          <label htmlFor="portfolioDescription" className="block text-sm font-medium text-gray-700 mb-2">
-            Portfolio Description <span className="text-red-500">*</span>
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label htmlFor="portfolioDescription" className="block text-sm font-medium text-gray-700">
+              Portfolio Description <span className="text-red-500">*</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowExampleModal(true)}
+              className="text-xs text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              See Example
+            </button>
+          </div>
           <textarea
             id="portfolioDescription"
-            rows={4}
+            rows={6}
             value={formData.portfolioDescription || ''}
-            onChange={(e) => setFormData(prev => ({ ...prev, portfolioDescription: e.target.value }))}
+            onChange={(e) => {
+              setFormData(prev => ({ ...prev, portfolioDescription: e.target.value }));
+              setAllocationsParsed(false); // Reset parsing status when description changes
+            }}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            placeholder="Describe your current holdings with specific dollar amounts, investment strategy, and any other relevant details..."
+            placeholder="Example: I have a $500,000 portfolio with Apple stock ($75,000), Microsoft ($50,000), Vanguard S&P 500 ETF ($100,000), Vanguard Total Bond ETF ($100,000), cash ($75,000), REIT ($75,000), and Gold ETF ($25,000)..."
             required
           />
           {errors.portfolioDescription && (
             <p className="mt-1 text-sm text-red-600">{errors.portfolioDescription}</p>
           )}
-          <p className="mt-1 text-xs text-gray-500">Include total portfolio value and specific holdings to enable more accurate analysis</p>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-xs text-gray-500">
+              Describe your holdings with names and amounts. AI will categorize them automatically.
+            </p>
+            <button
+              type="button"
+              onClick={handleParseDescription}
+              disabled={isParsing || !formData.portfolioDescription}
+              className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            >
+              {isParsing ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                  Parse Portfolio
+                </>
+              )}
+            </button>
+          </div>
+          {parseNotes && allocationsParsed && (
+            <div className="mt-2 p-3 bg-teal-50 border border-teal-200 rounded-lg">
+              <p className="text-xs text-teal-800 flex items-start gap-2">
+                <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <span>{parseNotes}</span>
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Portfolio Sum Indicator */}
@@ -159,82 +265,87 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[
-            { 
-              key: 'stocks' as const, 
-              label: 'Stocks (%)', 
-              icon: (
-                <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-              )
-            },
-            { 
-              key: 'bonds' as const, 
-              label: 'Bonds (%)', 
-              icon: (
-                <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              )
-            },
-            { 
-              key: 'cash' as const, 
-              label: 'Cash (%)', 
-              icon: (
-                <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              )
-            },
-            { 
-              key: 'realEstate' as const, 
-              label: 'Real Estate (%)', 
-              icon: (
-                <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-              )
-            },
-            { 
-              key: 'commodities' as const, 
-              label: 'Commodities (%)', 
-              icon: (
-                <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              )
-            },
-            { 
-              key: 'alternatives' as const, 
-              label: 'Alternatives (%)', 
-              icon: (
-                <svg className="w-5 h-5 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-              )
-            },
-          ].map(({ key, label, icon }) => (
-            <div key={key}>
-              <label htmlFor={key} className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                {icon}
-                {label}
-              </label>
-              <input
-                type="number"
-                id={key}
-                min="0"
-                max="100"
-                step="0.1"
-                value={formData.portfolio[key]}
-                onChange={(e) => handlePortfolioChange(key, e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="0"
-              />
-            </div>
-          ))}
-        </div>
+        {/* AI-Parsed Allocations Display */}
+        {allocationsParsed && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[
+              { 
+                key: 'stocks' as const, 
+                label: 'Stocks', 
+                icon: (
+                  <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                )
+              },
+              { 
+                key: 'bonds' as const, 
+                label: 'Bonds', 
+                icon: (
+                  <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                )
+              },
+              { 
+                key: 'cash' as const, 
+                label: 'Cash', 
+                icon: (
+                  <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                )
+              },
+              { 
+                key: 'realEstate' as const, 
+                label: 'Real Estate', 
+                icon: (
+                  <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                  </svg>
+                )
+              },
+              { 
+                key: 'commodities' as const, 
+                label: 'Commodities', 
+                icon: (
+                  <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                )
+              },
+              { 
+                key: 'alternatives' as const, 
+                label: 'Alternatives', 
+                icon: (
+                  <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                )
+              },
+            ].map(({ key, label, icon }) => (
+              <div key={key} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  {icon}
+                  <span className="text-sm font-medium text-gray-700">{label}</span>
+                </div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {formData.portfolio[key].toFixed(1)}%
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {!allocationsParsed && (
+          <div className="text-center py-8 px-4 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg">
+            <svg className="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p className="text-sm text-gray-600 font-medium">Enter your portfolio description above</p>
+            <p className="text-xs text-gray-500 mt-1">Then click "Parse Portfolio" to automatically calculate allocations</p>
+          </div>
+        )}
 
         {errors.portfolio && (
           <p className="text-sm text-red-600">{errors.portfolio}</p>
@@ -458,6 +569,114 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           )}
         </button>
       </div>
+
+      {/* Example Modal */}
+      {showExampleModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setShowExampleModal(false)}>
+          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-900">Portfolio Description Examples</h3>
+                <button
+                  onClick={() => setShowExampleModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                <div>
+                  <p className="text-sm text-gray-600 mb-4">
+                    To get the most accurate allocation, include the following in your description:
+                  </p>
+                  <ul className="space-y-2 text-sm text-gray-700">
+                    <li className="flex items-start gap-2">
+                      <svg className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span><strong>Total portfolio value</strong> (e.g., "$500,000 portfolio")</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <svg className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span><strong>Specific holdings with amounts</strong> (e.g., "Apple stock $75,000, Microsoft $50,000")</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <svg className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span><strong>Fund names or tickers</strong> (e.g., "Vanguard S&P 500 ETF (VOO)", "Vanguard Total Bond (BND)")</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <svg className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span><strong>Asset types</strong> (stocks, bonds, REITs, gold, crypto, cash, etc.)</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Example 1: Detailed Portfolio</h4>
+                  <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-700">
+                    <p>
+                      "I have a $500,000 portfolio diversified across growth and dividend stocks. Major holdings include:
+                      Apple (AAPL) $75,000, Microsoft (MSFT) $50,000, Vanguard S&P 500 ETF (VOO) $100,000, 
+                      Vanguard Total Bond Market ETF (BND) $100,000, cash reserves $75,000, 
+                      real estate via Vanguard Real Estate ETF (VNQ) $75,000, and Gold ETF (GLD) $25,000."
+                    </p>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2 italic">
+                    AI will categorize: Stocks 45%, Bonds 20%, Cash 15%, Real Estate 15%, Commodities 5%
+                  </p>
+                </div>
+
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Example 2: Simple List</h4>
+                  <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-700">
+                    <p>
+                      "Total: $250,000. Holdings: Tesla stock $50k, Amazon $40k, VTSAX mutual fund $80k, 
+                      BND bond fund $50k, high-yield savings $20k, Bitcoin $10k."
+                    </p>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2 italic">
+                    AI will categorize: Stocks 68%, Bonds 20%, Cash 8%, Alternatives (crypto) 4%
+                  </p>
+                </div>
+
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Example 3: Sector-Based</h4>
+                  <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-700">
+                    <p>
+                      "$1M portfolio: 60% in tech stocks (FAANG companies), 20% in treasury bonds and corporate bonds, 
+                      10% in rental property REITs, 10% in money market and CDs."
+                    </p>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2 italic">
+                    AI will categorize: Stocks 60%, Bonds 20%, Real Estate 10%, Cash 10%
+                  </p>
+                </div>
+
+                <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 mt-6">
+                  <div className="flex items-start gap-2">
+                    <svg className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    <div className="text-sm text-teal-800">
+                      <p className="font-medium mb-1">Pro Tip:</p>
+                      <p>The more specific you are with dollar amounts and fund names, the more accurate your allocation will be!</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
