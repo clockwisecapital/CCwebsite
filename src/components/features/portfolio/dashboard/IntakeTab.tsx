@@ -42,16 +42,6 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
   const portfolioSum = stocks + bonds + cash + realEstate + commodities + alternatives;
   const isPortfolioValid = portfolioSum === 100;
 
-  const handlePortfolioChange = (field: keyof typeof formData.portfolio, value: string) => {
-    const numValue = parseFloat(value) || 0;
-    setFormData(prev => ({
-      ...prev,
-      portfolio: {
-        ...prev.portfolio,
-        [field]: Math.max(0, Math.min(100, numValue)),
-      },
-    }));
-  };
 
   const handleParseDescription = async () => {
     if (!formData.portfolioDescription || formData.portfolioDescription.trim() === '') {
@@ -343,7 +333,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <p className="text-sm text-gray-600 font-medium">Enter your portfolio description above</p>
-            <p className="text-xs text-gray-500 mt-1">Then click "Parse Portfolio" to automatically calculate allocations</p>
+            <p className="text-xs text-gray-500 mt-1">Then click &ldquo;Parse Portfolio&rdquo; to automatically calculate allocations</p>
           </div>
         )}
 
@@ -597,19 +587,19 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                       <svg className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
-                      <span><strong>Total portfolio value</strong> (e.g., "$500,000 portfolio")</span>
+                      <span><strong>Total portfolio value</strong> (e.g., &ldquo;$500,000 portfolio&rdquo;)</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <svg className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
-                      <span><strong>Specific holdings with amounts</strong> (e.g., "Apple stock $75,000, Microsoft $50,000")</span>
+                      <span><strong>Specific holdings with amounts</strong> (e.g., &ldquo;Apple stock $75,000, Microsoft $50,000&rdquo;)</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <svg className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
-                      <span><strong>Fund names or tickers</strong> (e.g., "Vanguard S&P 500 ETF (VOO)", "Vanguard Total Bond (BND)")</span>
+                      <span><strong>Fund names or tickers</strong> (e.g., &ldquo;Vanguard S&P 500 ETF (VOO)&rdquo;, &ldquo;Vanguard Total Bond (BND)&rdquo;)</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <svg className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -624,10 +614,10 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                   <h4 className="font-semibold text-gray-900 mb-3">Example 1: Detailed Portfolio</h4>
                   <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-700">
                     <p>
-                      "I have a $500,000 portfolio diversified across growth and dividend stocks. Major holdings include:
+                      &ldquo;I have a $500,000 portfolio diversified across growth and dividend stocks. Major holdings include:
                       Apple (AAPL) $75,000, Microsoft (MSFT) $50,000, Vanguard S&P 500 ETF (VOO) $100,000, 
                       Vanguard Total Bond Market ETF (BND) $100,000, cash reserves $75,000, 
-                      real estate via Vanguard Real Estate ETF (VNQ) $75,000, and Gold ETF (GLD) $25,000."
+                      real estate via Vanguard Real Estate ETF (VNQ) $75,000, and Gold ETF (GLD) $25,000.&rdquo;
                     </p>
                   </div>
                   <p className="text-xs text-gray-500 mt-2 italic">
@@ -639,8 +629,8 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                   <h4 className="font-semibold text-gray-900 mb-3">Example 2: Simple List</h4>
                   <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-700">
                     <p>
-                      "Total: $250,000. Holdings: Tesla stock $50k, Amazon $40k, VTSAX mutual fund $80k, 
-                      BND bond fund $50k, high-yield savings $20k, Bitcoin $10k."
+                      &ldquo;Total: $250,000. Holdings: Tesla stock $50k, Amazon $40k, VTSAX mutual fund $80k, 
+                      BND bond fund $50k, high-yield savings $20k, Bitcoin $10k.&rdquo;
                     </p>
                   </div>
                   <p className="text-xs text-gray-500 mt-2 italic">
@@ -652,8 +642,8 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                   <h4 className="font-semibold text-gray-900 mb-3">Example 3: Sector-Based</h4>
                   <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-700">
                     <p>
-                      "$1M portfolio: 60% in tech stocks (FAANG companies), 20% in treasury bonds and corporate bonds, 
-                      10% in rental property REITs, 10% in money market and CDs."
+                      &ldquo;$1M portfolio: 60% in tech stocks (FAANG companies), 20% in treasury bonds and corporate bonds, 
+                      10% in rental property REITs, 10% in money market and CDs.&rdquo;
                     </p>
                   </div>
                   <p className="text-xs text-gray-500 mt-2 italic">
