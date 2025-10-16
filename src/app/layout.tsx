@@ -32,6 +32,25 @@ export const metadata: Metadata = {
     shortcut: '/CC%20(Blue%20C).png',
     apple: '/CC%20(Blue%20C).png',
   },
+  openGraph: {
+    title: 'Clockwise Capital | Portfolios + Advisors to Navigate Turbulent Times',
+    description: 'Clockwise Capital helps smart investors understand economic and technology cycles, positioning your portfolio for what\'s coming, not just what\'s happened.',
+    type: 'website',
+    images: [
+      {
+        url: '/homescreen/hero11.png',
+        width: 1200,
+        height: 630,
+        alt: 'Clockwise Capital - Navigate Turbulent Times',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Clockwise Capital | Portfolios + Advisors to Navigate Turbulent Times',
+    description: 'Clockwise Capital helps smart investors understand economic and technology cycles, positioning your portfolio for what\'s coming, not just what\'s happened.',
+    images: ['/homescreen/hero11.png'],
+  },
 };
 
 // Root layout that wraps all pages

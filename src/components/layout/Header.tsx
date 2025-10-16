@@ -3,14 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { useAdmin } from '@/hooks/useAdmin';
 import { HiArrowRightOnRectangle } from 'react-icons/hi2';
 
 export default function Header(): React.JSX.Element {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const router = useRouter();
   const { isAdmin, logout } = useAdmin();
 
 
