@@ -35,8 +35,11 @@ export default function AIAvatarSection() {
               <div className="border-t border-gray-700/50 bg-gray-900/30 backdrop-blur-sm px-6 py-6">
                 <div className="max-w-5xl mx-auto">
                   <h2 className="text-xl md:text-2xl font-bold mb-3 text-white">
-                    Welcome to Your Portfolio Analysis
+                    Hi! I&rsquo;m Kronos,
                   </h2>
+                  <p className="text-lg md:text-xl text-teal-300 mb-3">
+                    Your Portfolio Intelligence Guide
+                  </p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                     <div className="flex items-start gap-2">
