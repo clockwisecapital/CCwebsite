@@ -15,9 +15,7 @@ interface ReviewTabProps {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId, onReset }: ReviewTabProps) {
-  const [selectedCycle, setSelectedCycle] = useState<'technology' | 'economic'>('technology');
   const [showAnalysisAndSync, setShowAnalysisAndSync] = useState(true);
-  const [showCycleOverview, setShowCycleOverview] = useState(true);
   const [cycleAnalysisTab, setCycleAnalysisTab] = useState<'cycle' | 'portfolio' | 'goal'>('cycle');
 
   const handleDownloadPDF = () => {
@@ -263,122 +261,6 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                 </table>
               </div>
             )}
-          </div>
-        )}
-      </div>
-
-      {/* Cycle Overview Section */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <button
-          onClick={() => setShowCycleOverview(!showCycleOverview)}
-          className="w-full bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between hover:bg-gray-100 transition-colors"
-        >
-          <div className="text-left">
-            <h3 className="text-lg font-semibold text-gray-900">Cycle Overview</h3>
-            <p className="text-sm text-gray-600 mt-1">Choose a cycle to view its timeline and current phase</p>
-          </div>
-          <svg
-            className={`w-5 h-5 text-gray-600 transform transition-transform flex-shrink-0 ml-4 ${
-              showCycleOverview ? 'rotate-180' : ''
-            }`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        {showCycleOverview && (
-          <div className="p-6">
-            {/* Cycle Selector */}
-            <div className="mb-6">
-            <label htmlFor="cycle" className="block text-sm font-medium text-gray-700 mb-2">
-              Cycle
-            </label>
-            <select
-              id="cycle"
-              value={selectedCycle}
-              onChange={(e) => setSelectedCycle(e.target.value as 'technology' | 'economic')}
-              className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            >
-              <option value="technology">Technology Cycle</option>
-              <option value="economic">Economic Cycle</option>
-            </select>
-          </div>
-
-          {/* Cycle Gauge */}
-          <div className="flex flex-col md:flex-row gap-8 items-start">
-            <div className="flex-shrink-0">
-              <div className="relative w-48 h-48">
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                  {/* Background circle */}
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    fill="none"
-                    stroke="#e5e7eb"
-                    strokeWidth="8"
-                  />
-                  {/* Progress circle */}
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    fill="none"
-                    stroke="#14b8a6"
-                    strokeWidth="8"
-                    strokeDasharray={`${(cycleScore / 100) * 251.2} 251.2`}
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-4xl font-bold text-gray-900">{cycleScore}</span>
-                  <span className="text-sm text-gray-500">Cycle Score</span>
-                </div>
-              </div>
-              <div className="mt-4 text-center">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-teal-100 text-teal-800">
-                  {selectedCycle === 'technology' ? 'Frenzy → Synergy' : 'Late Stage'}
-                </span>
-              </div>
-            </div>
-
-            {/* Cycle Description */}
-            <div className="flex-1">
-              <h4 className="font-semibold text-gray-900 mb-2">
-                {selectedCycle === 'technology' ? 'Technology Cycle' : 'Economic Cycle'}
-              </h4>
-              <p className="text-gray-700 leading-relaxed mb-4">
-                {selectedCycle === 'technology' 
-                  ? 'General-purpose tech wave from installation & frenzy to deployment & maturity, and maturity.'
-                  : 'Economic cycles track the broader market conditions including inflation, interest rates, and overall economic health.'}
-              </p>
-
-              {/* Timeline (simplified) */}
-              <div className="mt-6">
-                <h5 className="text-sm font-medium text-gray-700 mb-3">
-                  {selectedCycle === 'technology' ? 'Technology Cycle Timeline' : 'Economic Cycle Timeline'}
-                </h5>
-                <div className="relative">
-                  <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-gray-200"></div>
-                  <div className="relative flex justify-between items-center">
-                    {['Initiation', 'Frenzy', 'Synergy/Deployment', 'Maturity'].map((phase, idx) => (
-                      <div key={phase} className="flex flex-col items-center">
-                        <div className={`w-3 h-3 rounded-full ${idx === 2 ? 'bg-teal-500' : 'bg-gray-300'}`}></div>
-                        <span className="mt-2 text-xs text-gray-600 text-center max-w-[80px]">{phase}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-4 text-center">
-                    <span className="text-sm text-gray-600">
-                      Current Phase: <span className="font-medium text-teal-600">Synergy/Deployment</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
           </div>
         )}
       </div>
