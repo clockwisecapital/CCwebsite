@@ -10,15 +10,17 @@ export interface IntakeFormData {
   // Personal
   age?: number;
   experienceLevel: 'Beginner' | 'Intermediate' | 'Advanced';
-  riskTolerance: 'low' | 'medium' | 'high';  // NEW: User risk tolerance
+  riskTolerance: 'low' | 'medium' | 'high';
   
-  // Goals
-  incomeGoal?: number;
-  accumulationGoal?: string;
+  // Financial Goals
+  goalAmount?: number;              // Target goal amount in dollars
+  goalDescription?: string;         // Description of the financial goal
+  timeHorizon?: number;             // Years to reach goal
+  monthlyContribution?: number;     // Monthly contribution amount
   
   // Portfolio
   portfolio: {
-    totalValue?: number;        // NEW: Total portfolio value in dollars
+    totalValue?: number;            // Total portfolio value in dollars
     stocks: number;
     bonds: number;
     cash: number;
@@ -27,10 +29,10 @@ export interface IntakeFormData {
     alternatives: number;
   };
   portfolioDescription?: string;
-  specificHoldings?: Array<{    // NEW: Optional specific holdings
+  specificHoldings?: Array<{
     name: string;
     ticker?: string;
-    percentage: number;          // Percentage of total portfolio
+    percentage: number;
   }>;
 }
 
@@ -47,6 +49,7 @@ export interface AnalysisResult {
   goalImpact?: string | string[];
   metrics?: Array<[string, string, string]>;
   cycleScore?: number;
+  cycleAnalysis?: import('@/types/cycleAnalysis').CycleAnalysisResult; // Add cycle analysis data
   cyclePhase?: string;
   portfolioScore?: number;
   recommendations?: string[];
@@ -75,23 +78,47 @@ export default function PortfolioDashboard() {
     setShowEmailModal(false);
 
     try {
-      // Call analysis API
-      const response = await fetch('/api/portfolio/analyze-dashboard', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userData: emailData,
-          intakeData,
+      // Call both analysis APIs in parallel
+      const [dashboardResponse, cycleResponse] = await Promise.all([
+        fetch('/api/portfolio/analyze-dashboard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userData: emailData,
+            intakeData,
+          }),
         }),
-      });
+        fetch('/api/portfolio/analyze-cycles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            intakeData,
+          }),
+        }),
+      ]);
 
-      if (!response.ok) {
-        throw new Error('Analysis failed');
+      if (!dashboardResponse.ok) {
+        throw new Error('Dashboard analysis failed');
       }
 
-      const result = await response.json();
-      setAnalysisResult(result.analysis);
-      setConversationId(result.conversationId);
+      const dashboardResult = await dashboardResponse.json();
+      
+      // Get cycle analysis if successful, otherwise use null (will fallback to mock data)
+      let cycleAnalysis = null;
+      if (cycleResponse.ok) {
+        const cycleResult = await cycleResponse.json();
+        cycleAnalysis = cycleResult.cycleAnalysis;
+        console.log('✅ Cycle analysis completed successfully');
+      } else {
+        console.warn('⚠️ Cycle analysis failed, will use mock data');
+      }
+
+      // Combine both analyses
+      setAnalysisResult({
+        ...dashboardResult.analysis,
+        cycleAnalysis, // Add cycle analysis data
+      });
+      setConversationId(dashboardResult.conversationId);
       setActiveTab('review');
     } catch (error) {
       console.error('Analysis error:', error);

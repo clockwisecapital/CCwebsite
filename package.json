@@ -9,7 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
     "@openai/agents": "^0.0.17",
+    "@perplexity-ai/perplexity_ai": "^0.15.0",
     "@supabase/supabase-js": "^2.57.4",
     "chart.js": "^4.5.0",
     "clsx": "^2.1.1",

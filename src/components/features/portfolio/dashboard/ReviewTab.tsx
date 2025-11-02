@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import type { IntakeFormData, AnalysisResult } from './PortfolioDashboard';
+import CycleTab from './CycleTab';
+import PortfolioTab from './PortfolioTab';
+import GoalTab from './GoalTab';
 
 interface ReviewTabProps {
   analysisResult: AnalysisResult;
@@ -10,9 +13,12 @@ interface ReviewTabProps {
   onReset: () => void;
 }
 
-export default function ReviewTab({ analysisResult, intakeData, conversationId, onReset }: ReviewTabProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId, onReset }: ReviewTabProps) {
   const [selectedCycle, setSelectedCycle] = useState<'technology' | 'economic'>('technology');
-  const [showStressTest, setShowStressTest] = useState(false);
+  const [showAnalysisAndSync, setShowAnalysisAndSync] = useState(true);
+  const [showCycleOverview, setShowCycleOverview] = useState(true);
+  const [cycleAnalysisTab, setCycleAnalysisTab] = useState<'cycle' | 'portfolio' | 'goal'>('cycle');
 
   const handleDownloadPDF = () => {
     // TODO: Implement PDF generation
@@ -39,7 +45,24 @@ export default function ReviewTab({ analysisResult, intakeData, conversationId, 
 
   // Calculate cycle score (mock data - replace with real calculation)
   const cycleScore = analysisResult.cycleScore || 79;
-  const portfolioSum = Object.values(intakeData.portfolio).reduce((sum, val) => sum + val, 0);
+
+  // Use real cycle analysis from backend - NO FALLBACKS (forces AI to work)
+  if (!analysisResult.cycleAnalysis) {
+    throw new Error('Cycle analysis data missing - AI analysis may have failed');
+  }
+
+  const allCycles = analysisResult.cycleAnalysis.cycles;
+  
+  // Only show the 4 implemented cycles (exclude market and company for now)
+  const cycleData = {
+    country: allCycles.country,
+    technology: allCycles.technology,
+    economic: allCycles.economic,
+    business: allCycles.business,
+  };
+  
+  const portfolioAnalysis = analysisResult.cycleAnalysis.portfolioAnalysis;
+  const goalAnalysis = analysisResult.cycleAnalysis.goalAnalysis;
 
   return (
     <div className="space-y-8">
@@ -77,95 +100,198 @@ export default function ReviewTab({ analysisResult, intakeData, conversationId, 
         </div>
       </div>
 
-      {/* Analysis Results */}
+      {/* 1. DETAILED CYCLE ANALYSIS - AT TOP */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Analysis Results</h3>
+        <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+          <h3 className="text-lg font-semibold text-gray-900">Detailed Cycle Analysis</h3>
+          <p className="text-sm text-gray-600 mt-1">AI-powered analysis across 4 economic cycles</p>
         </div>
-        <div className="p-6 space-y-6">
-          {/* Market Impact */}
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-3">
-              Market Impact
-            </h4>
-            <ul className="space-y-2 text-gray-700">
-              {marketImpact.map((item, idx) => (
-                <li key={idx} className="pl-4">{item}</li>
-              ))}
-            </ul>
-          </div>
+        <div className="border-b border-gray-200">
+          <nav className="flex -mb-px">
+            <button
+              onClick={() => setCycleAnalysisTab('cycle')}
+              className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
+                cycleAnalysisTab === 'cycle'
+                  ? 'border-b-2 border-secondary-teal text-secondary-teal bg-teal-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                </svg>
+                Cycle
+              </div>
+              <div className="text-xs text-gray-500 mt-1">4 Economic Cycles</div>
+            </button>
 
-          {/* Portfolio Impact */}
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-3">
-              Portfolio Impact
-            </h4>
-            <ul className="space-y-2 text-gray-700">
-              {portfolioImpact.map((item, idx) => (
-                <li key={idx} className="pl-4">{item}</li>
-              ))}
-            </ul>
-          </div>
+            <button
+              onClick={() => setCycleAnalysisTab('portfolio')}
+              className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
+                cycleAnalysisTab === 'portfolio'
+                  ? 'border-b-2 border-secondary-teal text-secondary-teal bg-teal-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Portfolio
+              </div>
+              <div className="text-xs text-gray-500 mt-1">Monte Carlo</div>
+            </button>
 
-          {/* Goal Impact */}
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-3">
-              Goal Impact
-            </h4>
-            <ul className="space-y-2 text-gray-700">
-              {goalImpact.map((item, idx) => (
-                <li key={idx} className="pl-4">{item}</li>
-              ))}
-            </ul>
-          </div>
+            <button
+              onClick={() => setCycleAnalysisTab('goal')}
+              className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
+                cycleAnalysisTab === 'goal'
+                  ? 'border-b-2 border-secondary-teal text-secondary-teal bg-teal-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+                Goal
+              </div>
+              <div className="text-xs text-gray-500 mt-1">Success Probability</div>
+            </button>
+          </nav>
+        </div>
 
-          {/* Metrics Table */}
-          {analysisResult.metrics && analysisResult.metrics.length > 0 && (
-            <div className="mt-6 overflow-hidden border border-gray-200 rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Metric
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Current Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Recommendation
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {analysisResult.metrics.map((row, idx) => (
-                    <tr key={idx}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {row[0]}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {row[1]}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {row[2]}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* Tab Content */}
+        <div className="p-6">
+          {cycleAnalysisTab === 'cycle' && <CycleTab cycleData={cycleData} />}
+          {cycleAnalysisTab === 'portfolio' && <PortfolioTab portfolioAnalysis={portfolioAnalysis} />}
+          {cycleAnalysisTab === 'goal' && <GoalTab goalAnalysis={goalAnalysis} />}
+        </div>
+      </div>
+
+      {/* 2. Analysis Results & Portfolio Sync */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <button
+          onClick={() => setShowAnalysisAndSync(!showAnalysisAndSync)}
+          className="w-full bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between hover:bg-gray-100 transition-colors"
+        >
+          <div className="text-left">
+            <h3 className="text-lg font-semibold text-gray-900">Analysis Results & Portfolio Sync</h3>
+            <p className="text-sm text-gray-600 mt-1">Market impact and portfolio comparison</p>
+          </div>
+          <svg
+            className={`w-5 h-5 text-gray-600 transform transition-transform flex-shrink-0 ml-4 ${
+              showAnalysisAndSync ? 'rotate-180' : ''
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {showAnalysisAndSync && (
+          <div className="p-6 space-y-6">
+            {/* Market Impact */}
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-3">
+                Market Impact
+              </h4>
+              <ul className="space-y-2 text-gray-700">
+                {marketImpact.map((item, idx) => (
+                  <li key={idx} className="pl-4">{item}</li>
+                ))}
+              </ul>
             </div>
-          )}
-        </div>
+
+            {/* Portfolio Impact */}
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-3">
+                Portfolio Impact
+              </h4>
+              <ul className="space-y-2 text-gray-700">
+                {portfolioImpact.map((item, idx) => (
+                  <li key={idx} className="pl-4">{item}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Goal Impact */}
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-3">
+                Goal Impact
+              </h4>
+              <ul className="space-y-2 text-gray-700">
+                {goalImpact.map((item, idx) => (
+                  <li key={idx} className="pl-4">{item}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Metrics Table */}
+            {analysisResult.metrics && analysisResult.metrics.length > 0 && (
+              <div className="mt-6 overflow-hidden border border-gray-200 rounded-lg">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Metric
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Current Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Recommendation
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {analysisResult.metrics.map((row, idx) => (
+                      <tr key={idx}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {row[0]}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                          {row[1]}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {row[2]}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Cycle Overview Section */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Cycle Overview</h3>
-          <p className="text-sm text-gray-600 mt-1">Choose a cycle to view its timeline and current phase</p>
-        </div>
-        <div className="p-6">
-          {/* Cycle Selector */}
-          <div className="mb-6">
+        <button
+          onClick={() => setShowCycleOverview(!showCycleOverview)}
+          className="w-full bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between hover:bg-gray-100 transition-colors"
+        >
+          <div className="text-left">
+            <h3 className="text-lg font-semibold text-gray-900">Cycle Overview</h3>
+            <p className="text-sm text-gray-600 mt-1">Choose a cycle to view its timeline and current phase</p>
+          </div>
+          <svg
+            className={`w-5 h-5 text-gray-600 transform transition-transform flex-shrink-0 ml-4 ${
+              showCycleOverview ? 'rotate-180' : ''
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {showCycleOverview && (
+          <div className="p-6">
+            {/* Cycle Selector */}
+            <div className="mb-6">
             <label htmlFor="cycle" className="block text-sm font-medium text-gray-700 mb-2">
               Cycle
             </label>
@@ -253,171 +379,26 @@ export default function ReviewTab({ analysisResult, intakeData, conversationId, 
               </div>
             </div>
           </div>
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Portfolio Cycle Sync (Stress Test) */}
+      {/* Scenario Stress Testing - COMING SOON */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Portfolio Cycle Sync</h3>
-          <p className="text-sm text-gray-600 mt-1">Your intake profiled the Current Portfolio. Edit any field and we&apos;ll auto-adjust Cash.</p>
+          <h3 className="text-lg font-semibold text-gray-900">Scenario Stress Testing</h3>
+          <p className="text-sm text-gray-600 mt-1">Coming Soon</p>
         </div>
         <div className="p-6">
-          <p className="text-sm text-gray-600 mb-6">Stress test your portfolio against market scenarios.</p>
-
-          {/* Current Portfolio Card */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <div className="border border-gray-200 rounded-lg p-5 bg-white">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="font-semibold text-gray-900">Current Portfolio</h4>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-teal-100 text-teal-800">
-                  Cycle Score: {cycleScore}
-                </span>
-              </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-2 text-gray-600">
-                    <svg className="w-4 h-4 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                    </svg>
-                    Stocks:
-                  </span>
-                  <span className="font-medium">{intakeData.portfolio.stocks}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-2 text-gray-600">
-                    <svg className="w-4 h-4 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    Bonds:
-                  </span>
-                  <span className="font-medium">{intakeData.portfolio.bonds}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-2 text-gray-600">
-                    <svg className="w-4 h-4 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                    </svg>
-                    Real Estate:
-                  </span>
-                  <span className="font-medium">{intakeData.portfolio.realEstate}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-2 text-gray-600">
-                    <svg className="w-4 h-4 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                    Commodities:
-                  </span>
-                  <span className="font-medium">{intakeData.portfolio.commodities}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-2 text-gray-600">
-                    <svg className="w-4 h-4 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                    Cash:
-                  </span>
-                  <span className="font-medium">{intakeData.portfolio.cash}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-2 text-gray-600">
-                    <svg className="w-4 h-4 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                    Alternatives:
-                  </span>
-                  <span className="font-medium">{intakeData.portfolio.alternatives}%</span>
-                </div>
-                <div className="pt-2 mt-2 border-t border-gray-200 flex justify-between font-semibold">
-                  <span>Auto Cash:</span>
-                  <span>{(100 - portfolioSum + intakeData.portfolio.cash).toFixed(1)}%</span>
-                </div>
-              </div>
-              <button className="mt-4 w-full text-sm text-teal-600 hover:text-teal-700 font-medium">
-                View Details
-              </button>
-            </div>
-
-            {/* Benchmark Portfolio Card */}
-            <div className="border border-teal-200 rounded-lg p-5 bg-teal-50">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="font-semibold text-gray-900">Clockwise Portfolio</h4>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-teal-200 text-teal-900">
-                  Cycle Score: 78
-                </span>
-              </div>
-              <p className="text-sm text-gray-700 mb-4">
-                This re-iterative score shows how our benchmark allocation aligns with the selected cycle. Higher is better. (Demo logic.)
-              </p>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-2 text-gray-600">
-                    <svg className="w-4 h-4 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                    </svg>
-                    Stocks:
-                  </span>
-                  <span className="font-medium">45%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-2 text-gray-600">
-                    <svg className="w-4 h-4 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    Bonds:
-                  </span>
-                  <span className="font-medium">30%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-2 text-gray-600">
-                    <svg className="w-4 h-4 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                    </svg>
-                    Real Estate:
-                  </span>
-                  <span className="font-medium">10%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-2 text-gray-600">
-                    <svg className="w-4 h-4 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                    Commodities:
-                  </span>
-                  <span className="font-medium">10%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-2 text-gray-600">
-                    <svg className="w-4 h-4 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                    Cash:
-                  </span>
-                  <span className="font-medium">5%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Stress Test Button */}
-          <button
-            onClick={() => setShowStressTest(!showStressTest)}
-            className="w-full px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 transition-colors flex items-center justify-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          <div className="text-center py-8">
+            <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            {showStressTest ? 'Hide' : 'Scenario Stress-Tests'}
-          </button>
-
-          {showStressTest && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <p className="text-gray-600 text-center">
-                Stress testing scenarios coming soon. This feature will allow you to test your portfolio against various market conditions.
-              </p>
-            </div>
-          )}
+            <p className="text-gray-600 font-medium mb-2">Coming Soon</p>
+            <p className="text-sm text-gray-500">
+              Stress testing scenarios will allow you to test your portfolio against various historical market conditions.
+            </p>
+          </div>
         </div>
       </div>
 

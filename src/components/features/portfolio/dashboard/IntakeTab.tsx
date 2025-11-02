@@ -23,6 +23,10 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
       alternatives: 0,
     },
     specificHoldings: [],
+    goalAmount: undefined,
+    goalDescription: '',
+    timeHorizon: undefined,
+    monthlyContribution: 0,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -89,6 +93,8 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
     }
   };
 
+  // Reserved for future reset functionality
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleReset = () => {
     setFormData({
       experienceLevel: 'Intermediate',
@@ -103,6 +109,10 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
         alternatives: 0,
       },
       specificHoldings: [],
+      goalAmount: undefined,
+      goalDescription: '',
+      timeHorizon: undefined,
+      monthlyContribution: 0,
     });
     setErrors({});
     setAllocationsParsed(false);
@@ -484,81 +494,6 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
         </div>
       </div>
 
-      {/* Section 3: Investment Goals */}
-      <div className="space-y-6 pt-6 border-t border-gray-200">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">Investment Goals</h3>
-          <p className="text-sm text-gray-500">Define your financial objectives</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label htmlFor="incomeGoal" className="block text-sm font-medium text-gray-700 mb-2">
-              Current Income Goal
-            </label>
-            <div className="relative">
-              <span className="absolute left-4 top-2 text-gray-500">$</span>
-              <input
-                type="number"
-                id="incomeGoal"
-                min="0"
-                step="1000"
-                value={formData.incomeGoal || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, incomeGoal: parseInt(e.target.value) || undefined }))}
-                className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="120,000"
-              />
-            </div>
-            <p className="mt-1 text-xs text-gray-500">Target current annual income from your portfolio</p>
-          </div>
-
-          <div>
-            <label htmlFor="accumulationGoal" className="block text-sm font-medium text-gray-700 mb-2">
-              Future Wealth Goal
-            </label>
-            <input
-              type="text"
-              id="accumulationGoal"
-              value={formData.accumulationGoal || ''}
-              onChange={(e) => setFormData(prev => ({ ...prev, accumulationGoal: e.target.value }))}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              placeholder="$2,000,000 by 2030"
-            />
-            <p className="mt-1 text-xs text-gray-500">Target future income or future value and timeline</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-        <button
-          type="button"
-          onClick={handleReset}
-          className="px-6 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          disabled={isAnalyzing}
-        >
-          Reset
-        </button>
-
-        <button
-          type="submit"
-          disabled={!isPortfolioValid || isAnalyzing}
-          className="px-8 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all transform hover:scale-105 disabled:hover:scale-100 shadow-lg"
-        >
-          {isAnalyzing ? (
-            <span className="flex items-center gap-2">
-              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              Analyzing...
-            </span>
-          ) : (
-            'Begin Analyzing'
-          )}
-        </button>
-      </div>
-
       {/* Example Modal */}
       {showExampleModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setShowExampleModal(false)}>
@@ -666,6 +601,95 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           </div>
         </div>
       )}
+
+      {/* Section 2: Financial Goals */}
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">Financial Goals</h3>
+          <p className="text-sm text-gray-600 mb-6">
+            Help us understand your investment goals and timeline
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Goal Amount */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Target Goal Amount
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+              <input
+                type="number"
+                value={formData.goalAmount || ''}
+                onChange={(e) => setFormData({ ...formData, goalAmount: Number(e.target.value) || undefined })}
+                className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="1000000"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">How much do you want to accumulate?</p>
+          </div>
+
+          {/* Time Horizon */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Time Horizon (Years)
+            </label>
+            <input
+              type="number"
+              value={formData.timeHorizon || ''}
+              onChange={(e) => setFormData({ ...formData, timeHorizon: Number(e.target.value) || undefined })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              placeholder="10"
+            />
+            <p className="text-xs text-gray-500 mt-1">Years until you need to reach this goal</p>
+          </div>
+
+          {/* Monthly Contribution */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Monthly Contribution
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+              <input
+                type="number"
+                value={formData.monthlyContribution || ''}
+                onChange={(e) => setFormData({ ...formData, monthlyContribution: Number(e.target.value) || 0 })}
+                className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="500"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Additional monthly investment</p>
+          </div>
+
+          {/* Goal Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Goal Description
+            </label>
+            <input
+              type="text"
+              value={formData.goalDescription || ''}
+              onChange={(e) => setFormData({ ...formData, goalDescription: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              placeholder="Retirement, Home Purchase, etc."
+            />
+            <p className="text-xs text-gray-500 mt-1">What is this goal for?</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Submit Button */}
+      <div className="flex justify-end pt-6 border-t border-gray-200">
+        <button
+          type="submit"
+          disabled={!isPortfolioValid || isAnalyzing}
+          className="px-8 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+        >
+          {isAnalyzing ? 'Analyzing...' : 'Analyze Portfolio'}
+        </button>
+      </div>
     </form>
   );
 }
