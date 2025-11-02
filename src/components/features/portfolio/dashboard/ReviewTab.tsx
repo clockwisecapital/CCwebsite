@@ -41,9 +41,29 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
   const portfolioImpact = processImpactData(analysisResult.portfolioImpact);
   const goalImpact = processImpactData(analysisResult.goalImpact);
 
-  // Use real cycle analysis from backend - NO FALLBACKS (forces AI to work)
+  // Handle missing cycle analysis gracefully
   if (!analysisResult.cycleAnalysis) {
-    throw new Error('Cycle analysis data missing - AI analysis may have failed');
+    return (
+      <div className="space-y-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-8">
+          <div className="flex items-center gap-3 mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h2 className="text-2xl font-bold text-red-900">Analysis Incomplete</h2>
+          </div>
+          <p className="text-red-800 mb-4">
+            The cycle analysis data is missing. This may be due to an API error or timeout.
+          </p>
+          <button
+            onClick={onReset}
+            className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
   }
 
   const allCycles = analysisResult.cycleAnalysis.cycles;
