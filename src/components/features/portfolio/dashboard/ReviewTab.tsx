@@ -41,9 +41,6 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
   const portfolioImpact = processImpactData(analysisResult.portfolioImpact);
   const goalImpact = processImpactData(analysisResult.goalImpact);
 
-  // Calculate cycle score (mock data - replace with real calculation)
-  const cycleScore = analysisResult.cycleScore || 79;
-
   // Use real cycle analysis from backend - NO FALLBACKS (forces AI to work)
   if (!analysisResult.cycleAnalysis) {
     throw new Error('Cycle analysis data missing - AI analysis may have failed');
