@@ -6,6 +6,8 @@ export interface CycleAnalysisResult {
     technology: CycleData;
     economic: CycleData;
     business: CycleData;
+    market: CycleData;
+    company: CycleData;
   };
   
   portfolioAnalysis: {
@@ -55,6 +57,8 @@ export interface PortfolioSimulation {
     technology: MonteCarloResult;
     economic: MonteCarloResult;
     business: MonteCarloResult;
+    market: MonteCarloResult;
+    company: MonteCarloResult;
   };
   
   // Overall weighted average

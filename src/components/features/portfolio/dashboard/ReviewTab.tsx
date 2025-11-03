@@ -68,12 +68,14 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
 
   const allCycles = analysisResult.cycleAnalysis.cycles;
   
-  // Only show the 4 implemented cycles (exclude market and company for now)
+  // Show all 6 cycles - Market (S&P 500) is primary/default
   const cycleData = {
+    market: allCycles.market,
     country: allCycles.country,
     technology: allCycles.technology,
     economic: allCycles.economic,
     business: allCycles.business,
+    company: allCycles.company,
   };
   
   const portfolioAnalysis = analysisResult.cycleAnalysis.portfolioAnalysis;

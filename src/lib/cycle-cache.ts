@@ -18,6 +18,8 @@ interface CycleCache {
   technology?: CachedCycle;
   economic?: CachedCycle;
   business?: CachedCycle;
+  market?: CachedCycle;
+  company?: CachedCycle;
 }
 
 // In-memory cache (for serverless, consider Redis or database for persistence)

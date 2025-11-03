@@ -382,7 +382,7 @@ async def analyze_cycles_with_real_data(intake_data):
     client = anthropic.Anthropic(api_key="your_api_key")
     
     ai_response = client.messages.create(
-        model="claude-3-5-sonnet-20241022",
+        model="claude-sonnet-4-5-20250929",
         max_tokens=4000,
         messages=[{
             "role": "user",

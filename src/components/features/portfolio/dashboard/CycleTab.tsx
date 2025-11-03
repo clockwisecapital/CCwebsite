@@ -5,17 +5,23 @@ import type { CycleData } from '@/types/cycleAnalysis';
 
 interface CycleTabProps {
   cycleData: {
+    market: CycleData;
     country: CycleData;
     technology: CycleData;
     economic: CycleData;
     business: CycleData;
+    company: CycleData;
   };
 }
 
 export default function CycleTab({ cycleData }: CycleTabProps) {
-  const [selectedCycle, setSelectedCycle] = useState<keyof typeof cycleData>('country');
+  // Default to market if available, otherwise first available cycle
+  const availableCycles = (Object.keys(cycleData) as Array<keyof typeof cycleData>).filter(key => cycleData[key] !== undefined);
+  const defaultCycle = cycleData.market ? 'market' : availableCycles[0] || 'country';
   
-  const currentCycle = cycleData[selectedCycle] || cycleData.country; // Fallback to country if selected doesn't exist
+  const [selectedCycle, setSelectedCycle] = useState<keyof typeof cycleData>(defaultCycle);
+  
+  const currentCycle = cycleData[selectedCycle] || cycleData[availableCycles[0]] || cycleData.country; // Fallback to first available
 
   // Cycle Dial Component
   const CycleDial = ({ value, size = 200 }: { value: number; size?: number }) => {
@@ -94,9 +100,7 @@ export default function CycleTab({ cycleData }: CycleTabProps) {
           Select Cycle to Analyze
         </label>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {(Object.keys(cycleData) as Array<keyof typeof cycleData>)
-            .filter(key => cycleData[key] !== undefined) // Only show implemented cycles
-            .map((key) => (
+          {availableCycles.map((key) => (
               <button
                 key={key}
                 onClick={() => setSelectedCycle(key)}

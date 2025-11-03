@@ -51,11 +51,13 @@ export async function POST(req: NextRequest) {
     console.log('🤖 Analyzing cycles (checking cache first for consistency)...');
     console.log('Cache stats:', getCacheStats());
     
-    const [countryAnalysis, technologyAnalysis, economicAnalysis, businessAnalysis] = await Promise.all([
+    const [countryAnalysis, technologyAnalysis, economicAnalysis, businessAnalysis, marketAnalysis, companyAnalysis] = await Promise.all([
       analyzeCountryCycleWithCache(realTimeData, dataHash),
       analyzeTechnologyCycleWithCache(realTimeData, dataHash),
       analyzeEconomicCycleWithCache(realTimeData, dataHash),
       analyzeBusinessCycleWithCache(realTimeData, dataHash),
+      analyzeMarketCycleWithCache(realTimeData, dataHash),
+      analyzeCompanyCycleWithCache(realTimeData, dataHash),
     ]);
     console.log('✅ All cycle analyses completed');
 
@@ -65,6 +67,8 @@ export async function POST(req: NextRequest) {
       technology: technologyAnalysis,
       economic: economicAnalysis,
       business: businessAnalysis,
+      market: marketAnalysis,
+      company: companyAnalysis,
     });
 
     const goalAnalysis = await analyzeGoalProbability(intakeData, portfolioAnalysis);
@@ -75,6 +79,8 @@ export async function POST(req: NextRequest) {
         technology: technologyAnalysis,
         economic: economicAnalysis,
         business: businessAnalysis,
+        market: marketAnalysis,
+        company: companyAnalysis,
       },
       portfolioAnalysis,
       goalAnalysis,
@@ -168,6 +174,36 @@ async function analyzeBusinessCycleWithCache(realTimeData: CycleDataSources, dat
   console.log('🆕 Generating new Business Cycle analysis');
   const result = await analyzeBusinessCycle(realTimeData);
   setCachedCycle('business', result, dataHash);
+  return result;
+}
+
+async function analyzeMarketCycleWithCache(realTimeData: CycleDataSources, dataHash: string): Promise<CycleData> {
+  if (isCacheValid('market', dataHash)) {
+    const cached = getCachedCycle('market');
+    if (cached) {
+      console.log('✅ Using cached Market Cycle (ensures consistency)');
+      return cached;
+    }
+  }
+  
+  console.log('🆕 Generating new Market Cycle analysis');
+  const result = await analyzeMarketCycle(realTimeData);
+  setCachedCycle('market', result, dataHash);
+  return result;
+}
+
+async function analyzeCompanyCycleWithCache(realTimeData: CycleDataSources, dataHash: string): Promise<CycleData> {
+  if (isCacheValid('company', dataHash)) {
+    const cached = getCachedCycle('company');
+    if (cached) {
+      console.log('✅ Using cached Company Cycle (ensures consistency)');
+      return cached;
+    }
+  }
+  
+  console.log('🆕 Generating new Company Cycle analysis');
+  const result = await analyzeCompanyCycle(realTimeData);
+  setCachedCycle('company', result, dataHash);
   return result;
 }
 
@@ -833,6 +869,206 @@ Provide only JSON.`;
 }
 
 // ======================
+// MARKET (S&P 500) CYCLE ANALYSIS
+// ======================
+
+async function analyzeMarketCycle(realTimeData: CycleDataSources): Promise<CycleData> {
+  const { market } = realTimeData;
+  
+  // Get current date for dynamic analysis
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.toLocaleString('en-US', { month: 'long' });
+  
+  const prompt = `You are an expert analyst of S&P 500 market cycles.
+
+## Analysis Date: ${currentMonth} ${currentYear}
+
+Analyze the current S&P 500 Market Cycle.
+
+### Your Task:
+1. Determine the average lifecycle of S&P 500 market cycles
+2. Identify the current lifecycle phase of the S&P 500
+3. Provide actionable portfolio insights
+
+### Analysis Frameworks (Synthesize ALL of these):
+- **Mike Wilson** (Morgan Stanley): Focus on earnings cycles and liquidity conditions
+- **David Kostin** (Goldman Sachs): Valuation-based cycle analysis and sector rotation
+- **Savita Subramanian** (BofA): Sentiment and technical indicators for market phases
+- **Tom Lee** (Fundstrat): Macro cycle integration with equity markets
+- **John Stoltzfus** (Oppenheimer): Market breadth and participation analysis
+- **Ed Yardeni** (Yardeni Research): Economic indicators and profit cycle analysis
+
+### Current Market Data (${currentMonth} ${currentYear}):
+- S&P 500 Price: ${market.sp500_price}
+- S&P 500 P/E Ratio: ${market.sp500_pe_ratio}
+- S&P 500 from High: ${market.sp500_from_high}%
+- VIX (Volatility): ${market.volatility_vix}
+
+### Output Requirements:
+Respond with ONLY a valid JSON object (no markdown, no code blocks):
+
+{
+  "name": "Market (S&P 500) Cycle",
+  "phase": "<current phase name>",
+  "phasePercent": <0-100 number representing progress through full cycle>,
+  "averageLifecycle": "<X-Y years based on historical analysis>",
+  "currentCycleStart": "<year and description of cycle start>",
+  "timeline": [
+    {
+      "phase": "<phase name>",
+      "description": "<brief description>",
+      "startPercent": <0-100>,
+      "endPercent": <0-100>,
+      "isCurrent": <true/false>
+    }
+  ],
+  "sp500Backtest": {
+    "expectedUpside": <decimal like 0.15 for 15%>,
+    "expectedDownside": <negative decimal like -0.10 for -10%>,
+    "expectedReturn": <decimal like 0.08 for 8%>
+  },
+  "historicalAnalog": {
+    "period": "<YYYY-YYYY>",
+    "description": "<synthesis of all frameworks>",
+    "similarity": "<High/Medium/Low with percentage>",
+    "keyEvents": ["<event 1>", "<event 2>", "<event 3>"]
+  },
+  "frameworks": ["Mike Wilson", "David Kostin", "Savita Subramanian", "Tom Lee", "John Stoltzfus", "Ed Yardeni"]
+}
+
+CRITICAL: Return ONLY the JSON object. No explanations, no markdown.`;
+
+  const message = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: 8000,
+    temperature: 0.3,
+    messages: [{
+      role: 'user',
+      content: prompt
+    }]
+  });
+
+  const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+  console.log('📊 Market Cycle raw response (first 500 chars):', responseText.substring(0, 500));
+
+  // Extract JSON from response
+  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    console.error('❌ Market Cycle: No JSON found in response');
+    console.error('Full response:', responseText);
+    throw new Error('Market Cycle analysis did not return valid JSON');
+  }
+
+  try {
+    return JSON.parse(jsonMatch[0]);
+  } catch (parseError) {
+    console.error('❌ Market Cycle: JSON parse error');
+    console.error('JSON string (first 1000 chars):', jsonMatch[0].substring(0, 1000));
+    throw parseError;
+  }
+}
+
+// ======================
+// COMPANY CYCLE ANALYSIS
+// ======================
+
+async function analyzeCompanyCycle(realTimeData: CycleDataSources): Promise<CycleData> {
+  const { market, economic } = realTimeData;
+  
+  // Get current date for dynamic analysis
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.toLocaleString('en-US', { month: 'long' });
+  
+  const prompt = `You are an expert analyst of corporate lifecycle cycles.
+
+## Analysis Date: ${currentMonth} ${currentYear}
+
+Analyze the current Company Lifecycle Cycle for the average US public company.
+
+### Your Task:
+1. Determine the average lifecycle of a company
+2. Identify the current lifecycle phase of the average company
+3. Provide actionable portfolio insights
+
+### Analysis Frameworks (Synthesize ALL of these):
+- **Patricia Dechow**: Earnings quality and lifecycle stages
+- **Richard Foster**: Creative destruction and corporate longevity
+- **Harry Markowitz**: Portfolio theory applied to company lifecycle
+- **Bill Sharpe**: Risk-adjusted return across lifecycle stages
+
+### Current Economic Context (${currentMonth} ${currentYear}):
+- GDP Growth: ${economic.gdp_growth}%
+- Unemployment: ${economic.unemployment}%
+- S&P 500 Price: ${market.sp500_price}
+- VIX (Volatility): ${market.volatility_vix}
+
+### Output Requirements:
+Respond with ONLY a valid JSON object (no markdown, no code blocks):
+
+{
+  "name": "Company Cycle",
+  "phase": "<current phase name>",
+  "phasePercent": <0-100 number representing progress through full cycle>,
+  "averageLifecycle": "<X years based on research>",
+  "currentCycleStart": "<description of when current phase began>",
+  "timeline": [
+    {
+      "phase": "<phase name like Startup/Growth/Maturity/Decline>",
+      "description": "<brief description>",
+      "startPercent": <0-100>,
+      "endPercent": <0-100>,
+      "isCurrent": <true/false>
+    }
+  ],
+  "sp500Backtest": {
+    "expectedUpside": <decimal like 0.15 for 15%>,
+    "expectedDownside": <negative decimal like -0.10 for -10%>,
+    "expectedReturn": <decimal like 0.08 for 8%>
+  },
+  "historicalAnalog": {
+    "period": "<YYYY-YYYY>",
+    "description": "<synthesis of all frameworks>",
+    "similarity": "<High/Medium/Low with percentage>",
+    "keyEvents": ["<event 1>", "<event 2>", "<event 3>"]
+  },
+  "frameworks": ["Patricia Dechow", "Richard Foster", "Harry Markowitz", "Bill Sharpe"]
+}
+
+CRITICAL: Return ONLY the JSON object. No explanations, no markdown.`;
+
+  const message = await anthropic.messages.create({
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: 8000,
+    temperature: 0.3,
+    messages: [{
+      role: 'user',
+      content: prompt
+    }]
+  });
+
+  const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+  console.log('🏢 Company Cycle raw response (first 500 chars):', responseText.substring(0, 500));
+
+  // Extract JSON from response
+  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    console.error('❌ Company Cycle: No JSON found in response');
+    console.error('Full response:', responseText);
+    throw new Error('Company Cycle analysis did not return valid JSON');
+  }
+
+  try {
+    return JSON.parse(jsonMatch[0]);
+  } catch (parseError) {
+    console.error('❌ Company Cycle: JSON parse error');
+    console.error('JSON string (first 1000 chars):', jsonMatch[0].substring(0, 1000));
+    throw parseError;
+  }
+}
+
+// ======================
 // PORTFOLIO ANALYSIS
 // ======================
 
@@ -872,13 +1108,15 @@ async function analyzePortfolioImpact(
   - Alternatives: ${portfolio.alternatives}%
 
 ## Current Cycle Phases:
+- Market (S&P 500) Cycle: ${cycles.market.phase} (${cycles.market.phasePercent}% through)
 - Country Cycle: ${cycles.country.phase} (${cycles.country.phasePercent}% through)
 - Technology Cycle: ${cycles.technology.phase} (${cycles.technology.phasePercent}% through)
 - Economic Cycle: ${cycles.economic.phase} (${cycles.economic.phasePercent}% through)
 - Business Cycle: ${cycles.business.phase} (${cycles.business.phasePercent}% through)
+- Company Cycle: ${cycles.company.phase} (${cycles.company.phasePercent}% through)
 
 ## Task:
-For each of the 4 cycles (Country, Technology, Economic, Business), provide:
+For each of the 6 cycles (Market, Country, Technology, Economic, Business, Company), provide:
 1. How this specific portfolio performs in that cycle
 2. Expected upside (as decimal, e.g., 0.25 = 25%)
 3. Expected downside (as decimal, negative, e.g., -0.15 = -15%)
@@ -887,12 +1125,14 @@ For each of the 4 cycles (Country, Technology, Economic, Business), provide:
 6. Confidence level (High/Medium/Low)
 
 Consider:
-- High stock allocation is riskier in late cycles
+- Market cycle directly affects stock performance and volatility
+- High stock allocation is riskier in late market/economic cycles
 - Bonds perform better in downturns
 - Cash is defensive
 - Real estate depends on business cycle
 - Technology stocks are affected by tech cycle phase
 - Country/political stability affects all assets
+- Company lifecycle affects individual stock selection
 
 Return ONLY this JSON structure:
 {
@@ -926,14 +1166,28 @@ Return ONLY this JSON structure:
         "expectedReturn": [decimal],
         "maxDrawdown": [decimal, negative],
         "confidence": "[High/Medium/Low]"
+      },
+      "market": {
+        "expectedUpside": [decimal],
+        "expectedDownside": [decimal, negative],
+        "expectedReturn": [decimal],
+        "maxDrawdown": [decimal, negative],
+        "confidence": "[High/Medium/Low]"
+      },
+      "company": {
+        "expectedUpside": [decimal],
+        "expectedDownside": [decimal, negative],
+        "expectedReturn": [decimal],
+        "maxDrawdown": [decimal, negative],
+        "confidence": "[High/Medium/Low]"
       }
     },
     "overall": {
-      "expectedUpside": [weighted average of all 4 cycles],
-      "expectedDownside": [weighted average of all 4 cycles],
-      "expectedReturn": [weighted average of all 4 cycles],
+      "expectedUpside": [weighted average of all 6 cycles],
+      "expectedDownside": [weighted average of all 6 cycles],
+      "expectedReturn": [weighted average of all 6 cycles],
       "maxDrawdown": [worst case across all cycles],
-      "confidence": "[overall confidence based on all 4 cycles]"
+      "confidence": "[overall confidence based on all 6 cycles]"
     }
   }
 }`;
@@ -941,7 +1195,7 @@ Return ONLY this JSON structure:
   try {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 3000,
+      max_tokens: 4000,
       temperature: 0.1,
       messages: [{ role: 'user', content: prompt }],
     });

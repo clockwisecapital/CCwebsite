@@ -10,16 +10,23 @@ interface PortfolioTabProps {
 }
 
 export default function PortfolioTab({ portfolioAnalysis }: PortfolioTabProps) {
-  const [selectedCycle, setSelectedCycle] = useState<keyof PortfolioSimulation['cycleResults']>('country');
-
-  const cycles = [
+  // Filter to only show cycles that exist in the data
+  const allCycles = [
+    { key: 'market' as const, name: 'Market (S&P 500) Cycle' },
     { key: 'country' as const, name: 'Country Cycle' },
     { key: 'technology' as const, name: 'Technology Cycle' },
     { key: 'economic' as const, name: 'Economic Cycle' },
     { key: 'business' as const, name: 'Business Cycle' },
+    { key: 'company' as const, name: 'Company Cycle' },
   ];
 
-  const currentCycleResult = portfolioAnalysis.current.cycleResults[selectedCycle];
+  const cycles = allCycles.filter(cycle => portfolioAnalysis.current.cycleResults[cycle.key] !== undefined);
+  
+  // Default to market if available, otherwise first available cycle
+  const defaultCycle = portfolioAnalysis.current.cycleResults.market ? 'market' : cycles[0]?.key || 'country';
+  const [selectedCycle, setSelectedCycle] = useState<keyof PortfolioSimulation['cycleResults']>(defaultCycle);
+
+  const currentCycleResult = portfolioAnalysis.current.cycleResults[selectedCycle] || portfolioAnalysis.current.cycleResults[cycles[0]?.key || 'country'];
   const overallResult = portfolioAnalysis.current.overall;
 
   const formatCurrency = (value: number) => {
