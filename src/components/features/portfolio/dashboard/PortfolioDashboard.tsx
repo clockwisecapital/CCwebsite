@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AIAvatarSection from './AIAvatarSection';
 import IntakeTab from './IntakeTab';
 import ReviewTab from './ReviewTab';
-import EmailCaptureModal from './EmailCaptureModal';
+import ThinkingModal from './ThinkingModal';
 
 export interface IntakeFormData {
   // Personal
@@ -63,36 +63,47 @@ export default function PortfolioDashboard() {
   const [intakeData, setIntakeData] = useState<IntakeFormData | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showThinkingModal, setShowThinkingModal] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [emailData, setEmailData] = useState<{ email: string; firstName: string; lastName: string } | null>(null);
+  const [analysisComplete, setAnalysisComplete] = useState(false);
 
-  const handleIntakeSubmit = (data: IntakeFormData) => {
+  // Effect to handle transition when both email and analysis are complete
+  useEffect(() => {
+    if (emailData && analysisComplete && conversationId && analysisResult) {
+      // Both conditions met, update backend and redirect
+      const finishFlow = async () => {
+        await updateEmailOnBackend(conversationId, emailData);
+        setShowThinkingModal(false);
+        setActiveTab('review');
+      };
+      finishFlow();
+    }
+  }, [emailData, analysisComplete, conversationId, analysisResult]);
+
+  const handleIntakeSubmit = async (data: IntakeFormData) => {
     setIntakeData(data);
-    setShowEmailModal(true);
-  };
-
-  const handleEmailSubmit = async (emailData: { email: string; firstName: string; lastName: string }) => {
-    if (!intakeData) return;
-
     setIsAnalyzing(true);
-    setShowEmailModal(false);
+    setShowThinkingModal(true);
+    setAnalysisComplete(false);
+    setEmailData(null);
 
     try {
-      // Call both analysis APIs in parallel
+      // Start analysis immediately - run both APIs in parallel
       const [dashboardResponse, cycleResponse] = await Promise.all([
         fetch('/api/portfolio/analyze-dashboard', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userData: emailData,
-            intakeData,
+            userData: { email: 'temp@temp.com', firstName: 'Temp', lastName: 'User' }, // Temporary, will be updated
+            intakeData: data,
           }),
         }),
         fetch('/api/portfolio/analyze-cycles', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            intakeData,
+            intakeData: data,
           }),
         }),
       ]);
@@ -103,7 +114,7 @@ export default function PortfolioDashboard() {
 
       const dashboardResult = await dashboardResponse.json();
       
-      // Get cycle analysis if successful, otherwise use null (will fallback to mock data)
+      // Get cycle analysis if successful
       let cycleAnalysis = null;
       if (cycleResponse.ok) {
         const cycleResult = await cycleResponse.json();
@@ -113,19 +124,42 @@ export default function PortfolioDashboard() {
         console.warn('⚠️ Cycle analysis failed, will use mock data');
       }
 
-      // Combine both analyses
+      // Store analysis result - useEffect will handle redirect when email is also ready
       setAnalysisResult({
         ...dashboardResult.analysis,
-        cycleAnalysis, // Add cycle analysis data
+        cycleAnalysis,
       });
       setConversationId(dashboardResult.conversationId);
-      setActiveTab('review');
+      setAnalysisComplete(true);
     } catch (error) {
       console.error('Analysis error:', error);
       alert('Analysis failed. Please try again.');
+      setShowThinkingModal(false);
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const updateEmailOnBackend = async (convId: string, userData: { email: string; firstName: string; lastName: string }) => {
+    try {
+      // Update the conversation with actual user email data
+      await fetch('/api/portfolio/update-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationId: convId,
+          userData,
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to update email:', error);
+      // Non-blocking error, continue to show results
+    }
+  };
+
+  const handleEmailSubmit = (userData: { email: string; firstName: string; lastName: string }) => {
+    // Just set the email data - useEffect will handle redirect when both conditions are met
+    setEmailData(userData);
   };
 
   const handleReset = () => {
@@ -133,6 +167,8 @@ export default function PortfolioDashboard() {
     setIntakeData(null);
     setAnalysisResult(null);
     setConversationId(null);
+    setEmailData(null);
+    setAnalysisComplete(false);
   };
 
   return (
@@ -211,11 +247,13 @@ export default function PortfolioDashboard() {
         </div>
       </div>
 
-      {/* Email Capture Modal */}
-      {showEmailModal && (
-        <EmailCaptureModal
+      {/* Thinking Modal */}
+      {showThinkingModal && (
+        <ThinkingModal
           onSubmit={handleEmailSubmit}
-          onCancel={() => setShowEmailModal(false)}
+          onCancel={() => setShowThinkingModal(false)}
+          isAnalyzing={isAnalyzing}
+          analysisComplete={analysisComplete}
         />
       )}
     </div>

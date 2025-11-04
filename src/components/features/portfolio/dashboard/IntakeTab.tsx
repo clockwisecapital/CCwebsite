@@ -47,52 +47,6 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
   const isPortfolioValid = portfolioSum === 100;
 
 
-  const handleParseDescription = async () => {
-    if (!formData.portfolioDescription || formData.portfolioDescription.trim() === '') {
-      setErrors({ portfolioDescription: 'Please enter a portfolio description first' });
-      return;
-    }
-
-    setIsParsing(true);
-    setErrors({});
-
-    try {
-      const response = await fetch('/api/portfolio/parse-description', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: formData.portfolioDescription })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to parse portfolio');
-      }
-
-      // Update allocations with AI-parsed values
-      setFormData(prev => ({
-        ...prev,
-        portfolio: {
-          ...prev.portfolio,
-          totalValue: data.allocations.totalValue || prev.portfolio.totalValue,
-          stocks: data.allocations.stocks,
-          bonds: data.allocations.bonds,
-          cash: data.allocations.cash,
-          realEstate: data.allocations.realEstate,
-          commodities: data.allocations.commodities,
-          alternatives: data.allocations.alternatives,
-        }
-      }));
-
-      setParseNotes(data.notes);
-      setAllocationsParsed(true);
-    } catch (error) {
-      setErrors({ portfolioDescription: error instanceof Error ? error.message : 'Failed to parse portfolio' });
-    } finally {
-      setIsParsing(false);
-    }
-  };
-
   // Reserved for future reset functionality
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleReset = () => {
@@ -130,9 +84,8 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
       newErrors.portfolioDescription = 'Portfolio Description is required';
     }
 
-    if (!allocationsParsed) {
-      newErrors.portfolio = 'Please click "Calculate Portfolio" to analyze your holdings';
-    } else if (!isPortfolioValid) {
+    // Only validate portfolio allocations if they've been parsed
+    if (allocationsParsed && !isPortfolioValid) {
       newErrors.portfolio = `Portfolio allocations must sum to 100% (currently ${portfolioSum.toFixed(1)}%)`;
     }
 
@@ -140,9 +93,75 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
+    
+    // First validate basic form fields
+    if (!validateForm()) {
+      return;
+    }
+
+    // If portfolio hasn't been parsed yet, parse it first
+    if (!allocationsParsed) {
+      setIsParsing(true);
+      setErrors({});
+
+      try {
+        const response = await fetch('/api/portfolio/parse-description', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description: formData.portfolioDescription })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to parse portfolio');
+        }
+
+        // Update allocations with AI-parsed values
+        const updatedFormData = {
+          ...formData,
+          portfolio: {
+            ...formData.portfolio,
+            totalValue: data.allocations.totalValue || formData.portfolio.totalValue,
+            stocks: data.allocations.stocks,
+            bonds: data.allocations.bonds,
+            cash: data.allocations.cash,
+            realEstate: data.allocations.realEstate,
+            commodities: data.allocations.commodities,
+            alternatives: data.allocations.alternatives,
+          }
+        };
+
+        setFormData(updatedFormData);
+        setParseNotes(data.notes);
+        setAllocationsParsed(true);
+
+        // Validate the parsed allocations MUST equal 100%
+        const sum = data.allocations.stocks + data.allocations.bonds + 
+                    data.allocations.cash + data.allocations.realEstate + 
+                    data.allocations.commodities + data.allocations.alternatives;
+        
+        setIsParsing(false);
+        
+        if (sum !== 100) {
+          setErrors({ portfolio: `Portfolio allocations must equal 100% to proceed (currently ${sum.toFixed(1)}%). Please adjust your description.` });
+          return;
+        }
+
+        // Submit with the updated form data - analysis will start immediately
+        onSubmit(updatedFormData);
+      } catch (error) {
+        setIsParsing(false);
+        setErrors({ portfolioDescription: error instanceof Error ? error.message : 'Failed to parse portfolio' });
+      }
+    } else {
+      // Portfolio already parsed, verify it equals 100% before submitting
+      if (!isPortfolioValid) {
+        setErrors({ portfolio: `Portfolio allocations must equal 100% to proceed (currently ${portfolioSum.toFixed(1)}%). Please adjust your description.` });
+        return;
+      }
       onSubmit(formData);
     }
   };
@@ -188,33 +207,10 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           {errors.portfolioDescription && (
             <p className="mt-1 text-sm text-red-600">{errors.portfolioDescription}</p>
           )}
-          <div className="mt-2 flex items-center justify-between">
+          <div className="mt-2">
             <p className="text-xs text-gray-500">
-              Describe your holdings with names and amounts. AI will categorize them automatically.
+              Describe your holdings with names and amounts. AI will categorize them automatically when you click &quot;Analyze Portfolio&quot;.
             </p>
-            <button
-              type="button"
-              onClick={handleParseDescription}
-              disabled={isParsing || !formData.portfolioDescription}
-              className="px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-            >
-              {isParsing ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
-                  Calculate Portfolio
-                </>
-              )}
-            </button>
           </div>
           {parseNotes && allocationsParsed && (
             <div className="mt-2 p-3 bg-teal-50 border border-teal-200 rounded-lg">
@@ -684,10 +680,22 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
       <div className="flex justify-end pt-6 border-t border-gray-200">
         <button
           type="submit"
-          disabled={!isPortfolioValid || isAnalyzing}
-          className="px-8 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          disabled={isAnalyzing || isParsing}
+          className="px-8 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
         >
-          {isAnalyzing ? 'Analyzing...' : 'Analyze Portfolio'}
+          {isParsing ? (
+            <>
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Calculating Portfolio...
+            </>
+          ) : isAnalyzing ? (
+            'Analyzing...'
+          ) : (
+            'Analyze Portfolio'
+          )}
         </button>
       </div>
     </form>
