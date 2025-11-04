@@ -83,11 +83,26 @@ export default function CycleTab({ cycleData }: CycleTabProps) {
               />
             );
           })}
+          {/* Text inside dial */}
+          <text
+            x={center}
+            y={center - 5}
+            textAnchor="middle"
+            className="fill-gray-900 font-bold"
+            style={{ fontSize: '32px' }}
+          >
+            {progress}%
+          </text>
+          <text
+            x={center}
+            y={center + 20}
+            textAnchor="middle"
+            className="fill-gray-600"
+            style={{ fontSize: '12px' }}
+          >
+            Through Cycle
+          </text>
         </svg>
-        <div className="mt-3 text-center">
-          <div className="text-3xl font-bold text-gray-900">{progress}%</div>
-          <div className="text-sm text-gray-600">Through Cycle</div>
-        </div>
       </div>
     );
   };
@@ -247,20 +262,7 @@ export default function CycleTab({ cycleData }: CycleTabProps) {
               )}
             </div>
 
-            {/* Frameworks Used */}
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">Analysis Frameworks</h4>
-              <div className="flex flex-wrap gap-2">
-                {currentCycle.frameworks.map((framework, idx) => (
-                  <span
-                    key={idx}
-                    className="text-xs px-2 py-1 bg-white border border-gray-300 text-gray-700 rounded"
-                  >
-                    {framework}
-                  </span>
-                ))}
-              </div>
-            </div>
+            {/* Analysis Frameworks section removed as requested */}
           </div>
         </div>
       </div>

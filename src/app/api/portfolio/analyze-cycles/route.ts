@@ -887,7 +887,7 @@ async function analyzeMarketCycle(realTimeData: CycleDataSources): Promise<Cycle
 Analyze the current S&P 500 Market Cycle.
 
 ### Your Task:
-1. Determine the average lifecycle of S&P 500 market cycles
+1. **IMPORTANT**: Use "Rolling 12 months" as the averageLifecycle (this is our framework for real-time analysis)
 2. Identify the current lifecycle phase of the S&P 500
 3. Provide actionable portfolio insights
 
@@ -912,7 +912,7 @@ Respond with ONLY a valid JSON object (no markdown, no code blocks):
   "name": "Market (S&P 500) Cycle",
   "phase": "<current phase name>",
   "phasePercent": <0-100 number representing progress through full cycle>,
-  "averageLifecycle": "<X-Y years based on historical analysis>",
+  "averageLifecycle": "Rolling 12 months",
   "currentCycleStart": "<year and description of cycle start>",
   "timeline": [
     {
@@ -988,7 +988,7 @@ async function analyzeCompanyCycle(realTimeData: CycleDataSources): Promise<Cycl
 Analyze the current Company Lifecycle Cycle for the average US public company.
 
 ### Your Task:
-1. Determine the average lifecycle of a company
+1. **IMPORTANT**: Use "Rolling 12 months" as the averageLifecycle (this is our framework for real-time analysis)
 2. Identify the current lifecycle phase of the average company
 3. Provide actionable portfolio insights
 
@@ -1011,7 +1011,7 @@ Respond with ONLY a valid JSON object (no markdown, no code blocks):
   "name": "Company Cycle",
   "phase": "<current phase name>",
   "phasePercent": <0-100 number representing progress through full cycle>,
-  "averageLifecycle": "<X years based on research>",
+  "averageLifecycle": "Rolling 12 months",
   "currentCycleStart": "<description of when current phase began>",
   "timeline": [
     {

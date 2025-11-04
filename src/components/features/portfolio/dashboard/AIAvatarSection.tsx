@@ -34,44 +34,32 @@ export default function AIAvatarSection() {
               {/* Bottom: Compact Intro Content */}
               <div className="border-t border-gray-700/50 bg-gray-900/30 backdrop-blur-sm px-6 py-6">
                 <div className="max-w-5xl mx-auto">
-                  <h2 className="text-xl md:text-2xl font-bold mb-3 text-white">
-                    Hi! I&rsquo;m Kronos,
+                  <h2 className="text-xl md:text-2xl font-bold mb-2 text-white">
+                    Hi! I&rsquo;m Kronos, Your Portfolio Intelligence Guide.
                   </h2>
-                  <p className="text-lg md:text-xl text-teal-300 mb-3">
-                    Your Portfolio Intelligence Guide
+                  <p className="text-lg text-teal-300 mb-4">
+                    I Analyze:
                   </p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                     <div className="flex items-start gap-2">
-                      <div className="flex-shrink-0 w-5 h-5 rounded-full bg-teal-500 flex items-center justify-center mt-0.5">
-                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
+                      <span className="text-teal-400 font-bold">-</span>
                       <p className="text-gray-300">
-                        <span className="font-semibold text-white">Cycle-Aware Analysis</span>
+                        <span className="font-semibold text-white">Your Investing Environment</span>
                       </p>
                     </div>
 
                     <div className="flex items-start gap-2">
-                      <div className="flex-shrink-0 w-5 h-5 rounded-full bg-teal-500 flex items-center justify-center mt-0.5">
-                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
+                      <span className="text-teal-400 font-bold">-</span>
                       <p className="text-gray-300">
-                        <span className="font-semibold text-white">Personalized Recommendations</span>
+                        <span className="font-semibold text-white">Your Portfolio Impact</span>
                       </p>
                     </div>
 
                     <div className="flex items-start gap-2">
-                      <div className="flex-shrink-0 w-5 h-5 rounded-full bg-teal-500 flex items-center justify-center mt-0.5">
-                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
+                      <span className="text-teal-400 font-bold">-</span>
                       <p className="text-gray-300">
-                        <span className="font-semibold text-white">Scenario Stress-Tests</span>
+                        <span className="font-semibold text-white">Your Goals Impact</span>
                       </p>
                     </div>
                   </div>
