@@ -53,7 +53,6 @@ export default function CycleTab({ cycleData }: CycleTabProps) {
               strokeWidth={10}
             />
           </g>
-          <circle cx={center} cy={center} r={4} className="fill-primary-blue" />
           <g transform={`rotate(${angle - 90} ${center} ${center})`}>
             <line
               x1={center}

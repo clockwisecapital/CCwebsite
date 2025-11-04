@@ -10,11 +10,12 @@ interface ReviewTabProps {
   analysisResult: AnalysisResult;
   intakeData: IntakeFormData;
   conversationId: string | null;
+  videoId: string | null; // Still needed for prop compatibility
   onReset: () => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId, onReset }: ReviewTabProps) {
+export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId, videoId, onReset }: ReviewTabProps) {
   const [showAnalysisAndSync, setShowAnalysisAndSync] = useState(true);
   const [cycleAnalysisTab, setCycleAnalysisTab] = useState<'cycle' | 'portfolio' | 'goal'>('cycle');
 

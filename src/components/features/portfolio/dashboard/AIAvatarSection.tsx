@@ -1,19 +1,28 @@
 'use client';
 
 import { useState } from 'react';
+import VideoPlayer from './VideoPlayer';
 
-export default function AIAvatarSection() {
+interface AIAvatarSectionProps {
+  videoId?: string | null;
+}
+
+export default function AIAvatarSection({ videoId }: AIAvatarSectionProps) {
   const [showVideoModal, setShowVideoModal] = useState(false);
 
   return (
     <div className="bg-gradient-to-br from-blue-900 via-teal-800 to-teal-900 text-white pt-20">
       <div className="w-full px-4 sm:px-8 lg:px-12 py-20 md:py-24">
-        {/* Full-Width Video Trigger with Intro Content */}
+        {/* Full-Width Video Section */}
         <div className="relative max-w-[1600px] mx-auto">
-          <button
-            onClick={() => setShowVideoModal(true)}
-            className="relative w-full bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg overflow-hidden shadow-2xl border border-teal-500/30 group cursor-pointer hover:border-teal-400 transition-all duration-300 text-left"
-          >
+          {/* Show HeyGen video if available, otherwise show intro placeholder */}
+          {videoId ? (
+            <VideoPlayer videoId={videoId} />
+          ) : (
+            <button
+              onClick={() => setShowVideoModal(true)}
+              className="relative w-full bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg overflow-hidden shadow-2xl border border-teal-500/30 group cursor-pointer hover:border-teal-400 transition-all duration-300 text-left"
+            >
             {/* Video Thumbnail Background */}
             <div className="absolute inset-0 bg-gradient-to-br from-blue-900/50 to-teal-900/50"></div>
             
@@ -67,6 +76,7 @@ export default function AIAvatarSection() {
               </div>
             </div>
           </button>
+          )}
           
           {/* Decorative Elements */}
           <div className="absolute -top-4 -right-4 w-24 h-24 bg-teal-500/10 rounded-full blur-xl"></div>

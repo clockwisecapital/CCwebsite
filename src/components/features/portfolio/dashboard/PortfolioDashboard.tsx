@@ -67,6 +67,38 @@ export default function PortfolioDashboard() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [emailData, setEmailData] = useState<{ email: string; firstName: string; lastName: string } | null>(null);
   const [analysisComplete, setAnalysisComplete] = useState(false);
+  const [videoId, setVideoId] = useState<string | null>(null);
+  const [dashboardComplete, setDashboardComplete] = useState(false);
+
+  // Effect to start video generation when email submitted and dashboard ready
+  useEffect(() => {
+    if (emailData && dashboardComplete && analysisResult && !videoId) {
+      console.log('🎬 Starting video generation with user name:', emailData.firstName);
+      fetch('/api/portfolio/generate-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          analysisResult: analysisResult,
+          userData: {
+            firstName: emailData.firstName,
+            lastName: emailData.lastName,
+          },
+        }),
+      })
+        .then(res => res.json())
+        .then(videoData => {
+          if (videoData.success) {
+            console.log('✅ Video generation started:', videoData.videoId);
+            setVideoId(videoData.videoId);
+          } else {
+            console.warn('⚠️ Video generation failed:', videoData.error);
+          }
+        })
+        .catch(err => {
+          console.warn('⚠️ Video generation error:', err);
+        });
+    }
+  }, [emailData, dashboardComplete, analysisResult, videoId]);
 
   // Effect to handle transition when both email and analysis are complete
   useEffect(() => {
@@ -89,32 +121,44 @@ export default function PortfolioDashboard() {
     setEmailData(null);
 
     try {
-      // Start analysis immediately - run both APIs in parallel
-      const [dashboardResponse, cycleResponse] = await Promise.all([
-        fetch('/api/portfolio/analyze-dashboard', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userData: { email: 'temp@temp.com', firstName: 'Temp', lastName: 'User' }, // Temporary, will be updated
-            intakeData: data,
-          }),
+      // Start both APIs in parallel but handle them independently
+      const dashboardPromise = fetch('/api/portfolio/analyze-dashboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userData: { email: 'temp@temp.com', firstName: 'Temp', lastName: 'User' }, // Temporary, will be updated
+          intakeData: data,
         }),
-        fetch('/api/portfolio/analyze-cycles', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            intakeData: data,
-          }),
-        }),
-      ]);
+      });
 
+      const cyclePromise = fetch('/api/portfolio/analyze-cycles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          intakeData: data,
+        }),
+      });
+
+      // Wait for dashboard to complete first
+      const dashboardResponse = await dashboardPromise;
       if (!dashboardResponse.ok) {
         throw new Error('Dashboard analysis failed');
       }
 
       const dashboardResult = await dashboardResponse.json();
+      console.log('✅ Dashboard analysis completed (~15s)');
       
-      // Get cycle analysis if successful
+      // Store dashboard result for video generation (will start when email submitted)
+      setAnalysisResult({
+        ...dashboardResult.analysis,
+        cycleAnalysis: null, // Will be filled in later
+      });
+      setConversationId(dashboardResult.conversationId);
+      setDashboardComplete(true);
+      
+      // NOW wait for cycle analysis to complete
+      console.log('⏳ Waiting for cycle analysis to complete...');
+      const cycleResponse = await cyclePromise;
       let cycleAnalysis = null;
       if (cycleResponse.ok) {
         const cycleResult = await cycleResponse.json();
@@ -124,12 +168,11 @@ export default function PortfolioDashboard() {
         console.warn('⚠️ Cycle analysis failed, will use mock data');
       }
 
-      // Store analysis result - useEffect will handle redirect when email is also ready
-      setAnalysisResult({
-        ...dashboardResult.analysis,
+      // Update analysis result with cycle data
+      setAnalysisResult(prev => ({
+        ...prev!,
         cycleAnalysis,
-      });
-      setConversationId(dashboardResult.conversationId);
+      }));
       setAnalysisComplete(true);
     } catch (error) {
       console.error('Analysis error:', error);
@@ -158,7 +201,7 @@ export default function PortfolioDashboard() {
   };
 
   const handleEmailSubmit = (userData: { email: string; firstName: string; lastName: string }) => {
-    // Just set the email data - useEffect will handle redirect when both conditions are met
+    // Just set the email data - useEffect will handle video generation
     setEmailData(userData);
   };
 
@@ -169,12 +212,14 @@ export default function PortfolioDashboard() {
     setConversationId(null);
     setEmailData(null);
     setAnalysisComplete(false);
+    setVideoId(null);
+    setDashboardComplete(false);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* AI Avatar Section */}
-      <AIAvatarSection />
+      <AIAvatarSection videoId={videoId} />
 
       {/* Dashboard Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -240,6 +285,7 @@ export default function PortfolioDashboard() {
                 analysisResult={analysisResult}
                 intakeData={intakeData}
                 conversationId={conversationId}
+                videoId={videoId}
                 onReset={handleReset}
               />
             )}
