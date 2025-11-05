@@ -466,13 +466,16 @@ Analyze the current Country Cycle for the United States.
 
 Provide a unified assessment of where the United States is in its country cycle.
 
+### Important:
+- Use "80-100 years" as the averageLifecycle (no additional parenthetical information)
+
 ## Required Output Format (JSON):
 
 {
   "name": "Country Cycle",
   "phase": "[Current phase name]",
   "phasePercent": [0-100],
-  "averageLifecycle": "[Duration]",
+  "averageLifecycle": "80-100 years",
   "currentCycleStart": "[Year/description]",
   "timeline": [
     {
@@ -811,13 +814,16 @@ How long is the average Lifecycle of the Short-Term Business Cycle and what is t
 
 Assess current position in short-term business cycle using ALL frameworks.
 
+### Important:
+- Use "7-10 years" as the averageLifecycle (no additional parenthetical information)
+
 ## Required Output Format (JSON):
 
 {
   "name": "Business Cycle",
   "phase": "[Phase]",
   "phasePercent": [0-100],
-  "averageLifecycle": "[Duration]",
+  "averageLifecycle": "7-10 years",
   "currentCycleStart": "[Year/description]",
   "timeline": [
     {

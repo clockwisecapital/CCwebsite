@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react';
 
 interface VideoPlayerProps {
   videoId: string | null;
+  onVideoReady?: () => void;
 }
 
-export default function VideoPlayer({ videoId }: VideoPlayerProps) {
+export default function VideoPlayer({ videoId, onVideoReady }: VideoPlayerProps) {
   const [status, setStatus] = useState<'pending' | 'processing' | 'completed' | 'failed'>('pending');
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -26,6 +27,10 @@ export default function VideoPlayer({ videoId }: VideoPlayerProps) {
             setVideoUrl(data.videoUrl);
             clearInterval(intervalId);
             console.log('✅ Video ready:', data.videoUrl);
+            // Notify parent that video is ready
+            if (onVideoReady) {
+              onVideoReady();
+            }
           } else if (data.status === 'failed') {
             setError('Video generation failed');
             clearInterval(intervalId);
@@ -47,7 +52,7 @@ export default function VideoPlayer({ videoId }: VideoPlayerProps) {
     return () => {
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [videoId]);
+  }, [videoId, onVideoReady]);
 
   if (!videoId) {
     return null;

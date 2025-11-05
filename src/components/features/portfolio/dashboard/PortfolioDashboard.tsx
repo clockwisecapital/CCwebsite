@@ -69,6 +69,18 @@ export default function PortfolioDashboard() {
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [videoId, setVideoId] = useState<string | null>(null);
   const [dashboardComplete, setDashboardComplete] = useState(false);
+  const [showAdvisorPopup, setShowAdvisorPopup] = useState(false);
+
+  // Effect to show advisor popup after 30 seconds on Review tab only
+  useEffect(() => {
+    if (activeTab !== 'review') return;
+
+    const timer = setTimeout(() => {
+      setShowAdvisorPopup(true);
+    }, 30000); // 30 seconds
+
+    return () => clearTimeout(timer);
+  }, [activeTab]);
 
   // Effect to start video generation when email submitted and dashboard ready
   useEffect(() => {
@@ -218,11 +230,16 @@ export default function PortfolioDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* AI Avatar Section */}
-      <AIAvatarSection videoId={videoId} />
+      {/* AI Avatar Section - Only show on Intake tab */}
+      {activeTab === 'intake' && <AIAvatarSection />}
+
+      {/* Gradient spacer for Review Tab */}
+      {activeTab === 'review' && (
+        <div className="bg-gradient-to-r from-teal-600 to-blue-600 pt-20 pb-16"></div>
+      )}
 
       {/* Dashboard Container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ${activeTab === 'review' ? '-mt-20' : ''}`}>
         {/* Tab Navigation */}
         <div className="bg-white rounded-lg shadow-sm">
           <div className="border-b border-gray-200">
@@ -292,6 +309,51 @@ export default function PortfolioDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Advisor Popup - Chatbot Style */}
+      {showAdvisorPopup && (
+        <div className="fixed bottom-6 right-6 z-50 transition-all duration-500 ease-out animate-in slide-in-from-bottom-4 fade-in">
+          <div className="bg-white rounded-lg shadow-2xl border border-gray-200 w-80 overflow-hidden">
+            {/* Close Button */}
+            <button
+              onClick={() => setShowAdvisorPopup(false)}
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-teal-600 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-bold text-gray-900">Need Help?</h4>
+                  <p className="text-xs text-gray-500">Talk to an advisor</p>
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-700 mb-4">
+                Ready to optimize your portfolio strategy? Work 1:1 with a Clockwise Capital strategist.
+              </p>
+
+              <a
+                href="https://clockwisecapital.com/contact"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full px-4 py-3 bg-gradient-to-r from-teal-600 to-blue-600 text-white font-semibold rounded-lg hover:from-teal-700 hover:to-blue-700 transition-all text-center"
+              >
+                Match me with an advisor
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Thinking Modal */}
       {showThinkingModal && (

@@ -224,44 +224,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           )}
         </div>
 
-        {/* Portfolio Sum Indicator */}
-        <div className={`p-4 rounded-lg border-2 ${
-          isPortfolioValid 
-            ? 'bg-green-50 border-green-500' 
-            : portfolioSum > 0 
-              ? 'bg-yellow-50 border-yellow-500' 
-              : 'bg-gray-50 border-gray-300'
-        }`}>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">Total Allocation:</span>
-            <span className={`text-2xl font-bold ${
-              isPortfolioValid 
-                ? 'text-green-600' 
-                : portfolioSum > 0 
-                  ? 'text-yellow-600' 
-                  : 'text-gray-600'
-            }`}>
-              {portfolioSum.toFixed(1)}%
-            </span>
-          </div>
-          {!isPortfolioValid && portfolioSum > 0 && (
-            <p className="mt-2 text-xs text-yellow-700">
-              {portfolioSum > 100 
-                ? `Reduce by ${(portfolioSum - 100).toFixed(1)}% to reach 100%` 
-                : `Add ${(100 - portfolioSum).toFixed(1)}% to reach 100%`}
-            </p>
-          )}
-          {isPortfolioValid && (
-            <p className="mt-2 text-xs text-green-700 flex items-center gap-1">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              Portfolio allocation is valid
-            </p>
-          )}
-        </div>
-
-        {/* AI-Parsed Allocations Display */}
+        {/* Display allocations */}
         {allocationsParsed && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
@@ -330,15 +293,6 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                 </div>
               </div>
             ))}
-          </div>
-        )}
-        
-        {!allocationsParsed && (
-          <div className="text-center py-8 px-4 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg">
-            <svg className="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <p className="text-xs text-gray-500">Allocations will appear here</p>
           </div>
         )}
 
@@ -623,7 +577,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                 placeholder="1000000"
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1">How much do you want to accumulate?</p>
+            <p className="text-xs text-gray-500 mt-1">What&apos;s your future growth or income goal?</p>
           </div>
 
           {/* Time Horizon */}

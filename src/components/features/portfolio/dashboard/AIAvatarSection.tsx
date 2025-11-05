@@ -1,13 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import VideoPlayer from './VideoPlayer';
 
-interface AIAvatarSectionProps {
-  videoId?: string | null;
-}
-
-export default function AIAvatarSection({ videoId }: AIAvatarSectionProps) {
+export default function AIAvatarSection() {
   const [showVideoModal, setShowVideoModal] = useState(false);
 
   return (
@@ -15,11 +10,8 @@ export default function AIAvatarSection({ videoId }: AIAvatarSectionProps) {
       <div className="w-full px-4 sm:px-8 lg:px-12 py-20 md:py-24">
         {/* Full-Width Video Section */}
         <div className="relative max-w-[1600px] mx-auto">
-          {/* Show HeyGen video if available, otherwise show intro placeholder */}
-          {videoId ? (
-            <VideoPlayer videoId={videoId} />
-          ) : (
-            <button
+          {/* Always show intro placeholder - video moved to review tab */}
+          <button
               onClick={() => setShowVideoModal(true)}
               className="relative w-full bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg overflow-hidden shadow-2xl border border-teal-500/30 group cursor-pointer hover:border-teal-400 transition-all duration-300 text-left"
             >
@@ -76,7 +68,6 @@ export default function AIAvatarSection({ videoId }: AIAvatarSectionProps) {
               </div>
             </div>
           </button>
-          )}
           
           {/* Decorative Elements */}
           <div className="absolute -top-4 -right-4 w-24 h-24 bg-teal-500/10 rounded-full blur-xl"></div>

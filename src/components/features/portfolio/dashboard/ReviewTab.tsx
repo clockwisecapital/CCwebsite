@@ -5,6 +5,7 @@ import type { IntakeFormData, AnalysisResult } from './PortfolioDashboard';
 import CycleTab from './CycleTab';
 import PortfolioTab from './PortfolioTab';
 import GoalTab from './GoalTab';
+import VideoPlayer from './VideoPlayer';
 
 interface ReviewTabProps {
   analysisResult: AnalysisResult;
@@ -17,7 +18,18 @@ interface ReviewTabProps {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId, videoId, onReset }: ReviewTabProps) {
   const [showAnalysisAndSync, setShowAnalysisAndSync] = useState(true);
-  const [cycleAnalysisTab, setCycleAnalysisTab] = useState<'cycle' | 'portfolio' | 'goal'>('cycle');
+  const [cycleAnalysisTab, setCycleAnalysisTab] = useState<'cycle' | 'portfolio' | 'goal'>('goal');
+  const [showVideoReadyModal, setShowVideoReadyModal] = useState(false);
+
+  const handleVideoReady = () => {
+    setShowVideoReadyModal(true);
+  };
+
+  const scrollToVideo = () => {
+    setShowVideoReadyModal(false);
+    // Scroll to video section
+    document.getElementById('video-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   // Process impact data (handle both string and array formats)
   const processImpactData = (data: string | string[] | undefined): string[] => {
@@ -117,6 +129,23 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
         <div className="border-b border-gray-200">
           <nav className="flex -mb-px">
             <button
+              onClick={() => setCycleAnalysisTab('goal')}
+              className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
+                cycleAnalysisTab === 'goal'
+                  ? 'border-b-2 border-secondary-teal text-secondary-teal bg-teal-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+                Goal
+              </div>
+              <div className="text-xs text-gray-500 mt-1">Success Probability</div>
+            </button>
+
+            <button
               onClick={() => setCycleAnalysisTab('cycle')}
               className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
                 cycleAnalysisTab === 'cycle'
@@ -148,23 +177,6 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                 Portfolio
               </div>
               <div className="text-xs text-gray-500 mt-1">Monte Carlo</div>
-            </button>
-
-            <button
-              onClick={() => setCycleAnalysisTab('goal')}
-              className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
-                cycleAnalysisTab === 'goal'
-                  ? 'border-b-2 border-secondary-teal text-secondary-teal bg-teal-50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <div className="flex items-center justify-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                </svg>
-                Goal
-              </div>
-              <div className="text-xs text-gray-500 mt-1">Success Probability</div>
             </button>
           </nav>
         </div>
@@ -288,7 +300,58 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
         )}
       </div>
 
+      {/* 3. VIDEO SECTION */}
+      {videoId && (
+        <div id="video-section" className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+            <h3 className="text-lg font-semibold text-gray-900">Your Personalized Analysis</h3>
+            <p className="text-sm text-gray-600 mt-1">Watch Kronos explain your results</p>
+          </div>
+          <div className="p-6">
+            <VideoPlayer videoId={videoId} onVideoReady={handleVideoReady} />
+          </div>
+        </div>
+      )}
+
       {/* Scenario Stress Testing - Hidden as requested */}
+
+      {/* Video Ready Notification Modal */}
+      {showVideoReadyModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-8 text-center">
+            {/* Success Icon */}
+            <div className="mx-auto mb-6 w-16 h-16 bg-gradient-to-br from-teal-500 to-blue-600 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+
+            {/* Message */}
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">
+              Your Video is Ready!
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Kronos has finished analyzing your portfolio. Watch your personalized summary now.
+            </p>
+
+            {/* Buttons */}
+            <div className="space-y-3">
+              <button
+                onClick={scrollToVideo}
+                className="w-full px-6 py-3 bg-gradient-to-r from-teal-600 to-blue-600 text-white font-semibold rounded-lg hover:from-teal-700 hover:to-blue-700 transition-all shadow-lg"
+              >
+                Watch Now
+              </button>
+              <button
+                onClick={() => setShowVideoReadyModal(false)}
+                className="w-full px-6 py-3 text-gray-600 font-medium hover:text-gray-900 transition-colors"
+              >
+                Maybe Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
