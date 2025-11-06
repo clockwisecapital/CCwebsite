@@ -98,18 +98,60 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
 
   return (
     <div className="space-y-8">
-      {/* VIDEO SECTION - Top Priority */}
-      {videoId && (
-        <div id="video-section" className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
-            <h3 className="text-lg font-semibold text-gray-900">Your Personalized Analysis</h3>
-            <p className="text-sm text-gray-600 mt-1">Watch Kronos explain your results</p>
-          </div>
-          <div className="p-6">
-            <VideoPlayer videoId={videoId} onVideoReady={handleVideoReady} />
-          </div>
+      {/* VIDEO SECTION - Top Priority - Always Visible */}
+      <div id="video-section" className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+          <h3 className="text-lg font-semibold text-gray-900">Your Personalized Analysis</h3>
+          <p className="text-sm text-gray-600 mt-1">Watch Kronos explain your results</p>
         </div>
-      )}
+        <div className="p-6">
+          {videoId ? (
+            <VideoPlayer videoId={videoId} onVideoReady={handleVideoReady} />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 px-4">
+              <div className="relative mb-6">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-teal-500 to-blue-600 flex items-center justify-center shadow-lg animate-pulse">
+                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <svg className="absolute -inset-2 w-24 h-24 animate-spin" viewBox="0 0 50 50">
+                  <circle 
+                    className="opacity-25" 
+                    cx="25" 
+                    cy="25" 
+                    r="20" 
+                    stroke="currentColor" 
+                    strokeWidth="4" 
+                    fill="none"
+                    style={{ color: '#0d9488' }}
+                  />
+                  <circle 
+                    className="opacity-75" 
+                    cx="25" 
+                    cy="25" 
+                    r="20" 
+                    stroke="currentColor" 
+                    strokeWidth="4" 
+                    fill="none"
+                    strokeDasharray="80"
+                    strokeDashoffset="60"
+                    style={{ color: '#0d9488' }}
+                  />
+                </svg>
+              </div>
+              <h4 className="text-lg font-semibold text-gray-900 mb-2">Generating Your Personalized Video</h4>
+              <p className="text-sm text-gray-600 text-center max-w-md">
+                Kronos is creating a custom video analysis tailored to your portfolio. This typically takes 60-90 seconds.
+              </p>
+              <div className="mt-4 flex items-center gap-2 text-xs text-teal-600">
+                <div className="w-2 h-2 bg-teal-600 rounded-full animate-pulse"></div>
+                <span>Video generation in progress...</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* 1. PORTFOLIO INTELLIGENCE COMPLETE */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">

@@ -68,7 +68,6 @@ export default function PortfolioDashboard() {
   const [emailData, setEmailData] = useState<{ email: string; firstName: string; lastName: string } | null>(null);
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [videoId, setVideoId] = useState<string | null>(null);
-  const [dashboardComplete, setDashboardComplete] = useState(false);
   const [showAdvisorPopup, setShowAdvisorPopup] = useState(false);
 
   // Effect to scroll to top when switching tabs
@@ -87,10 +86,10 @@ export default function PortfolioDashboard() {
     return () => clearTimeout(timer);
   }, [activeTab]);
 
-  // Effect to start video generation when email submitted and dashboard ready
+  // Effect to start video generation immediately when email submitted (don't wait for analysis)
   useEffect(() => {
-    if (emailData && dashboardComplete && analysisResult && !videoId) {
-      console.log('🎬 Starting video generation with user name:', emailData.firstName);
+    if (emailData && analysisResult && !videoId) {
+      console.log('🎬 Starting video generation immediately with user name:', emailData.firstName);
       fetch('/api/portfolio/generate-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -115,20 +114,17 @@ export default function PortfolioDashboard() {
           console.warn('⚠️ Video generation error:', err);
         });
     }
-  }, [emailData, dashboardComplete, analysisResult, videoId]);
+  }, [emailData, analysisResult, videoId]);
 
-  // Effect to handle transition when both email and analysis are complete
+  // Effect to show review tab only when BOTH email submitted AND analysis complete
   useEffect(() => {
-    if (emailData && analysisComplete && conversationId && analysisResult) {
-      // Both conditions met, update backend and redirect
-      const finishFlow = async () => {
-        await updateEmailOnBackend(conversationId, emailData);
-        setShowThinkingModal(false);
-        setActiveTab('review');
-      };
-      finishFlow();
+    if (emailData && analysisComplete && analysisResult && conversationId) {
+      // User has submitted email and analysis is complete
+      updateEmailOnBackend(conversationId, emailData);
+      setShowThinkingModal(false);
+      setActiveTab('review');
     }
-  }, [emailData, analysisComplete, conversationId, analysisResult]);
+  }, [emailData, analysisComplete, analysisResult, conversationId]);
 
   const handleIntakeSubmit = async (data: IntakeFormData) => {
     setIntakeData(data);
@@ -138,65 +134,55 @@ export default function PortfolioDashboard() {
     setEmailData(null);
 
     try {
-      // Start both APIs in parallel but handle them independently
-      const dashboardPromise = fetch('/api/portfolio/analyze-dashboard', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userData: { email: 'temp@temp.com', firstName: 'Temp', lastName: 'User' }, // Temporary, will be updated
-          intakeData: data,
+      // Start both APIs in parallel and wait for both to complete
+      console.log('🚀 Starting parallel analysis (dashboard + cycles)...');
+      
+      const [dashboardResponse, cycleResponse] = await Promise.all([
+        fetch('/api/portfolio/analyze-dashboard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userData: { email: 'temp@temp.com', firstName: 'Temp', lastName: 'User' },
+            intakeData: data,
+          }),
         }),
-      });
+        fetch('/api/portfolio/analyze-cycles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            intakeData: data,
+          }),
+        })
+      ]);
 
-      const cyclePromise = fetch('/api/portfolio/analyze-cycles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          intakeData: data,
-        }),
-      });
-
-      // Wait for dashboard to complete first
-      const dashboardResponse = await dashboardPromise;
+      // Check both responses
       if (!dashboardResponse.ok) {
         throw new Error('Dashboard analysis failed');
       }
-
-      const dashboardResult = await dashboardResponse.json();
-      console.log('✅ Dashboard analysis completed (~15s)');
-      
-      // Store dashboard result for video generation (will start when email submitted)
-      setAnalysisResult({
-        ...dashboardResult.analysis,
-        cycleAnalysis: null, // Will be filled in later
-      });
-      setConversationId(dashboardResult.conversationId);
-      setDashboardComplete(true);
-      
-      // NOW wait for cycle analysis to complete
-      console.log('⏳ Waiting for cycle analysis to complete...');
-      const cycleResponse = await cyclePromise;
-      
       if (!cycleResponse.ok) {
-        // If cycle analysis fails, throw error to prevent video generation
         throw new Error('Cycle analysis failed');
       }
-      
-      const cycleResult = await cycleResponse.json();
-      console.log('✅ Cycle analysis completed successfully');
 
-      // Update analysis result with cycle data
-      setAnalysisResult(prev => ({
-        ...prev!,
+      // Parse both results in parallel
+      const [dashboardResult, cycleResult] = await Promise.all([
+        dashboardResponse.json(),
+        cycleResponse.json()
+      ]);
+
+      console.log('✅ Both analyses completed successfully');
+      
+      // Combine results immediately
+      setAnalysisResult({
+        ...dashboardResult.analysis,
         cycleAnalysis: cycleResult.cycleAnalysis,
-      }));
+      });
+      setConversationId(dashboardResult.conversationId);
       setAnalysisComplete(true);
     } catch (error) {
       console.error('Analysis error:', error);
       alert('Analysis failed. Please try again.');
       setShowThinkingModal(false);
       // Reset state to allow retry
-      setDashboardComplete(false);
       setAnalysisResult(null);
       setAnalysisComplete(false);
     } finally {
@@ -234,7 +220,6 @@ export default function PortfolioDashboard() {
     setEmailData(null);
     setAnalysisComplete(false);
     setVideoId(null);
-    setDashboardComplete(false);
   };
 
   return (
