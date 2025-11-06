@@ -1,12 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import type { GoalAnalysis } from '@/types/cycleAnalysis';
+import CollapsibleSection from './CollapsibleSection';
 
 interface GoalTabProps {
   goalAnalysis: GoalAnalysis;
 }
 
 export default function GoalTab({ goalAnalysis }: GoalTabProps) {
+  const [showWatchFirst, setShowWatchFirst] = useState(true);
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -38,6 +42,49 @@ export default function GoalTab({ goalAnalysis }: GoalTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Watch Me First - Video Explanation */}
+      <div className="bg-gradient-to-r from-teal-500 to-blue-600 rounded-lg overflow-hidden">
+        <button
+          onClick={() => setShowWatchFirst(!showWatchFirst)}
+          className="w-full px-6 py-4 flex items-center justify-between text-white hover:bg-black/10 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+            <div className="text-left">
+              <p className="font-bold text-lg text-white">What are the implications if you fall short of this goal?</p>
+            </div>
+          </div>
+          <svg
+            className={`w-5 h-5 text-white transform transition-transform ${
+              showWatchFirst ? 'rotate-180' : ''
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {showWatchFirst && (
+          <div className="bg-white p-6 border-t border-teal-200">
+            <div className="aspect-video bg-gray-200 rounded-lg flex items-center justify-center">
+              <div className="text-center text-gray-500">
+                <svg className="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-sm font-medium">Video Placeholder</p>
+                <p className="text-xs">Goal Analysis Explainer Video</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Goal Overview */}
       <div className="bg-gradient-to-r from-teal-50 to-blue-50 rounded-lg p-6 border border-teal-200">
         <h3 className="text-2xl font-bold text-primary-blue mb-4">Your Financial Goal</h3>
@@ -93,11 +140,10 @@ export default function GoalTab({ goalAnalysis }: GoalTabProps) {
       </div>
 
       {/* Probability of Success */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">Probability of Reaching Your Goal</h3>
-        <p className="text-sm text-gray-600 mb-6">
-          Based on Monte Carlo simulations across all economic cycles
-        </p>
+      <CollapsibleSection 
+        title="Probability of Reaching Your Goal" 
+        subtitle="Based on Monte Carlo simulations across all economic cycles"
+      >
 
         {/* Main Probability Display */}
         <div className="bg-gray-50 rounded-lg p-6 border border-gray-200 mb-6">
@@ -157,14 +203,13 @@ export default function GoalTab({ goalAnalysis }: GoalTabProps) {
             </div>
           </div>
         </div>
-      </div>
+      </CollapsibleSection>
 
       {/* Projected Values */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">Projected Portfolio Values</h3>
-        <p className="text-sm text-gray-600 mb-6">
-          Estimated portfolio value in {goalAnalysis.timeHorizon} {goalAnalysis.timeHorizon === 1 ? 'year' : 'years'}
-        </p>
+      <CollapsibleSection 
+        title="Projected Portfolio Values" 
+        subtitle={`Estimated portfolio value in ${goalAnalysis.timeHorizon} ${goalAnalysis.timeHorizon === 1 ? 'year' : 'years'}`}
+      >
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
@@ -244,13 +289,16 @@ export default function GoalTab({ goalAnalysis }: GoalTabProps) {
             </div>
           </div>
         </div>
-      </div>
+      </CollapsibleSection>
 
       {/* Next Steps CTA */}
-      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-6 text-white">
-        <h4 className="text-xl font-bold mb-2">Ready to Optimize Your Strategy?</h4>
+      <CollapsibleSection 
+        title="Ready to Optimize Your Strategy?" 
+        subtitle="Work with a Clockwise Capital strategist"
+      >
+        <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-6 text-white">
         <p className="text-teal-100 mb-4">
-          Work with a Clockwise Capital strategist to refine your portfolio and maximize your chances of reaching your goal.
+          Refine your portfolio and maximize your chances of reaching your goal.
         </p>
         <a
           href="https://clockwisecapital.com/contact"
@@ -263,7 +311,8 @@ export default function GoalTab({ goalAnalysis }: GoalTabProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </a>
-      </div>
+        </div>
+      </CollapsibleSection>
     </div>
   );
 }

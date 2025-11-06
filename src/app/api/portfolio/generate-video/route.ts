@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
             voice: {
               type: 'text',
               input_text: script,
-              voice_id: 'b2810b1e1ef542c3a31734495d329e4b',
+              voice_id: 'f4ad09dc1d974467a12d374c5887ecc6',
               speed: 1.1,
             },
           },

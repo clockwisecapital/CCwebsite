@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { CycleData } from '@/types/cycleAnalysis';
+import CollapsibleSection from './CollapsibleSection';
 
 interface CycleTabProps {
   cycleData: {
@@ -20,6 +21,7 @@ export default function CycleTab({ cycleData }: CycleTabProps) {
   const defaultCycle = cycleData.market ? 'market' : availableCycles[0] || 'country';
   
   const [selectedCycle, setSelectedCycle] = useState<keyof typeof cycleData>(defaultCycle);
+  const [showWatchFirst, setShowWatchFirst] = useState(true);
   
   const currentCycle = cycleData[selectedCycle] || cycleData[availableCycles[0]] || cycleData.country; // Fallback to first available
 
@@ -108,6 +110,49 @@ export default function CycleTab({ cycleData }: CycleTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Watch Me First - Video Explanation */}
+      <div className="bg-gradient-to-r from-teal-500 to-blue-600 rounded-lg overflow-hidden">
+        <button
+          onClick={() => setShowWatchFirst(!showWatchFirst)}
+          className="w-full px-6 py-4 flex items-center justify-between text-white hover:bg-black/10 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+            <div className="text-left">
+              <p className="font-bold text-lg text-white">What&apos;s your sell strategy for this portfolio when the market cycle changes?</p>
+            </div>
+          </div>
+          <svg
+            className={`w-5 h-5 text-white transform transition-transform ${
+              showWatchFirst ? 'rotate-180' : ''
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {showWatchFirst && (
+          <div className="bg-white p-6 border-t border-teal-200">
+            <div className="aspect-video bg-gray-200 rounded-lg flex items-center justify-center">
+              <div className="text-center text-gray-500">
+                <svg className="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-sm font-medium">Video Placeholder</p>
+                <p className="text-xs">Cycle Analysis Explainer Video</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Cycle Selector */}
       <div className="bg-white rounded-lg border border-gray-200 p-4">
         <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -131,17 +176,10 @@ export default function CycleTab({ cycleData }: CycleTabProps) {
       </div>
 
       {/* Cycle Analysis */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="mb-6">
-          <h3 className="text-2xl font-bold text-primary-blue">{currentCycle.name}</h3>
-          <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-            <span>Current Phase: <span className="font-semibold text-secondary-teal">{currentCycle.phase}</span></span>
-            <span>•</span>
-            <span>Average Lifecycle: <span className="font-semibold">{currentCycle.averageLifecycle}</span></span>
-            <span>•</span>
-            <span>Cycle Start: <span className="font-semibold">{currentCycle.currentCycleStart}</span></span>
-          </div>
-        </div>
+      <CollapsibleSection 
+        title={currentCycle.name} 
+        subtitle={`Current Phase: ${currentCycle.phase} • ${currentCycle.averageLifecycle} lifecycle • Started ${currentCycle.currentCycleStart}`}
+      >
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left: Dial & Timeline */}
@@ -264,7 +302,7 @@ export default function CycleTab({ cycleData }: CycleTabProps) {
             {/* Analysis Frameworks section removed as requested */}
           </div>
         </div>
-      </div>
+      </CollapsibleSection>
     </div>
   );
 }

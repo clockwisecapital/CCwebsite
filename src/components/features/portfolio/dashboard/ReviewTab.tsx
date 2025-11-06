@@ -17,12 +17,19 @@ interface ReviewTabProps {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId, videoId, onReset }: ReviewTabProps) {
-  const [showAnalysisAndSync, setShowAnalysisAndSync] = useState(true);
+  // Default to collapsed on mobile (screens < 768px)
+  const [showPortfolioIntelligence, setShowPortfolioIntelligence] = useState(true);
+  const [showAnalysisAndSync, setShowAnalysisAndSync] = useState(false);
   const [cycleAnalysisTab, setCycleAnalysisTab] = useState<'cycle' | 'portfolio' | 'goal'>('goal');
   const [showVideoReadyModal, setShowVideoReadyModal] = useState(false);
+  const [hasShownVideoModal, setHasShownVideoModal] = useState(false); // Track if modal was already shown
 
   const handleVideoReady = () => {
-    setShowVideoReadyModal(true);
+    // Only show modal once per session
+    if (!hasShownVideoModal) {
+      setShowVideoReadyModal(true);
+      setHasShownVideoModal(true);
+    }
   };
 
   const scrollToVideo = () => {
@@ -91,102 +98,105 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
 
   return (
     <div className="space-y-8">
-      {/* Next Steps / CTA - Moved to Top */}
-      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-8 text-white">
-        <h3 className="text-2xl font-bold mb-3">Next Step</h3>
-        <p className="text-teal-100 mb-6">
-          Work 1:1 with a strategist to optimize allocations for the current cycle.
-        </p>
-        <div className="flex justify-center">
-          <a
-            href="https://clockwisecapital.com/contact"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-8 py-3 bg-white text-teal-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors text-center flex items-center justify-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            Match me with an advisor
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </a>
+      {/* VIDEO SECTION - Top Priority */}
+      {videoId && (
+        <div id="video-section" className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+            <h3 className="text-lg font-semibold text-gray-900">Your Personalized Analysis</h3>
+            <p className="text-sm text-gray-600 mt-1">Watch Kronos explain your results</p>
+          </div>
+          <div className="p-6">
+            <VideoPlayer videoId={videoId} onVideoReady={handleVideoReady} />
+          </div>
         </div>
-        <p className="mt-4 text-xs text-teal-200">
-          Privacy: Your intake details are used solely to personalize your review and schedule your consultation. 
-          We never sell your data. <a href="/privacy-policy" className="underline">Read our Privacy Policy</a> • 
-          <a href="/disclaimer" className="underline ml-2">Read our Disclaimer Policy</a>
-        </p>
-      </div>
+      )}
 
       {/* 1. PORTFOLIO INTELLIGENCE COMPLETE */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
-          <h3 className="text-lg font-semibold text-gray-900">Portfolio Intelligence Complete</h3>
-          <p className="text-sm text-gray-600 mt-1">AI-powered real-time investing intelligence based on the cycles driving markets</p>
-        </div>
-        <div className="border-b border-gray-200">
-          <nav className="flex -mb-px">
+        <button
+          onClick={() => setShowPortfolioIntelligence(!showPortfolioIntelligence)}
+          className="w-full border-b border-gray-200 bg-gray-50 px-6 py-4 flex items-center justify-between hover:bg-gray-100 transition-colors"
+        >
+          <div className="text-left">
+            <h3 className="text-lg font-semibold text-gray-900">Portfolio Intelligence Complete</h3>
+            <p className="text-sm text-gray-600 mt-1">AI-powered real-time investing intelligence based on the cycles driving markets</p>
+          </div>
+          <svg
+            className={`w-5 h-5 text-gray-600 transform transition-transform flex-shrink-0 ml-4 ${
+              showPortfolioIntelligence ? 'rotate-180' : ''
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {showPortfolioIntelligence && (
+          <>
+            <div className="border-b border-gray-200">
+              <nav className="flex -mb-px">
             <button
               onClick={() => setCycleAnalysisTab('goal')}
-              className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
+              className={`flex-1 py-3 md:py-4 px-2 md:px-6 text-center font-semibold transition-colors ${
                 cycleAnalysisTab === 'goal'
                   ? 'border-b-2 border-secondary-teal text-secondary-teal bg-teal-50'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
-              <div className="flex items-center justify-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-center justify-center gap-1 md:gap-2">
+                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                 </svg>
-                Goal
+                <span className="text-sm md:text-base">Goal</span>
               </div>
-              <div className="text-xs text-gray-500 mt-1">Success Probability</div>
+              <div className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 hidden sm:block">Success Probability</div>
             </button>
 
             <button
               onClick={() => setCycleAnalysisTab('cycle')}
-              className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
+              className={`flex-1 py-3 md:py-4 px-2 md:px-6 text-center font-semibold transition-colors ${
                 cycleAnalysisTab === 'cycle'
                   ? 'border-b-2 border-secondary-teal text-secondary-teal bg-teal-50'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
-              <div className="flex items-center justify-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-center justify-center gap-1 md:gap-2">
+                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
                 </svg>
-                Cycle
+                <span className="text-sm md:text-base">Cycle</span>
               </div>
-              <div className="text-xs text-gray-500 mt-1">6 Cycles</div>
+              <div className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 hidden sm:block">6 Cycles</div>
             </button>
 
             <button
               onClick={() => setCycleAnalysisTab('portfolio')}
-              className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
+              className={`flex-1 py-3 md:py-4 px-2 md:px-6 text-center font-semibold transition-colors ${
                 cycleAnalysisTab === 'portfolio'
                   ? 'border-b-2 border-secondary-teal text-secondary-teal bg-teal-50'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
-              <div className="flex items-center justify-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-center justify-center gap-1 md:gap-2">
+                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
-                Portfolio
+                <span className="text-sm md:text-base">Portfolio</span>
               </div>
-              <div className="text-xs text-gray-500 mt-1">Monte Carlo</div>
+              <div className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 hidden sm:block">Monte Carlo</div>
             </button>
           </nav>
         </div>
 
-        {/* Tab Content */}
-        <div className="p-6">
-          {cycleAnalysisTab === 'cycle' && <CycleTab cycleData={cycleData} />}
-          {cycleAnalysisTab === 'portfolio' && <PortfolioTab portfolioAnalysis={portfolioAnalysis} />}
-          {cycleAnalysisTab === 'goal' && <GoalTab goalAnalysis={goalAnalysis} />}
-        </div>
+            {/* Tab Content */}
+            <div className="p-6">
+              {cycleAnalysisTab === 'cycle' && <CycleTab cycleData={cycleData} />}
+              {cycleAnalysisTab === 'portfolio' && <PortfolioTab portfolioAnalysis={portfolioAnalysis} />}
+              {cycleAnalysisTab === 'goal' && <GoalTab goalAnalysis={goalAnalysis} />}
+            </div>
+          </>
+        )}
       </div>
 
       {/* 2. Portfolio Intelligence Results */}
@@ -300,20 +310,31 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
         )}
       </div>
 
-      {/* 3. VIDEO SECTION */}
-      {videoId && (
-        <div id="video-section" className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
-            <h3 className="text-lg font-semibold text-gray-900">Your Personalized Analysis</h3>
-            <p className="text-sm text-gray-600 mt-1">Watch Kronos explain your results</p>
-          </div>
-          <div className="p-6">
-            <VideoPlayer videoId={videoId} onVideoReady={handleVideoReady} />
-          </div>
-        </div>
-      )}
-
       {/* Scenario Stress Testing - Hidden as requested */}
+
+      {/* Next Steps / CTA - Moved to Bottom */}
+      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-4 md:p-8 text-white">
+        <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">Next Step</h3>
+        <p className="text-sm md:text-base text-teal-100 mb-4 md:mb-6">
+          Work 1:1 with a strategist to optimize allocations for the current cycle.
+        </p>
+        <div className="flex justify-center">
+          <a
+            href="https://clockwisecapital.com/contact"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-6 md:px-8 py-3 bg-white text-teal-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors text-center flex items-center justify-center gap-2 text-sm md:text-base"
+          >
+            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Match me with an advisor
+            <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+        </div>
+      </div>
 
       {/* Video Ready Notification Modal */}
       {showVideoReadyModal && (
@@ -346,7 +367,7 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                 onClick={() => setShowVideoReadyModal(false)}
                 className="w-full px-6 py-3 text-gray-600 font-medium hover:text-gray-900 transition-colors"
               >
-                Maybe Later
+                Watch Later
               </button>
             </div>
           </div>

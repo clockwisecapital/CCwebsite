@@ -34,6 +34,8 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
   const [showExampleModal, setShowExampleModal] = useState(false);
   const [parseNotes, setParseNotes] = useState('');
   const [allocationsParsed, setAllocationsParsed] = useState(false);
+  const [showPersonalInfo, setShowPersonalInfo] = useState(true);
+  const [showFinancialGoals, setShowFinancialGoals] = useState(true);
 
   useEffect(() => {
     if (initialData) {
@@ -301,12 +303,29 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
         )}
       </div>
 
-      {/* Section 2: Personal Information */}
+      {/* Section 2: Personal Information - Collapsible for Mobile */}
       <div className="space-y-6 pt-6 border-t border-gray-200">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">Personal Information</h3>
-          <p className="text-sm text-gray-500">Help us understand your investment background</p>
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowPersonalInfo(!showPersonalInfo)}
+          className="w-full flex items-center justify-between text-left group"
+        >
+          <div>
+            <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-1">Personal Information</h3>
+            <p className="text-xs md:text-sm text-gray-500">Help us understand your investment background</p>
+          </div>
+          <svg 
+            className={`w-5 h-5 md:w-6 md:h-6 text-gray-400 transition-transform flex-shrink-0 ml-4 ${showPersonalInfo ? 'rotate-180' : ''}`}
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {showPersonalInfo && (
+          <div className="space-y-6 animate-in slide-in-from-top-2 duration-200">
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -442,6 +461,8 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
             </div>
           </div>
         </div>
+          </div>
+        )}
       </div>
 
       {/* Example Modal */}
@@ -552,14 +573,29 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
         </div>
       )}
 
-      {/* Section 2: Financial Goals */}
-      <div className="space-y-6">
-        <div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">Financial Goals</h3>
-          <p className="text-sm text-gray-600 mb-6">
-            Help us understand your investment goals and timeline
-          </p>
-        </div>
+      {/* Section 3: Financial Goals - Collapsible for Mobile */}
+      <div className="space-y-6 pt-6 border-t border-gray-200">
+        <button
+          type="button"
+          onClick={() => setShowFinancialGoals(!showFinancialGoals)}
+          className="w-full flex items-center justify-between text-left group"
+        >
+          <div>
+            <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-1">Financial Goals</h3>
+            <p className="text-xs md:text-sm text-gray-500">Help us understand your investment goals and timeline</p>
+          </div>
+          <svg 
+            className={`w-5 h-5 md:w-6 md:h-6 text-gray-400 transition-transform flex-shrink-0 ml-4 ${showFinancialGoals ? 'rotate-180' : ''}`}
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {showFinancialGoals && (
+          <div className="space-y-6 animate-in slide-in-from-top-2 duration-200">
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Goal Amount */}
@@ -628,6 +664,8 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
             <p className="text-xs text-gray-500 mt-1">What is this goal for?</p>
           </div>
         </div>
+          </div>
+        )}
       </div>
 
       {/* Submit Button */}

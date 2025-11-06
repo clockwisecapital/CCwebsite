@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { PortfolioSimulation } from '@/types/cycleAnalysis';
+import CollapsibleSection from './CollapsibleSection';
 
 interface PortfolioTabProps {
   portfolioAnalysis: {
@@ -25,6 +26,7 @@ export default function PortfolioTab({ portfolioAnalysis }: PortfolioTabProps) {
   // Default to market if available, otherwise first available cycle
   const defaultCycle = portfolioAnalysis.current.cycleResults.market ? 'market' : cycles[0]?.key || 'country';
   const [selectedCycle, setSelectedCycle] = useState<keyof PortfolioSimulation['cycleResults']>(defaultCycle);
+  const [showWatchFirst, setShowWatchFirst] = useState(true);
 
   const currentCycleResult = portfolioAnalysis.current.cycleResults[selectedCycle] || portfolioAnalysis.current.cycleResults[cycles[0]?.key || 'country'];
   const overallResult = portfolioAnalysis.current.overall;
@@ -44,6 +46,49 @@ export default function PortfolioTab({ portfolioAnalysis }: PortfolioTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Watch Me First - Video Explanation */}
+      <div className="bg-gradient-to-r from-teal-500 to-blue-600 rounded-lg overflow-hidden">
+        <button
+          onClick={() => setShowWatchFirst(!showWatchFirst)}
+          className="w-full px-6 py-4 flex items-center justify-between text-white hover:bg-black/10 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+            <div className="text-left">
+              <p className="font-bold text-lg text-white">What keeps you up at night about this portfolio?</p>
+            </div>
+          </div>
+          <svg
+            className={`w-5 h-5 text-white transform transition-transform ${
+              showWatchFirst ? 'rotate-180' : ''
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {showWatchFirst && (
+          <div className="bg-white p-6 border-t border-teal-200">
+            <div className="aspect-video bg-gray-200 rounded-lg flex items-center justify-center">
+              <div className="text-center text-gray-500">
+                <svg className="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-sm font-medium">Video Placeholder</p>
+                <p className="text-xs">Portfolio Analysis Explainer Video</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Overall Portfolio Performance */}
       <div className="bg-gradient-to-r from-teal-50 to-blue-50 rounded-lg p-6 border border-teal-200">
         <div className="flex items-center justify-between mb-4">
@@ -99,11 +144,10 @@ export default function PortfolioTab({ portfolioAnalysis }: PortfolioTabProps) {
       </div>
 
       {/* Cycle-by-Cycle Analysis */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">Performance By Cycle</h3>
-        <p className="text-sm text-gray-600 mb-6">
-          See how your portfolio is expected to perform under different economic cycle conditions
-        </p>
+      <CollapsibleSection 
+        title="Performance By Cycle" 
+        subtitle="See how your portfolio is expected to perform under different economic cycle conditions"
+      >
 
         {/* Cycle Selector */}
         <div className="mb-6">
@@ -217,10 +261,14 @@ export default function PortfolioTab({ portfolioAnalysis }: PortfolioTabProps) {
             </table>
           </div>
         </div>
-      </div>
+      </CollapsibleSection>
 
       {/* Disclaimer */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+      <CollapsibleSection 
+        title="Important Disclaimer" 
+        subtitle="Please read before making investment decisions"
+      >
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
         <div className="flex items-start gap-3">
           <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -234,7 +282,8 @@ export default function PortfolioTab({ portfolioAnalysis }: PortfolioTabProps) {
             </p>
           </div>
         </div>
-      </div>
+        </div>
+      </CollapsibleSection>
     </div>
   );
 }

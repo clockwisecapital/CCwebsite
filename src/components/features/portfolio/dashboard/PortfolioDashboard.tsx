@@ -71,6 +71,11 @@ export default function PortfolioDashboard() {
   const [dashboardComplete, setDashboardComplete] = useState(false);
   const [showAdvisorPopup, setShowAdvisorPopup] = useState(false);
 
+  // Effect to scroll to top when switching tabs
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [activeTab]);
+
   // Effect to show advisor popup after 30 seconds on Review tab only
   useEffect(() => {
     if (activeTab !== 'review') return;
@@ -171,25 +176,29 @@ export default function PortfolioDashboard() {
       // NOW wait for cycle analysis to complete
       console.log('⏳ Waiting for cycle analysis to complete...');
       const cycleResponse = await cyclePromise;
-      let cycleAnalysis = null;
-      if (cycleResponse.ok) {
-        const cycleResult = await cycleResponse.json();
-        cycleAnalysis = cycleResult.cycleAnalysis;
-        console.log('✅ Cycle analysis completed successfully');
-      } else {
-        console.warn('⚠️ Cycle analysis failed, will use mock data');
+      
+      if (!cycleResponse.ok) {
+        // If cycle analysis fails, throw error to prevent video generation
+        throw new Error('Cycle analysis failed');
       }
+      
+      const cycleResult = await cycleResponse.json();
+      console.log('✅ Cycle analysis completed successfully');
 
       // Update analysis result with cycle data
       setAnalysisResult(prev => ({
         ...prev!,
-        cycleAnalysis,
+        cycleAnalysis: cycleResult.cycleAnalysis,
       }));
       setAnalysisComplete(true);
     } catch (error) {
       console.error('Analysis error:', error);
       alert('Analysis failed. Please try again.');
       setShowThinkingModal(false);
+      // Reset state to allow retry
+      setDashboardComplete(false);
+      setAnalysisResult(null);
+      setAnalysisComplete(false);
     } finally {
       setIsAnalyzing(false);
     }

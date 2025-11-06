@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface VideoPlayerProps {
   videoId: string | null;
@@ -11,6 +11,7 @@ export default function VideoPlayer({ videoId, onVideoReady }: VideoPlayerProps)
   const [status, setStatus] = useState<'pending' | 'processing' | 'completed' | 'failed'>('pending');
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const hasNotified = useRef(false); // Track if we've already called onVideoReady
 
   useEffect(() => {
     if (!videoId) return;
@@ -27,8 +28,9 @@ export default function VideoPlayer({ videoId, onVideoReady }: VideoPlayerProps)
             setVideoUrl(data.videoUrl);
             clearInterval(intervalId);
             console.log('✅ Video ready:', data.videoUrl);
-            // Notify parent that video is ready
-            if (onVideoReady) {
+            // Notify parent that video is ready (only once)
+            if (onVideoReady && !hasNotified.current) {
+              hasNotified.current = true;
               onVideoReady();
             }
           } else if (data.status === 'failed') {
@@ -52,7 +54,8 @@ export default function VideoPlayer({ videoId, onVideoReady }: VideoPlayerProps)
     return () => {
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [videoId, onVideoReady]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoId]); // Removed onVideoReady from deps to prevent re-running
 
   if (!videoId) {
     return null;
