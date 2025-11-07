@@ -76,13 +76,13 @@ export default function VideoPlayer({ videoId, onVideoReady }: VideoPlayerProps)
 
   if (status === 'completed' && videoUrl) {
     return (
-      <div className="relative w-full bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg overflow-hidden shadow-2xl border border-teal-500/30">
+      <div className="relative w-full bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden">
         <div className="relative aspect-video">
           <video
             controls
             autoPlay
             muted
-            className="w-full h-full"
+            className="w-full h-full object-cover"
             poster="/placeholder-video.jpg"
           >
             <source src={videoUrl} type="video/mp4" />
@@ -103,21 +103,21 @@ export default function VideoPlayer({ videoId, onVideoReady }: VideoPlayerProps)
               <div className="flex items-start gap-2">
                 <span className="text-teal-400 font-bold">-</span>
                 <p className="text-gray-300">
-                  <span className="font-semibold text-white">Your Investing Environment</span>
+                  <span className="font-semibold text-white">Investing Environment</span>
                 </p>
               </div>
 
               <div className="flex items-start gap-2">
                 <span className="text-teal-400 font-bold">-</span>
                 <p className="text-gray-300">
-                  <span className="font-semibold text-white">Your Portfolio Impact</span>
+                  <span className="font-semibold text-white">Portfolio Impact</span>
                 </p>
               </div>
 
               <div className="flex items-start gap-2">
                 <span className="text-teal-400 font-bold">-</span>
                 <p className="text-gray-300">
-                  <span className="font-semibold text-white">Your Goals Impact</span>
+                  <span className="font-semibold text-white">Goals Impact</span>
                 </p>
               </div>
             </div>

@@ -39,14 +39,13 @@ export async function POST(req: NextRequest) {
         video_inputs: [
           {
             character: {
-              type: 'avatar',
-              avatar_id: '8cd5a85e256e4aa9a40d297bac0021ab',
-              avatar_style: 'normal',
+              type: 'talking_photo',
+              talking_photo_id: 'ddb3e3340f9441028708bd4619635c94',
             },
             voice: {
               type: 'text',
               input_text: script,
-              voice_id: 'f4ad09dc1d974467a12d374c5887ecc6',
+              voice_id: '45fa04a45bfa49e38936640d6d447e84',
               speed: 1.1,
             },
           },

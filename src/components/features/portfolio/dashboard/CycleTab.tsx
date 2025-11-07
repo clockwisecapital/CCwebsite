@@ -13,15 +13,17 @@ interface CycleTabProps {
     business: CycleData;
     company: CycleData;
   };
+  onNext?: () => void;
+  onBack?: () => void;
 }
 
-export default function CycleTab({ cycleData }: CycleTabProps) {
+export default function CycleTab({ cycleData, onNext, onBack }: CycleTabProps) {
   // Default to market if available, otherwise first available cycle
   const availableCycles = (Object.keys(cycleData) as Array<keyof typeof cycleData>).filter(key => cycleData[key] !== undefined);
   const defaultCycle = cycleData.market ? 'market' : availableCycles[0] || 'country';
   
   const [selectedCycle, setSelectedCycle] = useState<keyof typeof cycleData>(defaultCycle);
-  const [showWatchFirst, setShowWatchFirst] = useState(true);
+  const [userResponse, setUserResponse] = useState('');
   
   const currentCycle = cycleData[selectedCycle] || cycleData[availableCycles[0]] || cycleData.country; // Fallback to first available
 
@@ -109,52 +111,167 @@ export default function CycleTab({ cycleData }: CycleTabProps) {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Watch Me First - Video Explanation */}
-      <div className="bg-gradient-to-r from-teal-500 to-blue-600 rounded-lg overflow-hidden">
-        <button
-          onClick={() => setShowWatchFirst(!showWatchFirst)}
-          className="w-full px-6 py-4 flex items-center justify-between text-white hover:bg-black/10 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+    <div className="space-y-6 md:space-y-8">
+      {/* Question (Call to Action) */}
+      <div className="bg-gradient-to-r from-cyan-500 via-blue-500 to-blue-600 rounded-2xl p-5 md:p-6 shadow-md">
+        <p className="text-lg md:text-xl font-semibold text-white leading-snug m-0">
+          What&apos;s your sell strategy for this portfolio when the market cycle changes?
+        </p>
+      </div>
+
+      {/* Video Section */}
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-4 md:p-8 border border-gray-200 shadow-sm">
+        <div className="aspect-video bg-white rounded-xl flex items-center justify-center shadow-inner">
+          <div className="text-center px-4">
+            <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-3 md:mb-4 bg-white rounded-full flex items-center justify-center shadow-lg">
+              <svg className="w-8 h-8 md:w-10 md:h-10 text-cyan-500" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z" />
               </svg>
             </div>
-            <div className="text-left">
-              <p className="font-bold text-lg text-white">What&apos;s your sell strategy for this portfolio when the market cycle changes?</p>
+            <p className="text-sm md:text-base font-semibold text-gray-700">Video Placeholder</p>
+            <p className="text-xs md:text-sm text-gray-500 mt-1">Cycle Analysis Explainer Video</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Text Input Section */}
+      <div className="bg-white rounded-2xl p-4 md:p-6 border border-gray-200 shadow-sm">
+        <label className="block text-sm md:text-base font-semibold text-gray-700 mb-2 md:mb-3">
+          Your Response
+        </label>
+        <textarea
+          value={userResponse}
+          onChange={(e) => setUserResponse(e.target.value)}
+          rows={4}
+          className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none transition-all"
+          placeholder=""
+        />
+      </div>
+
+      {/* Kronos Recommendation */}
+      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-4 md:p-6 border border-blue-100 shadow-sm">
+        <div className="flex items-start gap-3 md:gap-4 mb-4 md:mb-6">
+          <div className="flex-shrink-0">
+            <div className="w-12 h-12 md:w-14 md:h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-md">
+              <svg className="w-6 h-6 md:w-7 md:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
             </div>
           </div>
-          <svg
-            className={`w-5 h-5 text-white transform transition-transform ${
-              showWatchFirst ? 'rotate-180' : ''
-            }`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          <div className="flex-1 min-w-0">
+            <div className="text-base md:text-lg font-bold text-blue-900 mb-1 md:mb-2">Kronos Recommendation</div>
+            <p className="text-sm md:text-base text-gray-700 leading-relaxed">
+              Based on the current {currentCycle.phase} phase of the {currentCycle.name}, our analysis suggests a {currentCycle.phasePercent < 50 ? 'cautious' : 'strategic'} approach. Historical patterns indicate {(currentCycle.sp500Backtest.expectedReturn * 100).toFixed(1)}% median returns with significant volatility potential.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Buttons */}
+      {(onBack || onNext) && (
+        <div className="flex flex-col sm:flex-row gap-3 sm:justify-between">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="w-full sm:w-auto px-6 py-3 bg-white border border-gray-300 text-gray-700 text-sm md:text-base font-semibold rounded-xl hover:bg-gray-50 transition-all shadow-sm hover:shadow flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back: Goal
+            </button>
+          )}
+          {onNext && (
+            <button
+              onClick={onNext}
+              className="w-full sm:w-auto px-6 md:px-8 py-3 md:py-3.5 bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-sm md:text-base font-semibold rounded-xl hover:from-cyan-700 hover:to-blue-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 sm:ml-auto"
+            >
+              Next: Portfolio Analysis
+              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* S&P 500 Historical Backtest */}
+      <div className="bg-white rounded-2xl p-4 md:p-6 border border-gray-200 shadow-sm">
+        <div className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4 flex items-center gap-2">
+          <svg className="w-5 h-5 text-secondary-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
-        </button>
-        {showWatchFirst && (
-          <div className="bg-white p-6 border-t border-teal-200">
-            <div className="aspect-video bg-gray-200 rounded-lg flex items-center justify-center">
-              <div className="text-center text-gray-500">
-                <svg className="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-sm font-medium">Video Placeholder</p>
-                <p className="text-xs">Cycle Analysis Explainer Video</p>
+          S&P 500 Historical Backtest
+        </div>
+        <p className="text-xs md:text-sm text-gray-600 mb-3 md:mb-4">
+          Based on historical S&P 500 performance during similar {currentCycle.name.toLowerCase()} phases
+        </p>
+        
+        <div className="grid grid-cols-1 gap-3">
+          <div className="bg-white rounded-lg p-4 border border-gray-200">
+            <div className="text-xs text-gray-600 mb-1">Expected Return (Median)</div>
+            <div className="text-2xl font-bold text-gray-900">
+              {(currentCycle.sp500Backtest.expectedReturn * 100).toFixed(1)}%
+            </div>
+            <div className="text-xs text-gray-500 mt-1">50th percentile, next 12 months</div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+              <div className="text-xs text-emerald-700 mb-1">Upside (95th)</div>
+              <div className="text-xl font-bold text-gray-900">
+                {(currentCycle.sp500Backtest.expectedUpside * 100).toFixed(1)}%
               </div>
             </div>
+            
+            <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
+              <div className="text-xs text-rose-700 mb-1">Downside (5th)</div>
+              <div className="text-xl font-bold text-gray-900">
+                {(currentCycle.sp500Backtest.expectedDownside * 100).toFixed(1)}%
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Historical Analog */}
+      <div className="bg-white rounded-2xl p-4 md:p-6 border border-gray-200 shadow-sm">
+        <div className="text-base md:text-lg font-semibold text-gray-900 mb-2 md:mb-3 flex items-center gap-2">
+          <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Best Historical Analog
+        </div>
+        
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-2 gap-2">
+            <span className="text-base md:text-lg font-bold text-gray-900">{currentCycle.historicalAnalog.period}</span>
+            <span className="text-xs px-2 py-1 bg-amber-200 text-amber-900 rounded-full font-medium whitespace-nowrap">
+              {currentCycle.historicalAnalog.similarity}
+            </span>
+          </div>
+          <p className="text-xs md:text-sm text-gray-700 leading-relaxed">
+            {currentCycle.historicalAnalog.description}
+          </p>
+        </div>
+        
+        {currentCycle.historicalAnalog.keyEvents.length > 0 && (
+          <div className="mt-4">
+              <div className="text-xs font-bold text-gray-700 mb-2">Key Events:</div>
+            <ul className="space-y-1">
+              {currentCycle.historicalAnalog.keyEvents.map((event, idx) => (
+                <li key={idx} className="text-xs text-gray-600 flex items-start gap-2">
+                  <span className="text-amber-600 mt-0.5">•</span>
+                  <span>{event}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
 
       {/* Cycle Selector */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
         <label className="block text-sm font-medium text-gray-700 mb-3">
           Select Cycle to Analyze
         </label>
@@ -191,7 +308,7 @@ export default function CycleTab({ cycleData }: CycleTabProps) {
 
             {/* Timeline */}
             <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">Cycle Timeline</h4>
+              <div className="text-sm font-semibold text-gray-900 mb-3">Cycle Timeline</div>
               <div className="space-y-3">
                 {currentCycle.timeline.map((phase, idx) => (
                   <div
@@ -222,84 +339,14 @@ export default function CycleTab({ cycleData }: CycleTabProps) {
             </div>
           </div>
 
-          {/* Right: S&P 500 Backtest & Historical Analog */}
+          {/* Right: Additional Cycle Details */}
           <div className="space-y-6">
-            {/* S&P 500 Backtest */}
-            <div className="bg-gradient-to-br from-blue-50 to-teal-50 rounded-lg p-5 border border-blue-200">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <svg className="w-5 h-5 text-secondary-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                S&P 500 Historical Backtest
-              </h4>
-              <p className="text-sm text-gray-600 mb-4">
-                Based on historical S&P 500 performance during similar {currentCycle.name.toLowerCase()} phases
+            <div className="bg-white rounded-lg border border-gray-200 p-5">
+              <div className="text-lg font-semibold text-gray-900 mb-3">Additional Cycle Information</div>
+              <p className="text-sm text-gray-600">
+                The detailed cycle analysis and recommendations appear below after navigation.
               </p>
-              
-              <div className="grid grid-cols-1 gap-3">
-                <div className="bg-white rounded-lg p-4 border border-gray-200">
-                  <div className="text-xs text-gray-600 mb-1">Expected Return (Median)</div>
-                  <div className="text-2xl font-bold text-gray-900">
-                    {(currentCycle.sp500Backtest.expectedReturn * 100).toFixed(1)}%
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">50th percentile, next 12 months</div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                    <div className="text-xs text-emerald-700 mb-1">Upside (95th)</div>
-                    <div className="text-xl font-bold text-gray-900">
-                      {(currentCycle.sp500Backtest.expectedUpside * 100).toFixed(1)}%
-                    </div>
-                  </div>
-                  
-                  <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
-                    <div className="text-xs text-rose-700 mb-1">Downside (5th)</div>
-                    <div className="text-xl font-bold text-gray-900">
-                      {(currentCycle.sp500Backtest.expectedDownside * 100).toFixed(1)}%
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
-
-            {/* Historical Analog */}
-            <div className="bg-amber-50 rounded-lg p-5 border border-amber-200">
-              <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Best Historical Analog
-              </h4>
-              
-              <div className="mb-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-lg font-bold text-gray-900">{currentCycle.historicalAnalog.period}</span>
-                  <span className="text-xs px-2 py-1 bg-amber-200 text-amber-900 rounded-full font-medium">
-                    {currentCycle.historicalAnalog.similarity}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-700 leading-relaxed">
-                  {currentCycle.historicalAnalog.description}
-                </p>
-              </div>
-              
-              {currentCycle.historicalAnalog.keyEvents.length > 0 && (
-                <div className="mt-4">
-                  <div className="text-xs font-semibold text-gray-700 mb-2">Key Events:</div>
-                  <ul className="space-y-1">
-                    {currentCycle.historicalAnalog.keyEvents.map((event, idx) => (
-                      <li key={idx} className="text-xs text-gray-600 flex items-start gap-2">
-                        <span className="text-amber-600 mt-0.5">•</span>
-                        <span>{event}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            {/* Analysis Frameworks section removed as requested */}
           </div>
         </div>
       </CollapsibleSection>

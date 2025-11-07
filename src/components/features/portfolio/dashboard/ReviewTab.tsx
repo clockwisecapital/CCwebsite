@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { IntakeFormData, AnalysisResult } from './PortfolioDashboard';
 import CycleTab from './CycleTab';
 import PortfolioTab from './PortfolioTab';
 import GoalTab from './GoalTab';
-import VideoPlayer from './VideoPlayer';
 
 interface ReviewTabProps {
   analysisResult: AnalysisResult;
@@ -13,29 +12,61 @@ interface ReviewTabProps {
   conversationId: string | null;
   videoId: string | null; // Still needed for prop compatibility
   onReset: () => void;
+  onNavigateToAnalyze?: () => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId, videoId, onReset }: ReviewTabProps) {
+export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId, videoId, onReset, onNavigateToAnalyze }: ReviewTabProps) {
   // Default to collapsed on mobile (screens < 768px)
   const [showPortfolioIntelligence, setShowPortfolioIntelligence] = useState(true);
   const [showAnalysisAndSync, setShowAnalysisAndSync] = useState(false);
   const [cycleAnalysisTab, setCycleAnalysisTab] = useState<'cycle' | 'portfolio' | 'goal'>('goal');
   const [showVideoReadyModal, setShowVideoReadyModal] = useState(false);
-  const [hasShownVideoModal, setHasShownVideoModal] = useState(false); // Track if modal was already shown
+  const [previousVideoId, setPreviousVideoId] = useState<string | null>(null);
 
-  const handleVideoReady = () => {
-    // Only show modal once per session
-    if (!hasShownVideoModal) {
+  // Show video ready modal ONLY when video completes (transitions from null to a value)
+  // and ONLY if it has never been shown before (persisted in localStorage)
+  useEffect(() => {
+    if (!videoId) return; // No video yet
+
+    const modalKey = `video-modal-shown-${videoId}`;
+    const hasShownBefore = localStorage.getItem(modalKey);
+
+    // Only show if:
+    // 1. We haven't shown this specific video's modal before (checked via localStorage)
+    // 2. This is a new video (different from previous videoId)
+    // 3. We're transitioning from no video to having a video
+    if (!hasShownBefore && previousVideoId !== videoId) {
       setShowVideoReadyModal(true);
-      setHasShownVideoModal(true);
+      localStorage.setItem(modalKey, 'true');
+      setPreviousVideoId(videoId);
     }
-  };
+  }, [videoId, previousVideoId]);
 
   const scrollToVideo = () => {
     setShowVideoReadyModal(false);
-    // Scroll to video section
-    document.getElementById('video-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Navigate to Analyze tab if available, otherwise scroll to video
+    if (onNavigateToAnalyze) {
+      onNavigateToAnalyze();
+    } else {
+      document.getElementById('video-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  const handleNext = () => {
+    if (cycleAnalysisTab === 'goal') {
+      setCycleAnalysisTab('cycle');
+    } else if (cycleAnalysisTab === 'cycle') {
+      setCycleAnalysisTab('portfolio');
+    }
+  };
+
+  const handleBack = () => {
+    if (cycleAnalysisTab === 'portfolio') {
+      setCycleAnalysisTab('cycle');
+    } else if (cycleAnalysisTab === 'cycle') {
+      setCycleAnalysisTab('goal');
+    }
   };
 
   // Process impact data (handle both string and array formats)
@@ -98,61 +129,6 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
 
   return (
     <div className="space-y-8">
-      {/* VIDEO SECTION - Top Priority - Always Visible */}
-      <div id="video-section" className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
-          <h3 className="text-lg font-semibold text-gray-900">Your Personalized Analysis</h3>
-          <p className="text-sm text-gray-600 mt-1">Watch Kronos explain your results</p>
-        </div>
-        <div className="p-6">
-          {videoId ? (
-            <VideoPlayer videoId={videoId} onVideoReady={handleVideoReady} />
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 px-4">
-              <div className="relative mb-6">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-teal-500 to-blue-600 flex items-center justify-center shadow-lg animate-pulse">
-                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <svg className="absolute -inset-2 w-24 h-24 animate-spin" viewBox="0 0 50 50">
-                  <circle 
-                    className="opacity-25" 
-                    cx="25" 
-                    cy="25" 
-                    r="20" 
-                    stroke="currentColor" 
-                    strokeWidth="4" 
-                    fill="none"
-                    style={{ color: '#0d9488' }}
-                  />
-                  <circle 
-                    className="opacity-75" 
-                    cx="25" 
-                    cy="25" 
-                    r="20" 
-                    stroke="currentColor" 
-                    strokeWidth="4" 
-                    fill="none"
-                    strokeDasharray="80"
-                    strokeDashoffset="60"
-                    style={{ color: '#0d9488' }}
-                  />
-                </svg>
-              </div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-2">Generating Your Personalized Video</h4>
-              <p className="text-sm text-gray-600 text-center max-w-md">
-                Kronos is creating a custom video analysis tailored to your portfolio. This typically takes 60-90 seconds.
-              </p>
-              <div className="mt-4 flex items-center gap-2 text-xs text-teal-600">
-                <div className="w-2 h-2 bg-teal-600 rounded-full animate-pulse"></div>
-                <span>Video generation in progress...</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* 1. PORTFOLIO INTELLIGENCE COMPLETE */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <button
@@ -233,9 +209,25 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
 
             {/* Tab Content */}
             <div className="p-6">
-              {cycleAnalysisTab === 'cycle' && <CycleTab cycleData={cycleData} />}
-              {cycleAnalysisTab === 'portfolio' && <PortfolioTab portfolioAnalysis={portfolioAnalysis} />}
-              {cycleAnalysisTab === 'goal' && <GoalTab goalAnalysis={goalAnalysis} />}
+              {cycleAnalysisTab === 'cycle' && (
+                <CycleTab 
+                  cycleData={cycleData} 
+                  onNext={handleNext}
+                  onBack={handleBack}
+                />
+              )}
+              {cycleAnalysisTab === 'portfolio' && (
+                <PortfolioTab 
+                  portfolioAnalysis={portfolioAnalysis}
+                  onBack={handleBack}
+                />
+              )}
+              {cycleAnalysisTab === 'goal' && (
+                <GoalTab 
+                  goalAnalysis={goalAnalysis}
+                  onNext={handleNext}
+                />
+              )}
             </div>
           </>
         )}
@@ -394,7 +386,7 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
               Your Video is Ready!
             </h3>
             <p className="text-gray-600 mb-6">
-              Kronos has finished analyzing your portfolio. Watch your personalized summary now.
+              Kronos has finished analyzing your portfolio. Click below to watch your personalized analysis.
             </p>
 
             {/* Buttons */}

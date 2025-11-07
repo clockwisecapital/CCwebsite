@@ -8,9 +8,10 @@ interface PortfolioTabProps {
   portfolioAnalysis: {
     current: PortfolioSimulation;
   };
+  onBack?: () => void;
 }
 
-export default function PortfolioTab({ portfolioAnalysis }: PortfolioTabProps) {
+export default function PortfolioTab({ portfolioAnalysis, onBack }: PortfolioTabProps) {
   // Filter to only show cycles that exist in the data
   const allCycles = [
     { key: 'market' as const, name: 'Market (S&P 500) Cycle' },
@@ -26,7 +27,7 @@ export default function PortfolioTab({ portfolioAnalysis }: PortfolioTabProps) {
   // Default to market if available, otherwise first available cycle
   const defaultCycle = portfolioAnalysis.current.cycleResults.market ? 'market' : cycles[0]?.key || 'country';
   const [selectedCycle, setSelectedCycle] = useState<keyof PortfolioSimulation['cycleResults']>(defaultCycle);
-  const [showWatchFirst, setShowWatchFirst] = useState(true);
+  const [userResponse, setUserResponse] = useState('');
 
   const currentCycleResult = portfolioAnalysis.current.cycleResults[selectedCycle] || portfolioAnalysis.current.cycleResults[cycles[0]?.key || 'country'];
   const overallResult = portfolioAnalysis.current.overall;
@@ -45,62 +46,89 @@ export default function PortfolioTab({ portfolioAnalysis }: PortfolioTabProps) {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Watch Me First - Video Explanation */}
-      <div className="bg-gradient-to-r from-teal-500 to-blue-600 rounded-lg overflow-hidden">
-        <button
-          onClick={() => setShowWatchFirst(!showWatchFirst)}
-          className="w-full px-6 py-4 flex items-center justify-between text-white hover:bg-black/10 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+    <div className="space-y-6 md:space-y-8">
+      {/* Question (Call to Action) */}
+      <div className="bg-gradient-to-r from-cyan-500 via-blue-500 to-blue-600 rounded-2xl p-5 md:p-6 shadow-md">
+        <p className="text-lg md:text-xl font-semibold text-white leading-snug m-0">
+          What keeps you up at night about this portfolio?
+        </p>
+      </div>
+
+      {/* Video Section */}
+      <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-4 md:p-8 border border-gray-200 shadow-sm">
+        <div className="aspect-video bg-white rounded-xl flex items-center justify-center shadow-inner">
+          <div className="text-center px-4">
+            <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-3 md:mb-4 bg-white rounded-full flex items-center justify-center shadow-lg">
+              <svg className="w-8 h-8 md:w-10 md:h-10 text-cyan-500" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z" />
               </svg>
             </div>
-            <div className="text-left">
-              <p className="font-bold text-lg text-white">What keeps you up at night about this portfolio?</p>
-            </div>
+            <p className="text-sm md:text-base font-semibold text-gray-700">Video Placeholder</p>
+            <p className="text-xs md:text-sm text-gray-500 mt-1">Portfolio Analysis Explainer Video</p>
           </div>
-          <svg
-            className={`w-5 h-5 text-white transform transition-transform ${
-              showWatchFirst ? 'rotate-180' : ''
-            }`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        {showWatchFirst && (
-          <div className="bg-white p-6 border-t border-teal-200">
-            <div className="aspect-video bg-gray-200 rounded-lg flex items-center justify-center">
-              <div className="text-center text-gray-500">
-                <svg className="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-sm font-medium">Video Placeholder</p>
-                <p className="text-xs">Portfolio Analysis Explainer Video</p>
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
 
-      {/* Overall Portfolio Performance */}
-      <div className="bg-gradient-to-r from-teal-50 to-blue-50 rounded-lg p-6 border border-teal-200">
-        <div className="flex items-center justify-between mb-4">
+      {/* Text Input Section */}
+      <div className="bg-white rounded-2xl p-4 md:p-6 border border-gray-200 shadow-sm">
+        <label className="block text-sm md:text-base font-semibold text-gray-700 mb-2 md:mb-3">
+          Your Response
+        </label>
+        <textarea
+          value={userResponse}
+          onChange={(e) => setUserResponse(e.target.value)}
+          rows={4}
+          className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none transition-all"
+          placeholder=""
+        />
+      </div>
+
+      {/* Kronos Recommendation */}
+      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-4 md:p-6 border border-blue-100 shadow-sm">
+        <div className="flex items-start gap-3 md:gap-4">
+          <div className="flex-shrink-0">
+            <div className="w-12 h-12 md:w-14 md:h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-md">
+              <svg className="w-6 h-6 md:w-7 md:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-base md:text-lg font-bold text-blue-900 mb-1 md:mb-2">Kronos Recommendation</div>
+            <p className="text-sm md:text-base text-gray-700 leading-relaxed">
+              Your portfolio shows a {formatPercent(overallResult.expectedReturn)} median expected return with {overallResult.confidence} confidence. Given the current market conditions and cycle positioning, we recommend {overallResult.expectedReturn > 0.15 ? 'maintaining your current allocation while monitoring for rebalancing opportunities' : 'reviewing your risk exposure and considering strategic adjustments'}.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Back Button */}
+      {onBack && (
+        <div className="flex justify-start">
+          <button
+            onClick={onBack}
+            className="w-full sm:w-auto px-6 py-3 bg-white border border-gray-300 text-gray-700 text-sm md:text-base font-semibold rounded-xl hover:bg-gray-50 transition-all shadow-sm hover:shadow flex items-center justify-center gap-2"
+          >
+            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back: Cycle
+          </button>
+        </div>
+      )}
+
+      {/* Portfolio Performance Overview */}
+      <div className="bg-white rounded-2xl p-4 md:p-6 border border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between mb-4 md:mb-6">
           <div>
-            <h3 className="text-2xl font-bold text-blue-600">Current Portfolio</h3>
-            <p className="text-sm text-gray-600 mt-1">
+            <div className="text-base md:text-xl font-bold text-gray-900">Portfolio Performance Analysis</div>
+            <p className="text-xs md:text-sm text-gray-600 mt-1">
               Monte Carlo simulation across all economic cycles
             </p>
           </div>
           <div className="text-right">
-            <div className="text-sm text-gray-600">Total Value</div>
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-xs md:text-sm text-gray-600">Total Value</div>
+            <div className="text-lg md:text-2xl font-bold text-blue-900">
               {formatCurrency(portfolioAnalysis.current.totalValue)}
             </div>
           </div>
@@ -108,7 +136,7 @@ export default function PortfolioTab({ portfolioAnalysis }: PortfolioTabProps) {
 
         {/* Overall Expected Performance */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
             <div className="text-sm text-gray-600 mb-1">Expected Return</div>
             <div className="text-3xl font-bold text-gray-900">
               {formatPercent(overallResult.expectedReturn)}
@@ -173,9 +201,9 @@ export default function PortfolioTab({ portfolioAnalysis }: PortfolioTabProps) {
 
         {/* Selected Cycle Results */}
         <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="text-lg font-semibold text-gray-900 mb-4">
             {cycles.find(c => c.key === selectedCycle)?.name} Impact
-          </h4>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white rounded-lg p-4 border border-gray-200">
@@ -228,7 +256,7 @@ export default function PortfolioTab({ portfolioAnalysis }: PortfolioTabProps) {
 
         {/* Comparison Table */}
         <div className="mt-6">
-          <h4 className="text-sm font-semibold text-gray-900 mb-3">All Cycles Comparison</h4>
+          <div className="text-sm font-semibold text-gray-900 mb-3">All Cycles Comparison</div>
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead className="bg-gray-50">

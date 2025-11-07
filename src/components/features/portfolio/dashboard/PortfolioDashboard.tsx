@@ -5,6 +5,7 @@ import AIAvatarSection from './AIAvatarSection';
 import IntakeTab from './IntakeTab';
 import ReviewTab from './ReviewTab';
 import ThinkingModal from './ThinkingModal';
+import VideoPlayer from './VideoPlayer';
 
 export interface IntakeFormData {
   // Personal
@@ -59,7 +60,7 @@ export interface AnalysisResult {
 }
 
 export default function PortfolioDashboard() {
-  const [activeTab, setActiveTab] = useState<'intake' | 'review'>('intake');
+  const [activeTab, setActiveTab] = useState<'intake' | 'review' | 'analyze'>('intake');
   const [intakeData, setIntakeData] = useState<IntakeFormData | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -75,9 +76,9 @@ export default function PortfolioDashboard() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab]);
 
-  // Effect to show advisor popup after 30 seconds on Review tab only
+  // Effect to show advisor popup after 30 seconds on Review or Analyze tabs
   useEffect(() => {
-    if (activeTab !== 'review') return;
+    if (activeTab !== 'review' && activeTab !== 'analyze') return;
 
     const timer = setTimeout(() => {
       setShowAdvisorPopup(true);
@@ -227,13 +228,13 @@ export default function PortfolioDashboard() {
       {/* AI Avatar Section - Only show on Intake tab */}
       {activeTab === 'intake' && <AIAvatarSection />}
 
-      {/* Gradient spacer for Review Tab */}
-      {activeTab === 'review' && (
+      {/* Gradient spacer for Review and Analyze Tabs */}
+      {(activeTab === 'review' || activeTab === 'analyze') && (
         <div className="bg-gradient-to-r from-teal-600 to-blue-600 pt-20 pb-16"></div>
       )}
 
       {/* Dashboard Container */}
-      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ${activeTab === 'review' ? '-mt-20' : ''}`}>
+      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ${(activeTab === 'review' || activeTab === 'analyze') ? '-mt-20' : ''}`}>
         {/* Tab Navigation */}
         <div className="bg-white rounded-lg shadow-sm">
           <div className="border-b border-gray-200">
@@ -241,18 +242,18 @@ export default function PortfolioDashboard() {
               <button
                 onClick={() => setActiveTab('intake')}
                 className={`
-                  px-8 py-4 text-sm font-medium border-b-2 transition-colors
+                  flex-1 px-3 sm:px-6 md:px-8 py-3 md:py-4 text-xs sm:text-sm font-medium border-b-2 transition-colors
                   ${activeTab === 'intake'
                     ? 'border-teal-500 text-teal-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }
                 `}
               >
-                <span className="flex items-center gap-2">
-                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-teal-100 text-teal-600 text-xs font-bold">
+                <span className="flex items-center justify-center gap-1 sm:gap-2">
+                  <span className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-teal-100 text-teal-600 text-xs font-bold">
                     1
                   </span>
-                  Intake
+                  <span className="text-xs sm:text-sm">Intake</span>
                 </span>
               </button>
               
@@ -260,7 +261,7 @@ export default function PortfolioDashboard() {
                 onClick={() => analysisResult && setActiveTab('review')}
                 disabled={!analysisResult}
                 className={`
-                  px-8 py-4 text-sm font-medium border-b-2 transition-colors
+                  flex-1 px-3 sm:px-6 md:px-8 py-3 md:py-4 text-xs sm:text-sm font-medium border-b-2 transition-colors
                   ${activeTab === 'review'
                     ? 'border-teal-500 text-teal-600'
                     : analysisResult
@@ -269,13 +270,36 @@ export default function PortfolioDashboard() {
                   }
                 `}
               >
-                <span className="flex items-center gap-2">
-                  <span className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+                <span className="flex items-center justify-center gap-1 sm:gap-2">
+                  <span className={`flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full text-xs font-bold ${
                     analysisResult ? 'bg-teal-100 text-teal-600' : 'bg-gray-100 text-gray-400'
                   }`}>
                     2
                   </span>
-                  Review
+                  <span className="text-xs sm:text-sm">Review</span>
+                </span>
+              </button>
+              
+              <button
+                onClick={() => videoId && setActiveTab('analyze')}
+                disabled={!videoId}
+                className={`
+                  flex-1 px-3 sm:px-6 md:px-8 py-3 md:py-4 text-xs sm:text-sm font-medium border-b-2 transition-colors
+                  ${activeTab === 'analyze'
+                    ? 'border-teal-500 text-teal-600'
+                    : videoId
+                      ? 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      : 'border-transparent text-gray-300 cursor-not-allowed'
+                  }
+                `}
+              >
+                <span className="flex items-center justify-center gap-1 sm:gap-2">
+                  <span className={`flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full text-xs font-bold ${
+                    videoId ? 'bg-teal-100 text-teal-600' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                    3
+                  </span>
+                  <span className="text-xs sm:text-sm">Analyze</span>
                 </span>
               </button>
             </nav>
@@ -298,7 +322,46 @@ export default function PortfolioDashboard() {
                 conversationId={conversationId}
                 videoId={videoId}
                 onReset={handleReset}
+                onNavigateToAnalyze={() => setActiveTab('analyze')}
               />
+            )}
+            
+            {activeTab === 'analyze' && videoId && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Your Personalized Analysis</h3>
+                    <p className="text-sm text-gray-600 mt-1">Kronos explains your portfolio results</p>
+                  </div>
+                  <div className="p-0">
+                    <VideoPlayer videoId={videoId} />
+                  </div>
+                </div>
+
+                {/* Next Steps CTA */}
+                <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-4 md:p-8 text-white">
+                  <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">Ready to Optimize?</h3>
+                  <p className="text-sm md:text-base text-teal-100 mb-4 md:mb-6">
+                    Work 1:1 with a Clockwise Capital strategist to refine your strategy.
+                  </p>
+                  <div className="flex justify-center">
+                    <a
+                      href="https://clockwisecapital.com/contact"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-6 md:px-8 py-3 bg-white text-teal-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors text-center flex items-center justify-center gap-2 text-sm md:text-base"
+                    >
+                      <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      Schedule a Consultation
+                      <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </a>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>

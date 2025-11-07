@@ -30,6 +30,8 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [displayGoalAmount, setDisplayGoalAmount] = useState('');
+  const [displayMonthlyContribution, setDisplayMonthlyContribution] = useState('');
   const [isParsing, setIsParsing] = useState(false);
   const [showExampleModal, setShowExampleModal] = useState(false);
   const [parseNotes, setParseNotes] = useState('');
@@ -40,8 +42,24 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);
+      if (initialData.goalAmount) {
+        setDisplayGoalAmount(initialData.goalAmount.toLocaleString('en-US'));
+      }
+      if (initialData.monthlyContribution) {
+        setDisplayMonthlyContribution(initialData.monthlyContribution.toLocaleString('en-US'));
+      }
     }
   }, [initialData]);
+
+  const formatNumberWithCommas = (value: string): string => {
+    const numericValue = value.replace(/,/g, '');
+    if (!numericValue) return '';
+    return parseInt(numericValue).toLocaleString('en-US');
+  };
+
+  const parseNumber = (value: string): number => {
+    return parseInt(value.replace(/,/g, '')) || 0;
+  };
 
   // Calculate portfolio sum excluding totalValue
   const { stocks, bonds, cash, realEstate, commodities, alternatives } = formData.portfolio;
@@ -366,74 +384,91 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           </div>
         </div>
 
-        {/* Risk Tolerance Slider */}
+        {/* Risk Tolerance Buttons */}
         <div className="pt-4">
-          <label htmlFor="riskTolerance" className="block text-sm font-medium text-gray-900 mb-3">
+          <label className="block text-sm font-medium text-gray-900 mb-3">
             Risk Tolerance <span className="text-red-500">*</span>
           </label>
-          <div className="space-y-3">
-            {/* Slider */}
-            <div className="relative px-2">
-              <input
-                type="range"
-                id="riskTolerance"
-                min="0"
-                max="2"
-                step="1"
-                value={formData.riskTolerance === 'low' ? 0 : formData.riskTolerance === 'medium' ? 1 : 2}
-                onChange={(e) => {
-                  const value = parseInt(e.target.value);
-                  const tolerance = value === 0 ? 'low' : value === 1 ? 'medium' : 'high';
-                  setFormData(prev => ({ ...prev, riskTolerance: tolerance }));
-                }}
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer slider-thumb"
-                style={{
-                  background: 'linear-gradient(to right, #ef4444 0%, #f97316 20%, #fbbf24 50%, #a3e635 80%, #22c55e 100%)'
-                }}
-              />
-              <style jsx>{`
-                .slider-thumb::-webkit-slider-thumb {
-                  appearance: none;
-                  width: 24px;
-                  height: 24px;
-                  border-radius: 50%;
-                  background: white;
-                  border: 3px solid #0d9488;
-                  cursor: pointer;
-                  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                }
-                .slider-thumb::-moz-range-thumb {
-                  width: 24px;
-                  height: 24px;
-                  border-radius: 50%;
-                  background: white;
-                  border: 3px solid #0d9488;
-                  cursor: pointer;
-                  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                }
-              `}</style>
-            </div>
+          <div className="space-y-4">
+            {/* Three Buttons */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, riskTolerance: 'low' }))}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  formData.riskTolerance === 'low'
+                    ? 'border-red-500 bg-red-50'
+                    : 'border-gray-300 bg-white hover:border-gray-400'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                    formData.riskTolerance === 'low' ? 'bg-red-500' : 'bg-gray-200'
+                  }`}>
+                    <svg className={`w-5 h-5 ${formData.riskTolerance === 'low' ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <div className={`font-semibold ${formData.riskTolerance === 'low' ? 'text-red-600' : 'text-gray-700'}`}>
+                      Conservative
+                    </div>
+                    <div className="text-xs text-gray-500">Capital preservation</div>
+                  </div>
+                </div>
+              </button>
 
-            {/* Labels */}
-            <div className="flex justify-between text-xs font-medium px-2">
-              <span className={`flex items-center gap-1 transition-colors ${formData.riskTolerance === 'low' ? 'text-red-600' : 'text-gray-400'}`}>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                Conservative
-              </span>
-              <span className={`flex items-center gap-1 transition-colors ${formData.riskTolerance === 'medium' ? 'text-amber-600' : 'text-gray-400'}`}>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-                </svg>
-                Moderate
-              </span>
-              <span className={`flex items-center gap-1 transition-colors ${formData.riskTolerance === 'high' ? 'text-green-600' : 'text-gray-400'}`}>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-                Aggressive
-              </span>
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, riskTolerance: 'medium' }))}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  formData.riskTolerance === 'medium'
+                    ? 'border-amber-500 bg-amber-50'
+                    : 'border-gray-300 bg-white hover:border-gray-400'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                    formData.riskTolerance === 'medium' ? 'bg-amber-500' : 'bg-gray-200'
+                  }`}>
+                    <svg className={`w-5 h-5 ${formData.riskTolerance === 'medium' ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <div className={`font-semibold ${formData.riskTolerance === 'medium' ? 'text-amber-600' : 'text-gray-700'}`}>
+                      Moderate
+                    </div>
+                    <div className="text-xs text-gray-500">Balanced growth</div>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, riskTolerance: 'high' }))}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  formData.riskTolerance === 'high'
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-gray-300 bg-white hover:border-gray-400'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                    formData.riskTolerance === 'high' ? 'bg-green-500' : 'bg-gray-200'
+                  }`}>
+                    <svg className={`w-5 h-5 ${formData.riskTolerance === 'high' ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <div className={`font-semibold ${formData.riskTolerance === 'high' ? 'text-green-600' : 'text-gray-700'}`}>
+                      Aggressive
+                    </div>
+                    <div className="text-xs text-gray-500">Maximum growth</div>
+                  </div>
+                </div>
+              </button>
             </div>
 
             {/* Description */}
@@ -606,14 +641,23 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
               <input
-                type="number"
-                value={formData.goalAmount || ''}
-                onChange={(e) => setFormData({ ...formData, goalAmount: Number(e.target.value) || undefined })}
+                type="text"
+                value={displayGoalAmount}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9]/g, '');
+                  if (value) {
+                    const formatted = formatNumberWithCommas(value);
+                    setDisplayGoalAmount(formatted);
+                    setFormData({ ...formData, goalAmount: parseNumber(formatted) });
+                  } else {
+                    setDisplayGoalAmount('');
+                    setFormData({ ...formData, goalAmount: undefined });
+                  }
+                }}
                 className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="1000000"
+                placeholder="1,000,000"
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1">What&apos;s your future growth or income goal?</p>
           </div>
 
           {/* Time Horizon */}
@@ -639,9 +683,19 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
               <input
-                type="number"
-                value={formData.monthlyContribution || ''}
-                onChange={(e) => setFormData({ ...formData, monthlyContribution: Number(e.target.value) || 0 })}
+                type="text"
+                value={displayMonthlyContribution}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9]/g, '');
+                  if (value) {
+                    const formatted = formatNumberWithCommas(value);
+                    setDisplayMonthlyContribution(formatted);
+                    setFormData({ ...formData, monthlyContribution: parseNumber(formatted) });
+                  } else {
+                    setDisplayMonthlyContribution('');
+                    setFormData({ ...formData, monthlyContribution: 0 });
+                  }
+                }}
                 className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 placeholder="500"
               />
