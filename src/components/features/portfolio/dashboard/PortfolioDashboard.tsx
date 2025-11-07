@@ -299,7 +299,7 @@ export default function PortfolioDashboard() {
                   }`}>
                     3
                   </span>
-                  <span className="text-xs sm:text-sm">Analyze</span>
+                  <span className="text-xs sm:text-sm">Analysis</span>
                 </span>
               </button>
             </nav>

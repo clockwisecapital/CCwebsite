@@ -17,8 +17,6 @@ interface ReviewTabProps {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId, videoId, onReset, onNavigateToAnalyze }: ReviewTabProps) {
-  // Default to collapsed on mobile (screens < 768px)
-  const [showPortfolioIntelligence, setShowPortfolioIntelligence] = useState(true);
   const [showAnalysisAndSync, setShowAnalysisAndSync] = useState(false);
   const [cycleAnalysisTab, setCycleAnalysisTab] = useState<'cycle' | 'portfolio' | 'goal'>('goal');
   const [showVideoReadyModal, setShowVideoReadyModal] = useState(false);
@@ -129,29 +127,8 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
 
   return (
     <div className="space-y-8">
-      {/* 1. PORTFOLIO INTELLIGENCE COMPLETE */}
+      {/* Portfolio Intelligence with Dynamic Kronos Recommendations */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <button
-          onClick={() => setShowPortfolioIntelligence(!showPortfolioIntelligence)}
-          className="w-full border-b border-gray-200 bg-gray-50 px-6 py-4 flex items-center justify-between hover:bg-gray-100 transition-colors"
-        >
-          <div className="text-left">
-            <h3 className="text-lg font-semibold text-gray-900">Portfolio Intelligence Complete</h3>
-            <p className="text-sm text-gray-600 mt-1">AI-powered real-time investing intelligence based on the cycles driving markets</p>
-          </div>
-          <svg
-            className={`w-5 h-5 text-gray-600 transform transition-transform flex-shrink-0 ml-4 ${
-              showPortfolioIntelligence ? 'rotate-180' : ''
-            }`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        {showPortfolioIntelligence && (
-          <>
             <div className="border-b border-gray-200">
               <nav className="flex -mb-px">
             <button
@@ -207,6 +184,37 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
           </nav>
         </div>
 
+            {/* Dynamic Kronos Recommendation - Changes based on active tab */}
+            <div className="p-6 border-b border-gray-200">
+              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-4 md:p-6 border border-blue-100 shadow-sm">
+                <div className="flex items-start gap-3 md:gap-4">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 md:w-14 md:h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-md">
+                      <svg className="w-6 h-6 md:w-7 md:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-base md:text-lg font-bold text-blue-900 mb-1 md:mb-2">Kronos Recommendation</div>
+                    <p className="text-sm md:text-base text-gray-700 leading-relaxed">
+                      {cycleAnalysisTab === 'goal' && goalAnalysis.recommendation}
+                      {cycleAnalysisTab === 'cycle' && (
+                        <>
+                          Based on the current {cycleData.market.phase} phase of the {cycleData.market.name}, our analysis suggests a {cycleData.market.phasePercent < 50 ? 'cautious' : 'strategic'} approach. Historical patterns indicate {(cycleData.market.sp500Backtest.expectedReturn * 100).toFixed(1)}% median returns with significant volatility potential.
+                        </>
+                      )}
+                      {cycleAnalysisTab === 'portfolio' && (
+                        <>
+                          Your portfolio shows a {((portfolioAnalysis.current.overall.expectedReturn) * 100).toFixed(1)}% median expected return with {portfolioAnalysis.current.overall.confidence} confidence. Given the current market conditions and cycle positioning, we recommend {portfolioAnalysis.current.overall.expectedReturn > 0.15 ? 'maintaining your current allocation while monitoring for rebalancing opportunities' : 'reviewing your risk exposure and considering strategic adjustments'}.
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Tab Content */}
             <div className="p-6">
               {cycleAnalysisTab === 'cycle' && (
@@ -220,6 +228,7 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                 <PortfolioTab 
                   portfolioAnalysis={portfolioAnalysis}
                   onBack={handleBack}
+                  onNavigateToAnalysis={onNavigateToAnalyze}
                 />
               )}
               {cycleAnalysisTab === 'goal' && (
@@ -229,8 +238,6 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                 />
               )}
             </div>
-          </>
-        )}
       </div>
 
       {/* 2. Portfolio Intelligence Results */}

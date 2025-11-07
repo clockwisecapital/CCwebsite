@@ -9,9 +9,10 @@ interface PortfolioTabProps {
     current: PortfolioSimulation;
   };
   onBack?: () => void;
+  onNavigateToAnalysis?: () => void;
 }
 
-export default function PortfolioTab({ portfolioAnalysis, onBack }: PortfolioTabProps) {
+export default function PortfolioTab({ portfolioAnalysis, onBack, onNavigateToAnalysis }: PortfolioTabProps) {
   // Filter to only show cycles that exist in the data
   const allCycles = [
     { key: 'market' as const, name: 'Market (S&P 500) Cycle' },
@@ -56,16 +57,21 @@ export default function PortfolioTab({ portfolioAnalysis, onBack }: PortfolioTab
 
       {/* Video Section */}
       <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-4 md:p-8 border border-gray-200 shadow-sm">
-        <div className="aspect-video bg-white rounded-xl flex items-center justify-center shadow-inner">
-          <div className="text-center px-4">
-            <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-3 md:mb-4 bg-white rounded-full flex items-center justify-center shadow-lg">
-              <svg className="w-8 h-8 md:w-10 md:h-10 text-cyan-500" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            </div>
-            <p className="text-sm md:text-base font-semibold text-gray-700">Video Placeholder</p>
-            <p className="text-xs md:text-sm text-gray-500 mt-1">Portfolio Analysis Explainer Video</p>
-          </div>
+        <div className="aspect-video bg-black rounded-xl overflow-hidden shadow-inner">
+          <video
+            controls
+            className="w-full h-full object-contain"
+            preload="metadata"
+          >
+            <source src="/Porfolio%20Tab-with-captions.mp4" type="video/mp4" />
+            <track
+              kind="captions"
+              src="/Porfolio%20Tab-with-captions.mp4"
+              label="English"
+              default
+            />
+            Your browser does not support the video tag.
+          </video>
         </div>
       </div>
 
@@ -83,28 +89,9 @@ export default function PortfolioTab({ portfolioAnalysis, onBack }: PortfolioTab
         />
       </div>
 
-      {/* Kronos Recommendation */}
-      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-4 md:p-6 border border-blue-100 shadow-sm">
-        <div className="flex items-start gap-3 md:gap-4">
-          <div className="flex-shrink-0">
-            <div className="w-12 h-12 md:w-14 md:h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-md">
-              <svg className="w-6 h-6 md:w-7 md:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-            </div>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-base md:text-lg font-bold text-blue-900 mb-1 md:mb-2">Kronos Recommendation</div>
-            <p className="text-sm md:text-base text-gray-700 leading-relaxed">
-              Your portfolio shows a {formatPercent(overallResult.expectedReturn)} median expected return with {overallResult.confidence} confidence. Given the current market conditions and cycle positioning, we recommend {overallResult.expectedReturn > 0.15 ? 'maintaining your current allocation while monitoring for rebalancing opportunities' : 'reviewing your risk exposure and considering strategic adjustments'}.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Back Button */}
-      {onBack && (
-        <div className="flex justify-start">
+      {/* Navigation Buttons */}
+      <div className="flex flex-col sm:flex-row gap-3 sm:justify-between">
+        {onBack && (
           <button
             onClick={onBack}
             className="w-full sm:w-auto px-6 py-3 bg-white border border-gray-300 text-gray-700 text-sm md:text-base font-semibold rounded-xl hover:bg-gray-50 transition-all shadow-sm hover:shadow flex items-center justify-center gap-2"
@@ -114,8 +101,19 @@ export default function PortfolioTab({ portfolioAnalysis, onBack }: PortfolioTab
             </svg>
             Back: Cycle
           </button>
-        </div>
-      )}
+        )}
+        {onNavigateToAnalysis && (
+          <button
+            onClick={onNavigateToAnalysis}
+            className="w-full sm:w-auto px-6 md:px-8 py-3 md:py-3.5 bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-sm md:text-base font-semibold rounded-xl hover:from-cyan-700 hover:to-blue-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 sm:ml-auto"
+          >
+            Next: Watch Analysis Video
+            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        )}
+      </div>
 
       {/* Portfolio Performance Overview */}
       <div className="bg-white rounded-2xl p-4 md:p-6 border border-gray-200 shadow-sm">
