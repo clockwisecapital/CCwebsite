@@ -121,16 +121,21 @@ export default function CycleTab({ cycleData, onNext, onBack }: CycleTabProps) {
 
       {/* Video Section */}
       <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-4 md:p-8 border border-gray-200 shadow-sm">
-        <div className="aspect-video bg-white rounded-xl flex items-center justify-center shadow-inner">
-          <div className="text-center px-4">
-            <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-3 md:mb-4 bg-white rounded-full flex items-center justify-center shadow-lg">
-              <svg className="w-8 h-8 md:w-10 md:h-10 text-cyan-500" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            </div>
-            <p className="text-sm md:text-base font-semibold text-gray-700">Video Placeholder</p>
-            <p className="text-xs md:text-sm text-gray-500 mt-1">Cycle Analysis Explainer Video</p>
-          </div>
+        <div className="aspect-video bg-black rounded-xl overflow-hidden shadow-inner">
+          <video
+            controls
+            className="w-full h-full object-contain"
+            preload="metadata"
+          >
+            <source src="/Cycle-Tab-with-captions.mp4" type="video/mp4" />
+            <track
+              kind="captions"
+              src="/Cycle-Tab-with-captions.mp4"
+              label="English"
+              default
+            />
+            Your browser does not support the video tag.
+          </video>
         </div>
       </div>
 
