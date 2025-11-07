@@ -13,8 +13,18 @@ export default function VideoPlayer({ videoId, onVideoReady }: VideoPlayerProps)
   const [error, setError] = useState<string | null>(null);
   const hasNotified = useRef(false); // Track if we've already called onVideoReady
 
+  console.log('🎥 VideoPlayer rendered with videoId:', videoId, 'status:', status);
+
   useEffect(() => {
     if (!videoId) return;
+    
+    // Set timeout to show fallback video after 90 seconds
+    const fallbackTimeout = setTimeout(() => {
+      if (status !== 'completed') {
+        console.log('⏱️ Video generation timeout - showing fallback video');
+        setError('Video generation timeout');
+      }
+    }, 90000); // 90 seconds
 
     const checkVideoStatus = async (intervalId: NodeJS.Timeout) => {
       try {
@@ -27,6 +37,7 @@ export default function VideoPlayer({ videoId, onVideoReady }: VideoPlayerProps)
           if (data.status === 'completed' && data.videoUrl) {
             setVideoUrl(data.videoUrl);
             clearInterval(intervalId);
+            clearTimeout(fallbackTimeout);
             console.log('✅ Video ready:', data.videoUrl);
             // Notify parent that video is ready (only once)
             if (onVideoReady && !hasNotified.current) {
@@ -36,6 +47,7 @@ export default function VideoPlayer({ videoId, onVideoReady }: VideoPlayerProps)
           } else if (data.status === 'failed') {
             setError('Video generation failed');
             clearInterval(intervalId);
+            clearTimeout(fallbackTimeout);
           }
         }
       } catch (err) {
@@ -53,22 +65,49 @@ export default function VideoPlayer({ videoId, onVideoReady }: VideoPlayerProps)
     // Cleanup on unmount
     return () => {
       if (pollInterval) clearInterval(pollInterval);
+      clearTimeout(fallbackTimeout);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoId]); // Removed onVideoReady from deps to prevent re-running
 
   if (!videoId) {
-    return null;
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-center gap-3 text-gray-600">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-sm font-medium">No video ID available. Please complete the intake and analysis first.</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
+    // Show fallback video when API fails
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="flex items-center gap-3 text-amber-600">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          <p className="text-sm font-medium">Video unavailable at this time</p>
+      <div className="relative w-full bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden">
+        <div className="relative aspect-video">
+          <video
+            controls
+            autoPlay
+            muted
+            playsInline
+            className="w-full h-full object-cover"
+            poster="/placeholder-video.jpg"
+          >
+            <source src="/8cbbd46caa4a47e19e58b99801b272d3.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+        </div>
+        {/* Info banner */}
+        <div className="bg-amber-50 border-t border-amber-200 px-6 py-3">
+          <div className="flex items-center gap-2 text-amber-800">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm font-medium">Showing sample analysis video (personalized video temporarily unavailable)</p>
+          </div>
         </div>
       </div>
     );
