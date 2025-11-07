@@ -124,6 +124,9 @@ export default function CycleTab({ cycleData, onNext, onBack }: CycleTabProps) {
         <div className="aspect-video bg-black rounded-xl overflow-hidden shadow-inner">
           <video
             controls
+            autoPlay
+            muted
+            playsInline
             className="w-full h-full object-contain"
             preload="metadata"
           >

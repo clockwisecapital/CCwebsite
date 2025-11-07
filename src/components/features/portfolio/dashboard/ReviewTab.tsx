@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { IntakeFormData, AnalysisResult } from './PortfolioDashboard';
 import CycleTab from './CycleTab';
 import PortfolioTab from './PortfolioTab';
@@ -16,40 +16,9 @@ interface ReviewTabProps {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId, videoId, onReset, onNavigateToAnalyze }: ReviewTabProps) {
+export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId: _conversationId, videoId: _videoId, onReset, onNavigateToAnalyze }: ReviewTabProps) {
   const [showAnalysisAndSync, setShowAnalysisAndSync] = useState(false);
   const [cycleAnalysisTab, setCycleAnalysisTab] = useState<'cycle' | 'portfolio' | 'goal'>('goal');
-  const [showVideoReadyModal, setShowVideoReadyModal] = useState(false);
-  const [previousVideoId, setPreviousVideoId] = useState<string | null>(null);
-
-  // Show video ready modal ONLY when video completes (transitions from null to a value)
-  // and ONLY if it has never been shown before (persisted in localStorage)
-  useEffect(() => {
-    if (!videoId) return; // No video yet
-
-    const modalKey = `video-modal-shown-${videoId}`;
-    const hasShownBefore = localStorage.getItem(modalKey);
-
-    // Only show if:
-    // 1. We haven't shown this specific video's modal before (checked via localStorage)
-    // 2. This is a new video (different from previous videoId)
-    // 3. We're transitioning from no video to having a video
-    if (!hasShownBefore && previousVideoId !== videoId) {
-      setShowVideoReadyModal(true);
-      localStorage.setItem(modalKey, 'true');
-      setPreviousVideoId(videoId);
-    }
-  }, [videoId, previousVideoId]);
-
-  const scrollToVideo = () => {
-    setShowVideoReadyModal(false);
-    // Navigate to Analyze tab if available, otherwise scroll to video
-    if (onNavigateToAnalyze) {
-      onNavigateToAnalyze();
-    } else {
-      document.getElementById('video-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  };
 
   const handleNext = () => {
     if (cycleAnalysisTab === 'goal') {
@@ -376,44 +345,6 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
           </a>
         </div>
       </div>
-
-      {/* Video Ready Notification Modal */}
-      {showVideoReadyModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-8 text-center">
-            {/* Success Icon */}
-            <div className="mx-auto mb-6 w-16 h-16 bg-gradient-to-br from-teal-500 to-blue-600 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-
-            {/* Message */}
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">
-              Your Video is Ready!
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Kronos has finished analyzing your portfolio. Click below to watch your personalized analysis.
-            </p>
-
-            {/* Buttons */}
-            <div className="space-y-3">
-              <button
-                onClick={scrollToVideo}
-                className="w-full px-6 py-3 bg-gradient-to-r from-teal-600 to-blue-600 text-white font-semibold rounded-lg hover:from-teal-700 hover:to-blue-700 transition-all shadow-lg"
-              >
-                Watch Now
-              </button>
-              <button
-                onClick={() => setShowVideoReadyModal(false)}
-                className="w-full px-6 py-3 text-gray-600 font-medium hover:text-gray-900 transition-colors"
-              >
-                Watch Later
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

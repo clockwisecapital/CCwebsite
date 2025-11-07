@@ -11,6 +11,9 @@ export default function AIAvatarSection() {
             <div className="relative aspect-video">
               <video
                 controls
+                autoPlay
+                muted
+                playsInline
                 className="w-full h-full object-cover"
                 poster="/placeholder-video.jpg"
               >

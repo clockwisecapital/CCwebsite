@@ -55,6 +55,9 @@ export default function GoalTab({ goalAnalysis, onNext }: GoalTabProps) {
         <div className="aspect-video bg-black rounded-xl overflow-hidden shadow-inner">
           <video
             controls
+            autoPlay
+            muted
+            playsInline
             className="w-full h-full object-contain"
             preload="metadata"
           >
