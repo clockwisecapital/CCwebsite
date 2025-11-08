@@ -17,7 +17,7 @@ export default function AIAvatarSection() {
                 className="w-full h-full object-cover"
                 poster="/placeholder-video.jpg"
               >
-                <source src="/kronos-intro-test.mp4" type="video/mp4" />
+                <source src="/kronos-intro-no-watermark.mp4" type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
             </div>
@@ -43,14 +43,14 @@ export default function AIAvatarSection() {
                   <div className="flex items-start gap-2">
                     <span className="text-teal-400 font-bold">-</span>
                     <p className="text-gray-300">
-                      <span className="font-semibold text-white">Portfolio Impact</span>
+                      <span className="font-semibold text-white">Your Portfolio Impact</span>
                     </p>
                   </div>
 
                   <div className="flex items-start gap-2">
                     <span className="text-teal-400 font-bold">-</span>
                     <p className="text-gray-300">
-                      <span className="font-semibold text-white">Goals Impact</span>
+                      <span className="font-semibold text-white">Your Goals Impact</span>
                     </p>
                   </div>
                 </div>
