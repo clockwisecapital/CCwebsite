@@ -18,20 +18,20 @@ interface ReviewTabProps {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId: _conversationId, videoId: _videoId, onReset, onNavigateToAnalyze }: ReviewTabProps) {
   const [showAnalysisAndSync, setShowAnalysisAndSync] = useState(false);
-  const [cycleAnalysisTab, setCycleAnalysisTab] = useState<'cycle' | 'portfolio' | 'goal'>('goal');
+  const [cycleAnalysisTab, setCycleAnalysisTab] = useState<'market' | 'portfolio' | 'goal'>('goal');
 
   const handleNext = () => {
     if (cycleAnalysisTab === 'goal') {
-      setCycleAnalysisTab('cycle');
-    } else if (cycleAnalysisTab === 'cycle') {
       setCycleAnalysisTab('portfolio');
+    } else if (cycleAnalysisTab === 'portfolio') {
+      setCycleAnalysisTab('market');
     }
   };
 
   const handleBack = () => {
-    if (cycleAnalysisTab === 'portfolio') {
-      setCycleAnalysisTab('cycle');
-    } else if (cycleAnalysisTab === 'cycle') {
+    if (cycleAnalysisTab === 'market') {
+      setCycleAnalysisTab('portfolio');
+    } else if (cycleAnalysisTab === 'portfolio') {
       setCycleAnalysisTab('goal');
     }
   };
@@ -118,23 +118,6 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
             </button>
 
             <button
-              onClick={() => setCycleAnalysisTab('cycle')}
-              className={`flex-1 py-3 md:py-4 px-2 md:px-6 text-center font-semibold transition-colors ${
-                cycleAnalysisTab === 'cycle'
-                  ? 'border-b-2 border-secondary-teal text-secondary-teal bg-teal-50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <div className="flex items-center justify-center gap-1 md:gap-2">
-                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
-                </svg>
-                <span className="text-sm md:text-base">Cycle</span>
-              </div>
-              <div className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 hidden sm:block">6 Cycles</div>
-            </button>
-
-            <button
               onClick={() => setCycleAnalysisTab('portfolio')}
               className={`flex-1 py-3 md:py-4 px-2 md:px-6 text-center font-semibold transition-colors ${
                 cycleAnalysisTab === 'portfolio'
@@ -150,13 +133,30 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
               </div>
               <div className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 hidden sm:block">Monte Carlo</div>
             </button>
+
+            <button
+              onClick={() => setCycleAnalysisTab('market')}
+              className={`flex-1 py-3 md:py-4 px-2 md:px-6 text-center font-semibold transition-colors ${
+                cycleAnalysisTab === 'market'
+                  ? 'border-b-2 border-secondary-teal text-secondary-teal bg-teal-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-1 md:gap-2">
+                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                </svg>
+                <span className="text-sm md:text-base">Market</span>
+              </div>
+              <div className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 hidden sm:block">6 Cycles</div>
+            </button>
           </nav>
         </div>
 
-            {/* Dynamic Kronos Recommendation - Changes based on active tab */}
+            {/* Dynamic Kronos Recommendation with Question - Changes based on active tab */}
             <div className="p-6 border-b border-gray-200">
               <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-4 md:p-6 border border-blue-100 shadow-sm">
-                <div className="flex items-start gap-3 md:gap-4">
+                <div className="flex items-start gap-3 md:gap-4 mb-6">
                   <div className="flex-shrink-0">
                     <div className="w-12 h-12 md:w-14 md:h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-md">
                       <svg className="w-6 h-6 md:w-7 md:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,7 +168,7 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                     <div className="text-base md:text-lg font-bold text-blue-900 mb-1 md:mb-2">Kronos Recommendation</div>
                     <p className="text-sm md:text-base text-gray-700 leading-relaxed">
                       {cycleAnalysisTab === 'goal' && goalAnalysis.recommendation}
-                      {cycleAnalysisTab === 'cycle' && (
+                      {cycleAnalysisTab === 'market' && (
                         <>
                           Based on the current {cycleData.market.phase} phase of the {cycleData.market.name}, our analysis suggests a {cycleData.market.phasePercent < 50 ? 'cautious' : 'strategic'} approach. Historical patterns indicate {(cycleData.market.sp500Backtest.expectedReturn * 100).toFixed(1)}% median returns with significant volatility potential.
                         </>
@@ -181,12 +181,26 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                     </p>
                   </div>
                 </div>
+
+                {/* Conversational Question - Inside Kronos Recommendation */}
+                <div className="border-t border-blue-200 pt-4 mt-4">
+                  <p className="text-gray-800 text-base md:text-lg font-semibold leading-relaxed mb-2">
+                    {cycleAnalysisTab === 'goal' && 'How important is this Goal?'}
+                    {cycleAnalysisTab === 'portfolio' && 'Would it be helpful to speak with a Clockwise Approved Advisor about your Portfolio Risks?'}
+                    {cycleAnalysisTab === 'market' && 'How confident are you that this portfolio will hit your Goal?'}
+                  </p>
+                  <p className="text-gray-600 text-xs md:text-sm">
+                    {cycleAnalysisTab === 'goal' && 'Scale: Nice-to-have (1) - Critical (10)'}
+                    {cycleAnalysisTab === 'portfolio' && 'Scale: Not Helpful (1) - Very Helpful (10)'}
+                    {cycleAnalysisTab === 'market' && 'Scale: Not Confident (1) - Extremely Confident (10)'}
+                  </p>
+                </div>
               </div>
             </div>
 
             {/* Tab Content */}
             <div className="p-6">
-              {cycleAnalysisTab === 'cycle' && (
+              {cycleAnalysisTab === 'market' && (
                 <CycleTab 
                   cycleData={cycleData} 
                   onNext={handleNext}
@@ -197,7 +211,7 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                 <PortfolioTab 
                   portfolioAnalysis={portfolioAnalysis}
                   onBack={handleBack}
-                  onNavigateToAnalysis={onNavigateToAnalyze}
+                  onNext={handleNext}
                 />
               )}
               {cycleAnalysisTab === 'goal' && (

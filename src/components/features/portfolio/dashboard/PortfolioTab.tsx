@@ -9,10 +9,10 @@ interface PortfolioTabProps {
     current: PortfolioSimulation;
   };
   onBack?: () => void;
-  onNavigateToAnalysis?: () => void;
+  onNext?: () => void;
 }
 
-export default function PortfolioTab({ portfolioAnalysis, onBack, onNavigateToAnalysis }: PortfolioTabProps) {
+export default function PortfolioTab({ portfolioAnalysis, onBack, onNext }: PortfolioTabProps) {
   // Filter to only show cycles that exist in the data
   const allCycles = [
     { key: 'market' as const, name: 'Market (S&P 500) Cycle' },
@@ -48,48 +48,57 @@ export default function PortfolioTab({ portfolioAnalysis, onBack, onNavigateToAn
 
   return (
     <div className="space-y-6 md:space-y-8">
-      {/* Question (Call to Action) */}
-      <div className="bg-gradient-to-r from-cyan-500 via-blue-500 to-blue-600 rounded-2xl p-5 md:p-6 shadow-md">
-        <p className="text-lg md:text-xl font-semibold text-white leading-snug m-0">
-          What keeps you up at night about this portfolio?
-        </p>
-      </div>
-
-      {/* Video Section */}
-      <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-4 md:p-8 border border-gray-200 shadow-sm">
-        <div className="aspect-video bg-black rounded-xl overflow-hidden shadow-inner">
-          <video
-            controls
-            autoPlay
-            muted
-            playsInline
-            className="w-full h-full object-contain"
-            preload="metadata"
-          >
-            <source src="/Porfolio%20Tab-with-captions.mp4" type="video/mp4" />
-            <track
-              kind="captions"
-              src="/Porfolio%20Tab-with-captions.mp4"
-              label="English"
-              default
-            />
-            Your browser does not support the video tag.
-          </video>
+      {/* Slider Input */}
+      <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+        <label className="block text-sm font-medium text-gray-700 mb-4">
+          Your Answer
+        </label>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-600 whitespace-nowrap">Not Helpful</span>
+          <input
+            type="range"
+            min="1"
+            max="10"
+            defaultValue="5"
+            className="flex-1 h-2 bg-teal-200 rounded-lg appearance-none cursor-pointer accent-teal-600"
+          />
+          <span className="text-sm text-gray-600 whitespace-nowrap">Very Helpful</span>
+        </div>
+        <div className="flex justify-between text-xs text-gray-500 mt-2 px-2">
+          {[1,2,3,4,5,6,7,8,9,10].map(n => <span key={n}>{n}</span>)}
         </div>
       </div>
 
       {/* Text Input Section */}
       <div className="bg-white rounded-2xl p-4 md:p-6 border border-gray-200 shadow-sm">
         <label className="block text-sm md:text-base font-semibold text-gray-700 mb-2 md:mb-3">
-          Your Response
+          Additional thoughts (Optional)
         </label>
         <textarea
           value={userResponse}
           onChange={(e) => setUserResponse(e.target.value)}
           rows={4}
           className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none transition-all"
-          placeholder=""
+          placeholder="Tell us about your portfolio concerns..."
         />
+      </div>
+
+      {/* Talk to Advisor Button */}
+      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-6 text-white">
+        <p className="text-teal-100 mb-4">
+          Want personalized guidance? Work with a Clockwise Approved Advisor.
+        </p>
+        <a
+          href="https://clockwisecapital.com/contact"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-white text-teal-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors"
+        >
+          Talk to an Advisor
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
       </div>
 
       {/* Navigation Buttons */}
@@ -102,15 +111,15 @@ export default function PortfolioTab({ portfolioAnalysis, onBack, onNavigateToAn
             <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back: Cycle
+            Back: Goal
           </button>
         )}
-        {onNavigateToAnalysis && (
+        {onNext && (
           <button
-            onClick={onNavigateToAnalysis}
+            onClick={onNext}
             className="w-full sm:w-auto px-6 md:px-8 py-3 md:py-3.5 bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-sm md:text-base font-semibold rounded-xl hover:from-cyan-700 hover:to-blue-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 sm:ml-auto"
           >
-            Next: Watch Analysis Video
+            Next: Market Analysis
             <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>

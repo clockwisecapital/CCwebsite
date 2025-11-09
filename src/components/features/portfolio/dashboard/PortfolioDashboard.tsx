@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import AIAvatarSection from './AIAvatarSection';
 import IntakeTab from './IntakeTab';
 import ReviewTab from './ReviewTab';
-import ThinkingModal from './ThinkingModal';
 import VideoPlayer from './VideoPlayer';
 
 export interface IntakeFormData {
@@ -12,6 +11,9 @@ export interface IntakeFormData {
   age?: number;
   experienceLevel: 'Beginner' | 'Intermediate' | 'Advanced';
   riskTolerance: 'low' | 'medium' | 'high';
+  firstName?: string;
+  lastName?: string;
+  email?: string;
   
   // Financial Goals
   goalAmount?: number;              // Target goal amount in dollars
@@ -64,27 +66,14 @@ export default function PortfolioDashboard() {
   const [intakeData, setIntakeData] = useState<IntakeFormData | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [showThinkingModal, setShowThinkingModal] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [emailData, setEmailData] = useState<{ email: string; firstName: string; lastName: string } | null>(null);
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [videoId, setVideoId] = useState<string | null>(null);
-  const [showAdvisorPopup, setShowAdvisorPopup] = useState(false);
 
   // Effect to scroll to top when switching tabs
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [activeTab]);
-
-  // Effect to show advisor popup after 30 seconds on Review or Analyze tabs
-  useEffect(() => {
-    if (activeTab !== 'review' && activeTab !== 'analyze') return;
-
-    const timer = setTimeout(() => {
-      setShowAdvisorPopup(true);
-    }, 30000); // 30 seconds
-
-    return () => clearTimeout(timer);
   }, [activeTab]);
 
   // Effect to start video generation immediately when email submitted (don't wait for analysis)
@@ -117,12 +106,11 @@ export default function PortfolioDashboard() {
     }
   }, [emailData, analysisResult, videoId]);
 
-  // Effect to show review tab only when BOTH email submitted AND analysis complete
+  // Effect to show review tab when analysis is complete
   useEffect(() => {
     if (emailData && analysisComplete && analysisResult && conversationId) {
-      // User has submitted email and analysis is complete
+      // Analysis is complete, update email and show results
       updateEmailOnBackend(conversationId, emailData);
-      setShowThinkingModal(false);
       setActiveTab('review');
     }
   }, [emailData, analysisComplete, analysisResult, conversationId]);
@@ -130,20 +118,33 @@ export default function PortfolioDashboard() {
   const handleIntakeSubmit = async (data: IntakeFormData) => {
     setIntakeData(data);
     setIsAnalyzing(true);
-    setShowThinkingModal(true);
     setAnalysisComplete(false);
-    setEmailData(null);
+
+    // Personal info should always be collected in the intake form now
+    if (data.firstName && data.lastName && data.email) {
+      setEmailData({
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName
+      });
+    }
 
     try {
       // Start both APIs in parallel and wait for both to complete
       console.log('🚀 Starting parallel analysis (dashboard + cycles)...');
+      
+      const userData = { 
+        email: data.email || 'temp@temp.com', 
+        firstName: data.firstName || 'Temp', 
+        lastName: data.lastName || 'User' 
+      };
       
       const [dashboardResponse, cycleResponse] = await Promise.all([
         fetch('/api/portfolio/analyze-dashboard', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userData: { email: 'temp@temp.com', firstName: 'Temp', lastName: 'User' },
+            userData,
             intakeData: data,
           }),
         }),
@@ -182,7 +183,6 @@ export default function PortfolioDashboard() {
     } catch (error) {
       console.error('Analysis error:', error);
       alert('Analysis failed. Please try again.');
-      setShowThinkingModal(false);
       // Reset state to allow retry
       setAnalysisResult(null);
       setAnalysisComplete(false);
@@ -206,11 +206,6 @@ export default function PortfolioDashboard() {
       console.error('Failed to update email:', error);
       // Non-blocking error, continue to show results
     }
-  };
-
-  const handleEmailSubmit = (userData: { email: string; firstName: string; lastName: string }) => {
-    // Just set the email data - useEffect will handle video generation
-    setEmailData(userData);
   };
 
   const handleReset = () => {
@@ -367,60 +362,6 @@ export default function PortfolioDashboard() {
         </div>
       </div>
 
-      {/* Advisor Popup - Chatbot Style */}
-      {showAdvisorPopup && (
-        <div className="fixed bottom-6 right-6 z-50 transition-all duration-500 ease-out animate-in slide-in-from-bottom-4 fade-in">
-          <div className="bg-white rounded-lg shadow-2xl border border-gray-200 w-80 overflow-hidden">
-            {/* Close Button */}
-            <button
-              onClick={() => setShowAdvisorPopup(false)}
-              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            {/* Content */}
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-gradient-to-r from-teal-600 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-                <div>
-                  <h4 className="font-bold text-gray-900">Need Help?</h4>
-                  <p className="text-xs text-gray-500">Talk to an advisor</p>
-                </div>
-              </div>
-
-              <p className="text-sm text-gray-700 mb-4">
-                Ready to optimize your portfolio strategy? Work 1:1 with a Clockwise Capital strategist.
-              </p>
-
-              <a
-                href="https://clockwisecapital.com/contact"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full px-4 py-3 bg-gradient-to-r from-teal-600 to-blue-600 text-white font-semibold rounded-lg hover:from-teal-700 hover:to-blue-700 transition-all text-center"
-              >
-                Match me with an advisor
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Thinking Modal */}
-      {showThinkingModal && (
-        <ThinkingModal
-          onSubmit={handleEmailSubmit}
-          onCancel={() => setShowThinkingModal(false)}
-          isAnalyzing={isAnalyzing}
-          analysisComplete={analysisComplete}
-        />
-      )}
     </div>
   );
 }
