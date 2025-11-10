@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import type { GoalAnalysis } from '@/types/cycleAnalysis';
 import CollapsibleSection from './CollapsibleSection';
 
@@ -10,7 +9,6 @@ interface GoalTabProps {
 }
 
 export default function GoalTab({ goalAnalysis, onNext }: GoalTabProps) {
-  const [userResponse, setUserResponse] = useState('');
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -64,19 +62,20 @@ export default function GoalTab({ goalAnalysis, onNext }: GoalTabProps) {
         </div>
       </div>
 
-      {/* Text Input Section */}
-      <div className="bg-white rounded-2xl p-4 md:p-6 border border-gray-200 shadow-sm">
-        <label className="block text-sm md:text-base font-semibold text-gray-700 mb-2 md:mb-3">
-          Additional thoughts (Optional)
-        </label>
-        <textarea
-          value={userResponse}
-          onChange={(e) => setUserResponse(e.target.value)}
-          rows={4}
-          className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none transition-all"
-          placeholder="Tell us more about your goal..."
-        />
-      </div>
+      {/* Next Button */}
+      {onNext && (
+        <div className="flex justify-end">
+          <button
+            onClick={onNext}
+            className="w-full md:w-auto px-6 md:px-8 py-3 md:py-3.5 bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-sm md:text-base font-semibold rounded-xl hover:from-cyan-700 hover:to-blue-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+          >
+            Next: Portfolio Analysis
+            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Talk to Advisor Button */}
       <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-4 md:p-6 text-white">
@@ -95,21 +94,6 @@ export default function GoalTab({ goalAnalysis, onNext }: GoalTabProps) {
           </svg>
         </a>
       </div>
-
-      {/* Next Button */}
-      {onNext && (
-        <div className="flex justify-end">
-          <button
-            onClick={onNext}
-            className="w-full md:w-auto px-6 md:px-8 py-3 md:py-3.5 bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-sm md:text-base font-semibold rounded-xl hover:from-cyan-700 hover:to-blue-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-          >
-            Next: Portfolio Analysis
-            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
-      )}
 
       {/* Goal Overview - Additional Details */}
       <div className="bg-gradient-to-r from-teal-50 to-blue-50 rounded-lg p-6 border border-teal-200">

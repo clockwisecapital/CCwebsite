@@ -489,7 +489,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           <div className="space-y-4">
             <div className="bg-teal-50 border border-teal-200 rounded-2xl p-6 mb-6">
               <p className="text-gray-800 text-lg leading-relaxed">
-                What&apos;s your target goal amount? (Optional)
+                What&apos;s your target goal amount?
               </p>
             </div>
             <div>

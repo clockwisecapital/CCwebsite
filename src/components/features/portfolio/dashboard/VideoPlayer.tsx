@@ -149,14 +149,14 @@ export default function VideoPlayer({ videoId, onVideoReady }: VideoPlayerProps)
               <div className="flex items-start gap-2">
                 <span className="text-teal-400 font-bold">-</span>
                 <p className="text-gray-300">
-                  <span className="font-semibold text-white">Portfolio Impact</span>
+                  <span className="font-semibold text-white">Personalized Portfolio Risks</span>
                 </p>
               </div>
 
               <div className="flex items-start gap-2">
                 <span className="text-teal-400 font-bold">-</span>
                 <p className="text-gray-300">
-                  <span className="font-semibold text-white">Your Goals Impact</span>
+                  <span className="font-semibold text-white">Personalized Goal Risks</span>
                 </p>
               </div>
             </div>

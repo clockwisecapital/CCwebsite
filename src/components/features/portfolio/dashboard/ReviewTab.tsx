@@ -186,13 +186,13 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                 <div className="border-t border-blue-200 pt-3 md:pt-4 mt-3 md:mt-4">
                   <p className="text-gray-800 text-sm md:text-lg font-semibold leading-relaxed mb-1.5 md:mb-2">
                     {cycleAnalysisTab === 'goal' && 'How important is this Goal?'}
-                    {cycleAnalysisTab === 'portfolio' && 'Would it be helpful to speak with a Clockwise Approved Advisor about your Portfolio Risks?'}
-                    {cycleAnalysisTab === 'market' && 'How confident are you that this portfolio will hit your Goal?'}
+                    {cycleAnalysisTab === 'portfolio' && 'How confident are you that this portfolio will hit your Goal?'}
+                    {cycleAnalysisTab === 'market' && 'Would it be helpful to speak with a Clockwise Approved Advisor about your Portfolio Risks?'}
                   </p>
                   <p className="text-gray-600 text-xs md:text-sm">
                     {cycleAnalysisTab === 'goal' && 'Scale: Nice-to-have (1) - Critical (10)'}
-                    {cycleAnalysisTab === 'portfolio' && 'Scale: Not Helpful (1) - Very Helpful (10)'}
-                    {cycleAnalysisTab === 'market' && 'Scale: Not Confident (1) - Extremely Confident (10)'}
+                    {cycleAnalysisTab === 'portfolio' && 'Scale: Not Confident (1) - Very Confident (10)'}
+                    {cycleAnalysisTab === 'market' && 'Scale: Not Helpful (1) - Very Helpful (10)'}
                   </p>
                 </div>
               </div>

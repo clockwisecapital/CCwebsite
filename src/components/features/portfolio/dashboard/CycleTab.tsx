@@ -23,7 +23,6 @@ export default function CycleTab({ cycleData, onNext, onBack }: CycleTabProps) {
   const defaultCycle = cycleData.market ? 'market' : availableCycles[0] || 'country';
   
   const [selectedCycle, setSelectedCycle] = useState<keyof typeof cycleData>(defaultCycle);
-  const [userResponse, setUserResponse] = useState('');
   
   const currentCycle = cycleData[selectedCycle] || cycleData[availableCycles[0]] || cycleData.country; // Fallback to first available
 
@@ -118,7 +117,7 @@ export default function CycleTab({ cycleData, onNext, onBack }: CycleTabProps) {
           Your Answer
         </label>
         <div className="flex items-center gap-2 md:gap-4 mb-3">
-          <span className="text-xs md:text-sm text-gray-600 whitespace-nowrap flex-shrink-0">Not Confident</span>
+          <span className="text-xs md:text-sm text-gray-600 whitespace-nowrap flex-shrink-0">Not Helpful</span>
           <input
             type="range"
             min="1"
@@ -126,43 +125,11 @@ export default function CycleTab({ cycleData, onNext, onBack }: CycleTabProps) {
             defaultValue="5"
             className="flex-1 h-2 bg-teal-200 rounded-lg appearance-none cursor-pointer accent-teal-600 min-w-0"
           />
-          <span className="text-xs md:text-sm text-gray-600 whitespace-nowrap flex-shrink-0">Extremely Confident</span>
+          <span className="text-xs md:text-sm text-gray-600 whitespace-nowrap flex-shrink-0">Very Helpful</span>
         </div>
         <div className="flex justify-between text-[10px] md:text-xs text-gray-500 px-1 md:px-2">
           {[1,2,3,4,5,6,7,8,9,10].map(n => <span key={n} className="w-6 text-center">{n}</span>)}
         </div>
-      </div>
-
-      {/* Text Input Section */}
-      <div className="bg-white rounded-2xl p-4 md:p-6 border border-gray-200 shadow-sm">
-        <label className="block text-sm md:text-base font-semibold text-gray-700 mb-2 md:mb-3">
-          Additional thoughts (Optional)
-        </label>
-        <textarea
-          value={userResponse}
-          onChange={(e) => setUserResponse(e.target.value)}
-          rows={4}
-          className="w-full px-3 py-2 md:px-4 md:py-3 text-sm md:text-base border border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-transparent resize-none transition-all"
-          placeholder="Share your thoughts about market conditions..."
-        />
-      </div>
-
-      {/* Talk to Advisor Button */}
-      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-4 md:p-6 text-white">
-        <p className="text-sm md:text-base text-teal-100 mb-3 md:mb-4">
-          Want personalized guidance? Work with a Clockwise Approved Advisor.
-        </p>
-        <a
-          href="https://clockwisecapital.com/contact"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center justify-center gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-white text-teal-600 text-sm md:text-base font-semibold rounded-lg hover:bg-gray-100 transition-colors w-full md:w-auto"
-        >
-          Talk to an Advisor
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </a>
       </div>
 
       {/* Navigation Buttons */}
@@ -181,6 +148,24 @@ export default function CycleTab({ cycleData, onNext, onBack }: CycleTabProps) {
           )}
         </div>
       )}
+
+      {/* Talk to Advisor Button */}
+      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-4 md:p-6 text-white">
+        <p className="text-sm md:text-base text-teal-100 mb-3 md:mb-4">
+          Want personalized guidance? Work with a Clockwise Approved Advisor.
+        </p>
+        <a
+          href="https://clockwisecapital.com/contact"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-white text-teal-600 text-sm md:text-base font-semibold rounded-lg hover:bg-gray-100 transition-colors w-full md:w-auto"
+        >
+          Talk to an Advisor
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+      </div>
 
       {/* S&P 500 Historical Backtest */}
       <div className="bg-white rounded-2xl p-4 md:p-6 border border-gray-200 shadow-sm">
