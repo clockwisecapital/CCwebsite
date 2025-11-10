@@ -49,23 +49,23 @@ export default function PortfolioTab({ portfolioAnalysis, onBack, onNext }: Port
   return (
     <div className="space-y-6 md:space-y-8">
       {/* Slider Input */}
-      <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-        <label className="block text-sm font-medium text-gray-700 mb-4">
+      <div className="bg-white rounded-2xl p-4 md:p-6 border border-gray-200 shadow-sm">
+        <label className="block text-xs md:text-sm font-medium text-gray-700 mb-3 md:mb-4">
           Your Answer
         </label>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-600 whitespace-nowrap">Not Helpful</span>
+        <div className="flex items-center gap-2 md:gap-4 mb-3">
+          <span className="text-xs md:text-sm text-gray-600 whitespace-nowrap flex-shrink-0">Not Helpful</span>
           <input
             type="range"
             min="1"
             max="10"
             defaultValue="5"
-            className="flex-1 h-2 bg-teal-200 rounded-lg appearance-none cursor-pointer accent-teal-600"
+            className="flex-1 h-2 bg-teal-200 rounded-lg appearance-none cursor-pointer accent-teal-600 min-w-0"
           />
-          <span className="text-sm text-gray-600 whitespace-nowrap">Very Helpful</span>
+          <span className="text-xs md:text-sm text-gray-600 whitespace-nowrap flex-shrink-0">Very Helpful</span>
         </div>
-        <div className="flex justify-between text-xs text-gray-500 mt-2 px-2">
-          {[1,2,3,4,5,6,7,8,9,10].map(n => <span key={n}>{n}</span>)}
+        <div className="flex justify-between text-[10px] md:text-xs text-gray-500 px-1 md:px-2">
+          {[1,2,3,4,5,6,7,8,9,10].map(n => <span key={n} className="w-6 text-center">{n}</span>)}
         </div>
       </div>
 
@@ -84,15 +84,15 @@ export default function PortfolioTab({ portfolioAnalysis, onBack, onNext }: Port
       </div>
 
       {/* Talk to Advisor Button */}
-      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-6 text-white">
-        <p className="text-teal-100 mb-4">
+      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-4 md:p-6 text-white">
+        <p className="text-sm md:text-base text-teal-100 mb-3 md:mb-4">
           Want personalized guidance? Work with a Clockwise Approved Advisor.
         </p>
         <a
           href="https://clockwisecapital.com/contact"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-white text-teal-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors"
+          className="inline-flex items-center justify-center gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-white text-teal-600 text-sm md:text-base font-semibold rounded-lg hover:bg-gray-100 transition-colors w-full md:w-auto"
         >
           Talk to an Advisor
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

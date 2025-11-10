@@ -154,19 +154,19 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
         </div>
 
             {/* Dynamic Kronos Recommendation with Question - Changes based on active tab */}
-            <div className="p-6 border-b border-gray-200">
+            <div className="p-4 md:p-6 border-b border-gray-200">
               <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-4 md:p-6 border border-blue-100 shadow-sm">
-                <div className="flex items-start gap-3 md:gap-4 mb-6">
+                <div className="flex items-start gap-3 md:gap-4 mb-4 md:mb-6">
                   <div className="flex-shrink-0">
-                    <div className="w-12 h-12 md:w-14 md:h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-md">
-                      <svg className="w-6 h-6 md:w-7 md:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-10 h-10 md:w-14 md:h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-md">
+                      <svg className="w-5 h-5 md:w-7 md:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                       </svg>
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-base md:text-lg font-bold text-blue-900 mb-1 md:mb-2">Kronos Recommendation</div>
-                    <p className="text-sm md:text-base text-gray-700 leading-relaxed">
+                    <div className="text-sm md:text-lg font-bold text-blue-900 mb-1 md:mb-2">Kronos Recommendation</div>
+                    <p className="text-xs md:text-base text-gray-700 leading-relaxed">
                       {cycleAnalysisTab === 'goal' && goalAnalysis.recommendation}
                       {cycleAnalysisTab === 'market' && (
                         <>
@@ -183,8 +183,8 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                 </div>
 
                 {/* Conversational Question - Inside Kronos Recommendation */}
-                <div className="border-t border-blue-200 pt-4 mt-4">
-                  <p className="text-gray-800 text-base md:text-lg font-semibold leading-relaxed mb-2">
+                <div className="border-t border-blue-200 pt-3 md:pt-4 mt-3 md:mt-4">
+                  <p className="text-gray-800 text-sm md:text-lg font-semibold leading-relaxed mb-1.5 md:mb-2">
                     {cycleAnalysisTab === 'goal' && 'How important is this Goal?'}
                     {cycleAnalysisTab === 'portfolio' && 'Would it be helpful to speak with a Clockwise Approved Advisor about your Portfolio Risks?'}
                     {cycleAnalysisTab === 'market' && 'How confident are you that this portfolio will hit your Goal?'}
