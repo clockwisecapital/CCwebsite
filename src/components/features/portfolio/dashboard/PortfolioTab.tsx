@@ -100,7 +100,7 @@ export default function PortfolioTab({ portfolioAnalysis, onBack, onNext }: Port
           Want personalized guidance? Work with a Clockwise Approved Advisor.
         </p>
         <a
-          href="https://clockwisecapital.com/contact"
+          href="https://calendly.com/clockwisecapital/appointments"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center justify-center gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-white text-teal-600 text-sm md:text-base font-semibold rounded-lg hover:bg-gray-100 transition-colors w-full md:w-auto"

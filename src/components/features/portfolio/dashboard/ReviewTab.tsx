@@ -349,7 +349,7 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
         </p>
         <div className="flex justify-center">
           <a
-            href="https://clockwisecapital.com/contact"
+            href="https://calendly.com/clockwisecapital/appointments"
             target="_blank"
             rel="noopener noreferrer"
             className="px-6 md:px-8 py-3 bg-white text-teal-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors text-center flex items-center justify-center gap-2 text-sm md:text-base"
