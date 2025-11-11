@@ -337,7 +337,7 @@ export default function PortfolioDashboard() {
                 <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-4 md:p-8 text-white">
                   <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">Ready to Optimize?</h3>
                   <p className="text-sm md:text-base text-teal-100 mb-4 md:mb-6">
-                    Work 1:1 with a Clockwise Capital strategist to refine your strategy.
+                    Work 1:1 with a Clockwise Approved Advisor to refine your strategy.
                   </p>
                   <div className="flex justify-center">
                     <a

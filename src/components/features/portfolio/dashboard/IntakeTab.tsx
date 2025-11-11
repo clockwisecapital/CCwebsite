@@ -526,7 +526,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           <div className="space-y-4">
             <div className="bg-teal-50 border border-teal-200 rounded-2xl p-6 mb-6">
               <p className="text-gray-800 text-lg leading-relaxed">
-                What&apos;s your time horizon in years? (Optional)
+                What&apos;s your time horizon in years?
               </p>
             </div>
             <div>
@@ -589,7 +589,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           <div className="space-y-4">
             <div className="bg-teal-50 border border-teal-200 rounded-2xl p-6 mb-6">
               <p className="text-gray-800 text-lg leading-relaxed">
-                What is this goal for? (Optional)
+                What is this goal for?
               </p>
             </div>
             <div>
@@ -789,7 +789,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
             <div className="text-center mb-6">
               <h3 className="text-xl font-bold text-gray-900 mb-2">I&apos;m thinking...</h3>
               <p className="text-gray-600 text-sm">
-                I&apos;m finalizing your personalized portfolio analysis
+                I need about 20-30 seconds to complete your analysis
               </p>
             </div>
 

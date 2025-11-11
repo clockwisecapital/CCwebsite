@@ -25,6 +25,11 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
       setCycleAnalysisTab('portfolio');
     } else if (cycleAnalysisTab === 'portfolio') {
       setCycleAnalysisTab('market');
+    } else if (cycleAnalysisTab === 'market') {
+      // Navigate to Analysis tab
+      if (onNavigateToAnalyze) {
+        onNavigateToAnalyze();
+      }
     }
   };
 

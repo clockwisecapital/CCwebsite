@@ -146,6 +146,17 @@ export default function CycleTab({ cycleData, onNext, onBack }: CycleTabProps) {
               Back: Portfolio
             </button>
           )}
+          {onNext && (
+            <button
+              onClick={onNext}
+              className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-teal-600 to-blue-600 text-white text-sm md:text-base font-semibold rounded-xl hover:from-teal-700 hover:to-blue-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+            >
+              Next: Analysis
+              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
         </div>
       )}
 
