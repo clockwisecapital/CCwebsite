@@ -647,15 +647,15 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
             </div>
             
             <div className="text-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Kronos is thinking...</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">I&apos;m thinking...</h3>
               <p className="text-gray-600 text-sm">
-                Analyzing your portfolio across multiple economic cycles
+                I need about 20-30 seconds to complete your analysis
               </p>
             </div>
 
             <div className="bg-teal-50 border border-teal-200 rounded-2xl p-6 mb-6">
               <p className="text-gray-800 text-lg leading-relaxed">
-                While we analyze your portfolio, what&apos;s your first name?
+                While I analyze your portfolio, what&apos;s your first name?
               </p>
             </div>
             <div>
@@ -717,9 +717,9 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
             </div>
             
             <div className="text-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Kronos is thinking...</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">I&apos;m thinking...</h3>
               <p className="text-gray-600 text-sm">
-                Analyzing your portfolio across multiple economic cycles
+                I&apos;m analyzing your portfolio across multiple economic cycles
               </p>
             </div>
 
@@ -787,15 +787,15 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
             </div>
             
             <div className="text-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Kronos is thinking...</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">I&apos;m thinking...</h3>
               <p className="text-gray-600 text-sm">
-                Finalizing your personalized portfolio analysis
+                I&apos;m finalizing your personalized portfolio analysis
               </p>
             </div>
 
             <div className="bg-teal-50 border border-teal-200 rounded-2xl p-6 mb-6">
               <p className="text-gray-800 text-lg leading-relaxed">
-                Where should we send your personalized analysis?
+                Where should I send your personalized analysis?
               </p>
             </div>
             

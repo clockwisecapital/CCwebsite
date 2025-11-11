@@ -14,6 +14,63 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
 });
 
+// Helper function to clean and fix common JSON issues
+function cleanJSON(jsonString: string): string {
+  // Remove any markdown code blocks
+  jsonString = jsonString.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+  
+  // Extract only the first complete JSON object (handles extra text after closing brace)
+  const firstBraceIndex = jsonString.indexOf('{');
+  if (firstBraceIndex !== -1) {
+    let braceCount = 0;
+    let inString = false;
+    let escapeNext = false;
+    
+    for (let i = firstBraceIndex; i < jsonString.length; i++) {
+      const char = jsonString[i];
+      
+      if (escapeNext) {
+        escapeNext = false;
+        continue;
+      }
+      
+      if (char === '\\') {
+        escapeNext = true;
+        continue;
+      }
+      
+      if (char === '"' && !escapeNext) {
+        inString = !inString;
+        continue;
+      }
+      
+      if (!inString) {
+        if (char === '{') {
+          braceCount++;
+        } else if (char === '}') {
+          braceCount--;
+          if (braceCount === 0) {
+            // Found the end of the JSON object
+            jsonString = jsonString.substring(firstBraceIndex, i + 1);
+            break;
+          }
+        }
+      }
+    }
+  }
+  
+  // Fix trailing commas before closing braces/brackets
+  jsonString = jsonString.replace(/,(\s*[}\]])/g, '$1');
+  
+  // Fix missing commas between properties (common AI error)
+  jsonString = jsonString.replace(/"\s*\n\s*"/g, '",\n"');
+  
+  // Fix unquoted keys (basic cases)
+  jsonString = jsonString.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+  
+  return jsonString.trim();
+}
+
 export async function POST(req: NextRequest) {
   try {
     // Validate API key exists
@@ -375,11 +432,12 @@ Provide only the JSON output, no additional text.`;
     }
     
     try {
-      const cycleData: CycleData = JSON.parse(jsonMatch[0]);
+      const cleanedJSON = cleanJSON(jsonMatch[0]);
+      const cycleData: CycleData = JSON.parse(cleanedJSON);
       return cycleData;
     } catch (parseError) {
       console.error('❌ Technology Cycle: JSON parse error');
-      console.error('JSON string:', jsonMatch[0].substring(0, 1000));
+      console.error('JSON string:', jsonMatch[0].substring(0, 2500));
       throw parseError;
     }
   } catch (error) {
@@ -518,10 +576,11 @@ Provide only the JSON output.`;
   }
   
   try {
-    return JSON.parse(jsonMatch[0]);
+    const cleanedJSON = cleanJSON(jsonMatch[0]);
+    return JSON.parse(cleanedJSON);
   } catch (parseError) {
     console.error('❌ Country Cycle: JSON parse error at position', parseError);
-    console.error('JSON string (first 2000 chars):', jsonMatch[0].substring(0, 2000));
+    console.error('JSON string (first 2500 chars):', jsonMatch[0].substring(0, 2500));
     console.error('JSON string (last 500 chars):', jsonMatch[0].substring(jsonMatch[0].length - 500));
     throw new Error(`Country Cycle JSON parse failed: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
   }
@@ -678,10 +737,21 @@ Provide only JSON.`;
   }
   
   try {
-    return JSON.parse(jsonMatch[0]);
+    // Clean the JSON before parsing
+    const cleanedJSON = cleanJSON(jsonMatch[0]);
+    return JSON.parse(cleanedJSON);
   } catch (parseError) {
     console.error('❌ Economic Cycle: JSON parse error');
-    console.error('JSON string (first 1000 chars):', jsonMatch[0].substring(0, 1000));
+    console.error('Original JSON (first 2500 chars):', jsonMatch[0].substring(0, 2500));
+    console.error('Parse error:', parseError);
+    // Try to find the error position
+    if (parseError instanceof SyntaxError && parseError.message.includes('position')) {
+      const posMatch = parseError.message.match(/position (\d+)/);
+      if (posMatch) {
+        const pos = parseInt(posMatch[1]);
+        console.error('JSON around error position:', jsonMatch[0].substring(Math.max(0, pos - 100), Math.min(jsonMatch[0].length, pos + 100)));
+      }
+    }
     throw parseError;
   }
 }
@@ -866,10 +936,11 @@ Provide only JSON.`;
   }
   
   try {
-    return JSON.parse(jsonMatch[0]);
+    const cleanedJSON = cleanJSON(jsonMatch[0]);
+    return JSON.parse(cleanedJSON);
   } catch (parseError) {
     console.error('❌ Business Cycle: JSON parse error');
-    console.error('JSON string (first 1000 chars):', jsonMatch[0].substring(0, 1000));
+    console.error('JSON string (first 2500 chars):', jsonMatch[0].substring(0, 2500));
     throw parseError;
   }
 }
@@ -967,10 +1038,11 @@ CRITICAL: Return ONLY the JSON object. No explanations, no markdown.`;
   }
 
   try {
-    return JSON.parse(jsonMatch[0]);
+    const cleanedJSON = cleanJSON(jsonMatch[0]);
+    return JSON.parse(cleanedJSON);
   } catch (parseError) {
     console.error('❌ Market Cycle: JSON parse error');
-    console.error('JSON string (first 1000 chars):', jsonMatch[0].substring(0, 1000));
+    console.error('JSON string (first 2500 chars):', jsonMatch[0].substring(0, 2500));
     throw parseError;
   }
 }
@@ -1065,11 +1137,25 @@ CRITICAL: Return ONLY the JSON object. No explanations, no markdown.`;
     throw new Error('Company Cycle analysis did not return valid JSON');
   }
 
+  let cleanedJSON = '';
   try {
-    return JSON.parse(jsonMatch[0]);
+    cleanedJSON = cleanJSON(jsonMatch[0]);
+    return JSON.parse(cleanedJSON);
   } catch (parseError) {
     console.error('❌ Company Cycle: JSON parse error');
-    console.error('JSON string (first 1000 chars):', jsonMatch[0].substring(0, 1000));
+    console.error('Original JSON (first 2500 chars):', jsonMatch[0].substring(0, 2500));
+    console.error('Cleaned JSON (first 2500 chars):', cleanedJSON.substring(0, 2500));
+    
+    // Try to find the error position
+    if (parseError instanceof SyntaxError && parseError.message.includes('position')) {
+      const posMatch = parseError.message.match(/position (\d+)/);
+      if (posMatch) {
+        const pos = parseInt(posMatch[1]);
+        console.error('JSON around error position:', cleanedJSON.substring(Math.max(0, pos - 150), Math.min(cleanedJSON.length, pos + 150)));
+        console.error('Exact error character:', cleanedJSON[pos], 'at position', pos);
+      }
+    }
+    
     throw parseError;
   }
 }
@@ -1216,7 +1302,8 @@ Return ONLY this JSON structure:
     }
 
     try {
-      const analysis = JSON.parse(jsonMatch[0]);
+      const cleanedJSON = cleanJSON(jsonMatch[0]);
+      const analysis = JSON.parse(cleanedJSON);
       console.log('✅ Portfolio analysis completed with user data');
       return analysis;
     } catch (parseError) {

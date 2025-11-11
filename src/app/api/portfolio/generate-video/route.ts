@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
           {
             character: {
               type: 'talking_photo',
-              talking_photo_id: 'ddb3e3340f9441028708bd4619635c94',
+              talking_photo_id: '8265a673ce054c97ba07fb31267af777',
             },
             voice: {
               type: 'text',

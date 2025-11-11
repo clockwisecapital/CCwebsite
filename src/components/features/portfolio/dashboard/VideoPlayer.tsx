@@ -17,14 +17,6 @@ export default function VideoPlayer({ videoId, onVideoReady }: VideoPlayerProps)
 
   useEffect(() => {
     if (!videoId) return;
-    
-    // Set timeout to show fallback video after 90 seconds
-    const fallbackTimeout = setTimeout(() => {
-      if (status !== 'completed') {
-        console.log('⏱️ Video generation timeout - showing fallback video');
-        setError('Video generation timeout');
-      }
-    }, 90000); // 90 seconds
 
     const checkVideoStatus = async (intervalId: NodeJS.Timeout) => {
       try {
@@ -37,7 +29,6 @@ export default function VideoPlayer({ videoId, onVideoReady }: VideoPlayerProps)
           if (data.status === 'completed' && data.videoUrl) {
             setVideoUrl(data.videoUrl);
             clearInterval(intervalId);
-            clearTimeout(fallbackTimeout);
             console.log('✅ Video ready:', data.videoUrl);
             // Notify parent that video is ready (only once)
             if (onVideoReady && !hasNotified.current) {
@@ -47,12 +38,16 @@ export default function VideoPlayer({ videoId, onVideoReady }: VideoPlayerProps)
           } else if (data.status === 'failed') {
             setError('Video generation failed');
             clearInterval(intervalId);
-            clearTimeout(fallbackTimeout);
           }
+        } else {
+          // API returned success: false
+          setError('Failed to retrieve video status');
+          clearInterval(intervalId);
         }
       } catch (err) {
         console.error('Failed to check video status:', err);
         setError('Failed to check video status');
+        clearInterval(intervalId);
       }
     };
 
@@ -65,7 +60,6 @@ export default function VideoPlayer({ videoId, onVideoReady }: VideoPlayerProps)
     // Cleanup on unmount
     return () => {
       if (pollInterval) clearInterval(pollInterval);
-      clearTimeout(fallbackTimeout);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoId]); // Removed onVideoReady from deps to prevent re-running
@@ -87,13 +81,13 @@ export default function VideoPlayer({ videoId, onVideoReady }: VideoPlayerProps)
     // Show fallback video when API fails
     return (
       <div className="relative w-full bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden">
-        <div className="relative aspect-video">
+        <div className="relative w-full">
           <video
             controls
             autoPlay
             muted
             playsInline
-            className="w-full h-full object-cover"
+            className="w-full h-auto"
             poster="/placeholder-video.jpg"
           >
             <source src="/8cbbd46caa4a47e19e58b99801b272d3.mp4" type="video/mp4" />
@@ -116,12 +110,12 @@ export default function VideoPlayer({ videoId, onVideoReady }: VideoPlayerProps)
   if (status === 'completed' && videoUrl) {
     return (
       <div className="relative w-full bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden">
-        <div className="relative aspect-video">
+        <div className="relative w-full">
           <video
             controls
             autoPlay
             muted
-            className="w-full h-full object-cover"
+            className="w-full h-auto"
             poster="/placeholder-video.jpg"
           >
             <source src={videoUrl} type="video/mp4" />
