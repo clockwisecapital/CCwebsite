@@ -36,21 +36,21 @@ export default function AIAvatarSection() {
                   <div className="flex items-start gap-2">
                     <span className="text-teal-400 font-bold">-</span>
                     <p className="text-gray-300">
-                      <span className="font-semibold text-white">Investing Environment</span>
+                      <span className="font-semibold text-white">Investing Environments</span>
                     </p>
                   </div>
 
                   <div className="flex items-start gap-2">
                     <span className="text-teal-400 font-bold">-</span>
                     <p className="text-gray-300">
-                      <span className="font-semibold text-white">Your Portfolio Impact</span>
+                      <span className="font-semibold text-white">Personalized Portfolio Risks</span>
                     </p>
                   </div>
 
                   <div className="flex items-start gap-2">
                     <span className="text-teal-400 font-bold">-</span>
                     <p className="text-gray-300">
-                      <span className="font-semibold text-white">Your Goals Impact</span>
+                      <span className="font-semibold text-white">Personalized Goal Risks</span>
                     </p>
                   </div>
                 </div>

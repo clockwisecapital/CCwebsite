@@ -432,7 +432,7 @@ export function ConversationalChat({}: ConversationalChatProps) {
     let messageText = '';
     switch (action) {
       case 'start_analysis':
-        messageText = 'Start Analysis';
+        messageText = 'Show Analysis ';
         break;
       case 'continue':
         messageText = 'Continue';

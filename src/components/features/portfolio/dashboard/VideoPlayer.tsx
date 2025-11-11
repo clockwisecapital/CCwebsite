@@ -136,7 +136,7 @@ export default function VideoPlayer({ videoId, onVideoReady }: VideoPlayerProps)
               <div className="flex items-start gap-2">
                 <span className="text-teal-400 font-bold">-</span>
                 <p className="text-gray-300">
-                  <span className="font-semibold text-white">Investing Environment</span>
+                  <span className="font-semibold text-white">Investing Environments</span>
                 </p>
               </div>
 

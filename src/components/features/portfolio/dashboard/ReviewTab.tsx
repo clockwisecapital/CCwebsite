@@ -258,10 +258,10 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
               </ul>
             </div>
 
-            {/* Your Portfolio Impact */}
+            {/* Personalized Portfolio Risks */}
             <div>
               <h4 className="font-semibold text-gray-900 mb-3">
-                Your Portfolio Impact
+                Personalized Portfolio Risks
               </h4>
               <ul className="space-y-2 text-gray-700">
                 {portfolioImpact.map((item, idx) => (

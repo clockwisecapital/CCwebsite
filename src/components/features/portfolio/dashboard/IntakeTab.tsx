@@ -168,7 +168,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
     if (currentStep < 10) {
       setCurrentStep(currentStep + 1);
     } else {
-      // On final step (10), submit everything and start analysis
+      // On final step (10), submit everything and Show Analysis 
       if (isPortfolioValid && allocationsParsed) {
         onSubmit(formData);
       }
@@ -904,7 +904,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
               Processing...
             </>
           ) : currentStep === 10 ? (
-            'Start Analysis'
+            'Show Analysis '
           ) : (
             'Next →'
           )}
