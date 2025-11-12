@@ -25,6 +25,9 @@ export {
   getUserData,
   initializeSession,
   saveSessionState,
+  saveIntakeForm,
+  getIntakeForm,
+  getAllIntakeForms,
   getConversationAnalytics
 } from './database'
 
@@ -40,6 +43,9 @@ export type {
   UserData,
   UserDataInsert,
   UserDataUpdate,
+  IntakeForm,
+  IntakeFormInsert,
+  IntakeFormUpdate,
   SessionData,
   DisplaySpec,
   DisplayBlock

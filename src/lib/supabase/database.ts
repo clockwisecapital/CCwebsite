@@ -412,6 +412,137 @@ export async function saveSessionState(data: {
 }
 
 // ============================================================================
+// INTAKE FORMS
+// ============================================================================
+
+/**
+ * Save intake form submission
+ * Stores all intake form data in structured fields
+ */
+export async function saveIntakeForm(data: {
+  conversationId: string
+  sessionId: string
+  intakeData: {
+    age?: number
+    experienceLevel?: 'Beginner' | 'Intermediate' | 'Advanced'
+    riskTolerance?: 'low' | 'medium' | 'high'
+    firstName?: string
+    lastName?: string
+    email?: string
+    goalAmount?: number
+    goalDescription?: string
+    timeHorizon?: number
+    monthlyContribution?: number
+    portfolio: {
+      totalValue?: number
+      stocks: number
+      bonds: number
+      cash: number
+      realEstate: number
+      commodities: number
+      alternatives: number
+    }
+    portfolioDescription?: string
+    specificHoldings?: Array<{
+      name: string
+      ticker?: string
+      percentage: number
+    }>
+  }
+}): Promise<boolean> {
+  try {
+    const supabase = createAdminSupabaseClient()
+    
+    const { error } = await supabase
+      .from('intake_forms')
+      .insert({
+        conversation_id: data.conversationId,
+        session_id: data.sessionId,
+        age: data.intakeData.age,
+        experience_level: data.intakeData.experienceLevel,
+        risk_tolerance: data.intakeData.riskTolerance,
+        first_name: data.intakeData.firstName,
+        last_name: data.intakeData.lastName,
+        email: data.intakeData.email,
+        goal_amount: data.intakeData.goalAmount,
+        goal_description: data.intakeData.goalDescription,
+        time_horizon: data.intakeData.timeHorizon,
+        monthly_contribution: data.intakeData.monthlyContribution,
+        portfolio_total_value: data.intakeData.portfolio.totalValue,
+        portfolio_stocks: data.intakeData.portfolio.stocks,
+        portfolio_bonds: data.intakeData.portfolio.bonds,
+        portfolio_cash: data.intakeData.portfolio.cash,
+        portfolio_real_estate: data.intakeData.portfolio.realEstate,
+        portfolio_commodities: data.intakeData.portfolio.commodities,
+        portfolio_alternatives: data.intakeData.portfolio.alternatives,
+        portfolio_description: data.intakeData.portfolioDescription,
+        specific_holdings: data.intakeData.specificHoldings as Json || null,
+      })
+
+    if (error) {
+      console.error('Error saving intake form:', error)
+      return false
+    }
+
+    console.log('✅ Intake form saved successfully')
+    return true
+  } catch (error) {
+    console.error('Database error saving intake form:', error)
+    return false
+  }
+}
+
+/**
+ * Get intake form by conversation ID
+ */
+export async function getIntakeForm(conversationId: string) {
+  try {
+    const supabase = createAdminSupabaseClient()
+    
+    const { data, error } = await supabase
+      .from('intake_forms')
+      .select('*')
+      .eq('conversation_id', conversationId)
+      .single()
+
+    if (error) {
+      console.error('Error fetching intake form:', error)
+      return null
+    }
+
+    return data
+  } catch (error) {
+    console.error('Database error fetching intake form:', error)
+    return null
+  }
+}
+
+/**
+ * Get all intake forms (for admin/reporting)
+ */
+export async function getAllIntakeForms(limit = 100) {
+  try {
+    const supabase = createAdminSupabaseClient()
+    
+    const { data, error } = await supabase
+      .from('intake_forms')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error) {
+      console.error('Error fetching intake forms:', error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('Database error fetching intake forms:', error)
+    return []
+  }
+}
+
+// ============================================================================
 // ANALYTICS & REPORTING
 // ============================================================================
 

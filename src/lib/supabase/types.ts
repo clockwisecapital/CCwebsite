@@ -121,6 +121,95 @@ export interface Database {
           }
         ]
       }
+      intake_forms: {
+        Row: {
+          id: string
+          conversation_id: string
+          session_id: string
+          age: number | null
+          experience_level: 'Beginner' | 'Intermediate' | 'Advanced' | null
+          risk_tolerance: 'low' | 'medium' | 'high' | null
+          first_name: string | null
+          last_name: string | null
+          email: string | null
+          goal_amount: number | null
+          goal_description: string | null
+          time_horizon: number | null
+          monthly_contribution: number | null
+          portfolio_total_value: number | null
+          portfolio_stocks: number | null
+          portfolio_bonds: number | null
+          portfolio_cash: number | null
+          portfolio_real_estate: number | null
+          portfolio_commodities: number | null
+          portfolio_alternatives: number | null
+          portfolio_description: string | null
+          specific_holdings: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          session_id: string
+          age?: number | null
+          experience_level?: 'Beginner' | 'Intermediate' | 'Advanced' | null
+          risk_tolerance?: 'low' | 'medium' | 'high' | null
+          first_name?: string | null
+          last_name?: string | null
+          email?: string | null
+          goal_amount?: number | null
+          goal_description?: string | null
+          time_horizon?: number | null
+          monthly_contribution?: number | null
+          portfolio_total_value?: number | null
+          portfolio_stocks?: number | null
+          portfolio_bonds?: number | null
+          portfolio_cash?: number | null
+          portfolio_real_estate?: number | null
+          portfolio_commodities?: number | null
+          portfolio_alternatives?: number | null
+          portfolio_description?: string | null
+          specific_holdings?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          conversation_id?: string
+          session_id?: string
+          age?: number | null
+          experience_level?: 'Beginner' | 'Intermediate' | 'Advanced' | null
+          risk_tolerance?: 'low' | 'medium' | 'high' | null
+          first_name?: string | null
+          last_name?: string | null
+          email?: string | null
+          goal_amount?: number | null
+          goal_description?: string | null
+          time_horizon?: number | null
+          monthly_contribution?: number | null
+          portfolio_total_value?: number | null
+          portfolio_stocks?: number | null
+          portfolio_bonds?: number | null
+          portfolio_cash?: number | null
+          portfolio_real_estate?: number | null
+          portfolio_commodities?: number | null
+          portfolio_alternatives?: number | null
+          portfolio_description?: string | null
+          specific_holdings?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_forms_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -149,6 +238,10 @@ export type MessageUpdate = Database['public']['Tables']['messages']['Update']
 export type UserData = Database['public']['Tables']['user_data']['Row']
 export type UserDataInsert = Database['public']['Tables']['user_data']['Insert']
 export type UserDataUpdate = Database['public']['Tables']['user_data']['Update']
+
+export type IntakeForm = Database['public']['Tables']['intake_forms']['Row']
+export type IntakeFormInsert = Database['public']['Tables']['intake_forms']['Insert']
+export type IntakeFormUpdate = Database['public']['Tables']['intake_forms']['Update']
 
 // Application-specific types
 export interface SessionData {

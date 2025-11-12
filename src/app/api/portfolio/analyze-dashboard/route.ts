@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { saveSessionState } from '@/lib/supabase/index';
+import { saveSessionState, saveIntakeForm, getConversationBySessionId } from '@/lib/supabase/index';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -10,6 +10,10 @@ interface IntakeFormData {
   riskTolerance: 'low' | 'medium' | 'high';  // NEW: User risk tolerance
   incomeGoal?: number;
   accumulationGoal?: string;
+  goalAmount?: number;              // Target goal amount in dollars
+  goalDescription?: string;         // Description of the financial goal
+  timeHorizon?: number;             // Years to reach goal
+  monthlyContribution?: number;     // Monthly contribution amount
   portfolio: {
     totalValue?: number;        // NEW: Total portfolio value in dollars
     stocks: number;
@@ -94,6 +98,17 @@ export async function POST(request: NextRequest) {
         } as Record<string, unknown>,
       });
       console.log('✅ Analysis saved to Supabase');
+      
+      // Save intake form data to dedicated table
+      const conversation = await getConversationBySessionId(sessionId);
+      if (conversation) {
+        await saveIntakeForm({
+          conversationId: conversation.id,
+          sessionId: sessionId,
+          intakeData: intakeData,
+        });
+        console.log('✅ Intake form saved to database');
+      }
     } catch (error) {
       console.error('❌ Supabase save failed (non-blocking):', error);
     }
@@ -155,16 +170,18 @@ async function loadMarketContext(): Promise<Record<string, unknown>> {
  * Transform dashboard intake data to analysis format (FSM-compatible)
  */
 function transformIntakeData(intakeData: IntakeFormData) {
-  // Extract goal amount and timeline from accumulation goal if provided
-  let goalAmount = intakeData.incomeGoal || 100000;
-  let timelineYears = 10;
+  // Extract goal amount and timeline from intake form
+  // Priority: use explicit fields (goalAmount, timeHorizon) first
+  let goalAmount = intakeData.goalAmount || intakeData.incomeGoal || 100000;
+  let timelineYears = intakeData.timeHorizon || 10;
 
+  // Fallback: try to extract from accumulation goal text if explicit fields not provided
   if (intakeData.accumulationGoal) {
     // Try to extract amount and timeline from free text
     const amountMatch = intakeData.accumulationGoal.match(/\$?([\d,]+(?:\.\d+)?)\s*(?:k|thousand|million|M)?/i);
     const yearMatch = intakeData.accumulationGoal.match(/(\d+)\s*year/i);
 
-    if (amountMatch) {
+    if (amountMatch && !intakeData.goalAmount) {
       let amount = parseFloat(amountMatch[1].replace(/,/g, ''));
       if (amountMatch[0].toLowerCase().includes('k') || amountMatch[0].toLowerCase().includes('thousand')) {
         amount *= 1000;
@@ -174,7 +191,7 @@ function transformIntakeData(intakeData: IntakeFormData) {
       goalAmount = amount;
     }
 
-    if (yearMatch) {
+    if (yearMatch && !intakeData.timeHorizon) {
       timelineYears = parseInt(yearMatch[1]);
     }
   }
