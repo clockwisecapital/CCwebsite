@@ -126,22 +126,27 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
     setErrors({});
 
     // Validate current step before proceeding
-    if (currentStep === 0 && (!formData.portfolioDescription || formData.portfolioDescription.trim() === '')) {
-      setErrors({ portfolioDescription: 'Portfolio Description is required' });
-      return;
-    }
+    // Step 1: Age
     if (currentStep === 1 && !formData.age) {
       setErrors({ age: 'Age is required' });
       return;
     }
+    // Step 2: Portfolio Description
+    if (currentStep === 2 && (!formData.portfolioDescription || formData.portfolioDescription.trim() === '')) {
+      setErrors({ portfolioDescription: 'Portfolio Description is required' });
+      return;
+    }
+    // Step 8: First Name
     if (currentStep === 8 && (!formData.firstName || !formData.firstName.trim())) {
       setErrors({ firstName: 'First name is required' });
       return;
     }
+    // Step 9: Last Name
     if (currentStep === 9 && (!formData.lastName || !formData.lastName.trim())) {
       setErrors({ lastName: 'Last name is required' });
       return;
     }
+    // Step 10: Email & Acknowledgement
     if (currentStep === 10) {
       if (!formData.email || !formData.email.trim()) {
         setErrors({ email: 'Email is required' });
@@ -249,9 +254,9 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
   };
 
   const steps = [
-    { id: 0, title: 'Portfolio Description', field: 'portfolioDescription' },
+    { id: 0, title: 'Investment Experience', field: 'experienceLevel' },
     { id: 1, title: 'Age', field: 'age' },
-    { id: 2, title: 'Investment Experience', field: 'experienceLevel' },
+    { id: 2, title: 'Portfolio Description', field: 'portfolioDescription' },
     { id: 3, title: 'Risk Tolerance', field: 'riskTolerance' },
     { id: 4, title: 'Target Goal Amount', field: 'goalAmount' },
     { id: 5, title: 'Time Horizon', field: 'timeHorizon' },
@@ -265,12 +270,69 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
   const renderStepContent = () => {
     switch (currentStep) {
       case 0:
+        // Investment Experience
+        return (
+          <div className="space-y-4">
+            <div className="bg-teal-900/20 border border-teal-800 rounded-2xl p-6 mb-6">
+              <p className="text-gray-200 text-lg leading-relaxed">
+                What&apos;s your investment experience level?
+              </p>
+            </div>
+            <div>
+              <label htmlFor="experienceLevel" className="block text-sm font-medium text-gray-300 mb-2">
+                Your Answer
+              </label>
+              <select
+                id="experienceLevel"
+                value={formData.experienceLevel}
+                onChange={(e) => setFormData(prev => ({ ...prev, experienceLevel: e.target.value as IntakeFormData['experienceLevel'] }))}
+                className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
+              >
+                <option value="Beginner">Beginner</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
+              </select>
+            </div>
+          </div>
+        );
+
+      case 1:
+        // Age
+        return (
+          <div className="space-y-4">
+            <div className="bg-teal-900/20 border border-teal-800 rounded-2xl p-6 mb-6">
+              <p className="text-gray-200 text-lg leading-relaxed">
+                How old are you?
+              </p>
+            </div>
+            <div>
+              <label htmlFor="age" className="block text-sm font-medium text-gray-300 mb-2">
+                Your Answer
+              </label>
+              <input
+                type="number"
+                id="age"
+                min="18"
+                max="100"
+                value={formData.age || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, age: parseInt(e.target.value) || undefined }))}
+                className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
+                placeholder="35"
+              />
+              {errors.age && (
+                <p className="mt-2 text-sm text-red-600">{errors.age}</p>
+              )}
+            </div>
+          </div>
+        );
+
+      case 2:
         // Portfolio Description
         return (
           <div className="space-y-4">
-            <div className="bg-teal-50 border border-teal-200 rounded-2xl p-6 mb-6">
-              <p className="text-gray-800 text-lg leading-relaxed">
-                Let&apos;s start by understanding your current portfolio. Describe your holdings with names and amounts.
+            <div className="bg-teal-900/20 border border-teal-800 rounded-2xl p-6 mb-6">
+              <p className="text-gray-200 text-lg leading-relaxed">
+                Let&apos;s understand your current portfolio. What&apos;s your total portfolio value and describe your holdings (Names &amp; Amounts)?
               </p>
             </div>
             <div>
@@ -297,82 +359,26 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                   setFormData(prev => ({ ...prev, portfolioDescription: e.target.value }));
                   setAllocationsParsed(false);
                 }}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
+                className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
                 placeholder="Example: I have a $500,000 portfolio with Apple stock ($75,000), Microsoft ($50,000), Vanguard S&P 500 ETF ($100,000)..."
               />
               {errors.portfolioDescription && (
                 <p className="mt-2 text-sm text-red-600">{errors.portfolioDescription}</p>
               )}
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-gray-400 mt-2">
                 AI will categorize your holdings automatically when you complete the questions.
               </p>
             </div>
           </div>
         );
 
-      case 1:
-        // Age
-        return (
-          <div className="space-y-4">
-            <div className="bg-teal-50 border border-teal-200 rounded-2xl p-6 mb-6">
-              <p className="text-gray-800 text-lg leading-relaxed">
-                How old are you?
-              </p>
-            </div>
-            <div>
-              <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-2">
-                Your Answer
-              </label>
-              <input
-                type="number"
-                id="age"
-                min="18"
-                max="100"
-                value={formData.age || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, age: parseInt(e.target.value) || undefined }))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
-                placeholder="35"
-              />
-              {errors.age && (
-                <p className="mt-2 text-sm text-red-600">{errors.age}</p>
-              )}
-            </div>
-          </div>
-        );
-
-      case 2:
-        // Investment Experience
-        return (
-          <div className="space-y-4">
-            <div className="bg-teal-50 border border-teal-200 rounded-2xl p-6 mb-6">
-              <p className="text-gray-800 text-lg leading-relaxed">
-                What&apos;s your investment experience level?
-              </p>
-            </div>
-            <div>
-              <label htmlFor="experienceLevel" className="block text-sm font-medium text-gray-700 mb-2">
-                Your Answer
-              </label>
-              <select
-                id="experienceLevel"
-                value={formData.experienceLevel}
-                onChange={(e) => setFormData(prev => ({ ...prev, experienceLevel: e.target.value as IntakeFormData['experienceLevel'] }))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
-              >
-                <option value="Beginner">Beginner</option>
-                <option value="Intermediate">Intermediate</option>
-                <option value="Advanced">Advanced</option>
-              </select>
-            </div>
-          </div>
-        );
 
       case 3:
         // Risk Tolerance
         return (
           <div className="space-y-4">
-            <div className="bg-teal-50 border border-teal-200 rounded-2xl p-6 mb-6">
-              <p className="text-gray-800 text-lg leading-relaxed">
+            <div className="bg-teal-900/20 border border-teal-800 rounded-2xl p-6 mb-6">
+              <p className="text-gray-200 text-lg leading-relaxed">
                 What&apos;s your risk tolerance?
               </p>
             </div>
@@ -383,23 +389,23 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                   onClick={() => setFormData(prev => ({ ...prev, riskTolerance: 'low' }))}
                   className={`p-4 rounded-xl border-2 transition-all ${
                     formData.riskTolerance === 'low'
-                      ? 'border-red-500 bg-red-50'
-                      : 'border-gray-300 bg-white hover:border-gray-400'
+                      ? 'border-red-500 bg-red-900/20'
+                      : 'border-gray-600 bg-gray-700 hover:border-gray-500'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                      formData.riskTolerance === 'low' ? 'bg-red-500' : 'bg-gray-200'
+                      formData.riskTolerance === 'low' ? 'bg-red-500' : 'bg-gray-600'
                     }`}>
                       <svg className={`w-5 h-5 ${formData.riskTolerance === 'low' ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                       </svg>
                     </div>
                     <div className="text-left">
-                      <div className={`font-semibold ${formData.riskTolerance === 'low' ? 'text-red-600' : 'text-gray-700'}`}>
+                      <div className={`font-semibold ${formData.riskTolerance === 'low' ? 'text-red-400' : 'text-gray-300'}`}>
                         Conservative
                       </div>
-                      <div className="text-xs text-gray-500">Capital preservation</div>
+                      <div className="text-xs text-gray-400">Capital preservation</div>
                     </div>
                   </div>
                 </button>
@@ -409,23 +415,23 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                   onClick={() => setFormData(prev => ({ ...prev, riskTolerance: 'medium' }))}
                   className={`p-4 rounded-xl border-2 transition-all ${
                     formData.riskTolerance === 'medium'
-                      ? 'border-amber-500 bg-amber-50'
-                      : 'border-gray-300 bg-white hover:border-gray-400'
+                      ? 'border-amber-500 bg-amber-900/20'
+                      : 'border-gray-600 bg-gray-700 hover:border-gray-500'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                      formData.riskTolerance === 'medium' ? 'bg-amber-500' : 'bg-gray-200'
+                      formData.riskTolerance === 'medium' ? 'bg-amber-500' : 'bg-gray-600'
                     }`}>
                       <svg className={`w-5 h-5 ${formData.riskTolerance === 'medium' ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
                       </svg>
                     </div>
                     <div className="text-left">
-                      <div className={`font-semibold ${formData.riskTolerance === 'medium' ? 'text-amber-600' : 'text-gray-700'}`}>
+                      <div className={`font-semibold ${formData.riskTolerance === 'medium' ? 'text-amber-400' : 'text-gray-300'}`}>
                         Moderate
                       </div>
-                      <div className="text-xs text-gray-500">Balanced growth</div>
+                      <div className="text-xs text-gray-400">Balanced growth</div>
                     </div>
                   </div>
                 </button>
@@ -435,30 +441,30 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                   onClick={() => setFormData(prev => ({ ...prev, riskTolerance: 'high' }))}
                   className={`p-4 rounded-xl border-2 transition-all ${
                     formData.riskTolerance === 'high'
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-300 bg-white hover:border-gray-400'
+                      ? 'border-green-500 bg-green-900/20'
+                      : 'border-gray-600 bg-gray-700 hover:border-gray-500'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                      formData.riskTolerance === 'high' ? 'bg-green-500' : 'bg-gray-200'
+                      formData.riskTolerance === 'high' ? 'bg-green-500' : 'bg-gray-600'
                     }`}>
                       <svg className={`w-5 h-5 ${formData.riskTolerance === 'high' ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                       </svg>
                     </div>
                     <div className="text-left">
-                      <div className={`font-semibold ${formData.riskTolerance === 'high' ? 'text-green-600' : 'text-gray-700'}`}>
+                      <div className={`font-semibold ${formData.riskTolerance === 'high' ? 'text-green-400' : 'text-gray-300'}`}>
                         Aggressive
                       </div>
-                      <div className="text-xs text-gray-500">Maximum growth</div>
+                      <div className="text-xs text-gray-400">Maximum growth</div>
                     </div>
                   </div>
                 </button>
               </div>
 
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
-                <p className="text-xs text-gray-700">
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-3">
+                <p className="text-xs text-gray-300">
                   {formData.riskTolerance === 'low' && (
                     <>
                       <strong>Conservative:</strong> Prioritize capital preservation with lower volatility. 
@@ -487,17 +493,17 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
         // Target Goal Amount
         return (
           <div className="space-y-4">
-            <div className="bg-teal-50 border border-teal-200 rounded-2xl p-6 mb-6">
-              <p className="text-gray-800 text-lg leading-relaxed">
+            <div className="bg-teal-900/20 border border-teal-800 rounded-2xl p-6 mb-6">
+              <p className="text-gray-200 text-lg leading-relaxed">
                 What&apos;s your target goal amount?
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Your Answer
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-base">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base">$</span>
                 <input
                   type="text"
                   value={displayGoalAmount}
@@ -512,7 +518,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                       setFormData({ ...formData, goalAmount: undefined });
                     }
                   }}
-                  className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
+                  className="w-full pl-8 pr-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
                   placeholder="1,000,000"
                 />
               </div>
@@ -524,23 +530,23 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
         // Time Horizon
         return (
           <div className="space-y-4">
-            <div className="bg-teal-50 border border-teal-200 rounded-2xl p-6 mb-6">
-              <p className="text-gray-800 text-lg leading-relaxed">
+            <div className="bg-teal-900/20 border border-teal-800 rounded-2xl p-6 mb-6">
+              <p className="text-gray-200 text-lg leading-relaxed">
                 What&apos;s your time horizon in years?
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Your Answer
               </label>
               <input
                 type="number"
                 value={formData.timeHorizon || ''}
                 onChange={(e) => setFormData({ ...formData, timeHorizon: Number(e.target.value) || undefined })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
+                className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
                 placeholder="10"
               />
-              <p className="text-xs text-gray-500 mt-1">Years until you need to reach this goal</p>
+              <p className="text-xs text-gray-400 mt-1">Years until you need to reach this goal</p>
             </div>
           </div>
         );
@@ -549,17 +555,17 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
         // Monthly Contribution
         return (
           <div className="space-y-4">
-            <div className="bg-teal-50 border border-teal-200 rounded-2xl p-6 mb-6">
-              <p className="text-gray-800 text-lg leading-relaxed">
+            <div className="bg-teal-900/20 border border-teal-800 rounded-2xl p-6 mb-6">
+              <p className="text-gray-200 text-lg leading-relaxed">
                 How much will you contribute monthly? (Optional)
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Your Answer
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-base">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base">$</span>
                 <input
                   type="text"
                   value={displayMonthlyContribution}
@@ -574,11 +580,11 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                       setFormData({ ...formData, monthlyContribution: 0 });
                     }
                   }}
-                  className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
+                  className="w-full pl-8 pr-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
                   placeholder="500"
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">Additional monthly investment</p>
+              <p className="text-xs text-gray-400 mt-1">Additional monthly investment</p>
             </div>
           </div>
         );
@@ -587,20 +593,20 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
         // Goal Description
         return (
           <div className="space-y-4">
-            <div className="bg-teal-50 border border-teal-200 rounded-2xl p-6 mb-6">
-              <p className="text-gray-800 text-lg leading-relaxed">
+            <div className="bg-teal-900/20 border border-teal-800 rounded-2xl p-6 mb-6">
+              <p className="text-gray-200 text-lg leading-relaxed">
                 What is this goal for?
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Your Answer
               </label>
               <input
                 type="text"
                 value={formData.goalDescription || ''}
                 onChange={(e) => setFormData({ ...formData, goalDescription: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
+                className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
                 placeholder="Retirement, Home Purchase, etc."
               />
             </div>
@@ -647,19 +653,19 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
             </div>
             
             <div className="text-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">I&apos;m thinking...</h3>
-              <p className="text-gray-600 text-sm">
+              <h3 className="text-xl font-bold text-gray-100 mb-2">I&apos;m thinking...</h3>
+              <p className="text-gray-300 text-sm">
                 I need about 20-30 seconds to complete your analysis
               </p>
             </div>
 
-            <div className="bg-teal-50 border border-teal-200 rounded-2xl p-6 mb-6">
-              <p className="text-gray-800 text-lg leading-relaxed">
+            <div className="bg-teal-900/20 border border-teal-800 rounded-2xl p-6 mb-6">
+              <p className="text-gray-200 text-lg leading-relaxed">
                 While I analyze your portfolio, what&apos;s your first name?
               </p>
             </div>
             <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="firstName" className="block text-sm font-medium text-gray-300 mb-2">
                 Your Answer
               </label>
               <input
@@ -667,7 +673,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                 id="firstName"
                 value={formData.firstName || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
+                className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
                 placeholder="John"
               />
               {errors.firstName && (
@@ -717,19 +723,19 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
             </div>
             
             <div className="text-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">I&apos;m thinking...</h3>
-              <p className="text-gray-600 text-sm">
+              <h3 className="text-xl font-bold text-gray-100 mb-2">I&apos;m thinking...</h3>
+              <p className="text-gray-300 text-sm">
                 I&apos;m analyzing your portfolio across multiple economic cycles
               </p>
             </div>
 
-            <div className="bg-teal-50 border border-teal-200 rounded-2xl p-6 mb-6">
-              <p className="text-gray-800 text-lg leading-relaxed">
+            <div className="bg-teal-900/20 border border-teal-800 rounded-2xl p-6 mb-6">
+              <p className="text-gray-200 text-lg leading-relaxed">
                 And your last name?
               </p>
             </div>
             <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-300 mb-2">
                 Your Answer
               </label>
               <input
@@ -737,7 +743,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                 id="lastName"
                 value={formData.lastName || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
+                className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
                 placeholder="Smith"
               />
               {errors.lastName && (
@@ -787,20 +793,20 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
             </div>
             
             <div className="text-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">I&apos;m thinking...</h3>
-              <p className="text-gray-600 text-sm">
+              <h3 className="text-xl font-bold text-gray-100 mb-2">I&apos;m thinking...</h3>
+              <p className="text-gray-300 text-sm">
                 I need about 20-30 seconds to complete your analysis
               </p>
             </div>
 
-            <div className="bg-teal-50 border border-teal-200 rounded-2xl p-6 mb-6">
-              <p className="text-gray-800 text-lg leading-relaxed">
+            <div className="bg-teal-900/20 border border-teal-800 rounded-2xl p-6 mb-6">
+              <p className="text-gray-200 text-lg leading-relaxed">
                 Where should I send your personalized analysis?
               </p>
             </div>
             
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
                 Email Address
               </label>
               <input
@@ -808,7 +814,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                 id="email"
                 value={formData.email || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
+                className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
                 placeholder="you@example.com"
               />
               {errors.email && (
@@ -836,8 +842,8 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
             </div>
 
             {/* Privacy Notice */}
-            <div className="bg-gray-50 rounded-xl p-4 mt-4">
-              <p className="text-xs text-gray-600">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 mt-4">
+              <p className="text-xs text-gray-400">
                 We&apos;ll email your personalized cycle analysis and portfolio review. 
                 We never sell your data.{' '}
                 <a href="/privacy-policy" className="text-teal-600 hover:underline" target="_blank" rel="noopener noreferrer">
@@ -858,14 +864,14 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
       {/* Progress Indicator */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700">
+          <span className="text-sm font-medium text-gray-200">
             Question {currentStep + 1} of {steps.length}
           </span>
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-gray-300">
             {Math.round(((currentStep + 1) / steps.length) * 100)}% Complete
           </span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className="w-full bg-gray-700 rounded-full h-2">
           <div
             className="bg-teal-600 h-2 rounded-full transition-all duration-300"
             style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
@@ -879,12 +885,12 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
       </div>
 
       {/* Navigation Buttons */}
-      <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
+      <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-700">
         <button
           type="button"
           onClick={handleBack}
           disabled={currentStep === 0}
-          className="px-6 py-3 text-gray-700 font-medium rounded-xl hover:bg-gray-100 disabled:opacity-0 disabled:cursor-not-allowed transition-all"
+          className="px-6 py-3 text-gray-200 font-medium rounded-xl hover:bg-gray-700 disabled:opacity-0 disabled:cursor-not-allowed transition-all"
         >
           ← Back
         </button>
@@ -893,7 +899,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           type="button"
           onClick={handleNext}
           disabled={isParsing || (isAnalyzing && currentStep === 10)}
-          className="px-8 py-3 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+          className="px-8 py-3 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
         >
           {isParsing && currentStep === 7 ? (
             <>
@@ -972,7 +978,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                       real estate via Vanguard Real Estate ETF (VNQ) $75,000, and Gold ETF (GLD) $25,000.&rdquo;
                     </p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2 italic">
+                  <p className="text-xs text-gray-400 mt-2 italic">
                     AI will categorize: Stocks 45%, Bonds 20%, Cash 15%, Real Estate 15%, Commodities 5%
                   </p>
                 </div>
@@ -985,7 +991,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                       BND bond fund $50k, high-yield savings $20k, Bitcoin $10k.&rdquo;
                     </p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2 italic">
+                  <p className="text-xs text-gray-400 mt-2 italic">
                     AI will categorize: Stocks 68%, Bonds 20%, Cash 8%, Alternatives (crypto) 4%
                   </p>
                 </div>
@@ -998,12 +1004,12 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                       10% in rental property REITs, 10% in money market and CDs.&rdquo;
                     </p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2 italic">
+                  <p className="text-xs text-gray-400 mt-2 italic">
                     AI will categorize: Stocks 60%, Bonds 20%, Real Estate 10%, Cash 10%
                   </p>
                 </div>
 
-                <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 mt-6">
+                <div className="bg-teal-900/20 border border-teal-800 rounded-lg p-4 mt-6">
                   <div className="flex items-start gap-2">
                     <svg className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />

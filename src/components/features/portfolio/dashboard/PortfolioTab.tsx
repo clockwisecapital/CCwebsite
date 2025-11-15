@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { PortfolioSimulation } from '@/types/cycleAnalysis';
-import CollapsibleSection from './CollapsibleSection';
+import { CarouselContainer, CarouselSlide } from './CarouselSlide';
 
 interface PortfolioTabProps {
   portfolioAnalysis: {
@@ -10,27 +10,44 @@ interface PortfolioTabProps {
   };
   onBack?: () => void;
   onNext?: () => void;
+  onSlideChange?: (slide: number) => void;
 }
 
-export default function PortfolioTab({ portfolioAnalysis, onBack, onNext }: PortfolioTabProps) {
-  // Filter to only show cycles that exist in the data
-  const allCycles = [
-    { key: 'market' as const, name: 'Market (S&P 500) Cycle' },
-    { key: 'country' as const, name: 'Country Cycle' },
-    { key: 'technology' as const, name: 'Technology Cycle' },
-    { key: 'economic' as const, name: 'Economic Cycle' },
-    { key: 'business' as const, name: 'Business Cycle' },
-    { key: 'company' as const, name: 'Company Cycle' },
-  ];
-
-  const cycles = allCycles.filter(cycle => portfolioAnalysis.current.cycleResults[cycle.key] !== undefined);
+export default function PortfolioTab({ portfolioAnalysis, onBack, onNext, onSlideChange }: PortfolioTabProps) {
+  // Carousel state: 0 = Portfolio Analysis, 1 = Important Disclaimer
+  const [currentSlide, setCurrentSlide] = useState(0);
   
-  // Default to market if available, otherwise first available cycle
-  const defaultCycle = portfolioAnalysis.current.cycleResults.market ? 'market' : cycles[0]?.key || 'country';
-  const [selectedCycle, setSelectedCycle] = useState<keyof PortfolioSimulation['cycleResults']>(defaultCycle);
+  // Notify parent when slide changes for video sync
+  useEffect(() => {
+    if (onSlideChange) {
+      onSlideChange(currentSlide);
+    }
+  }, [currentSlide, onSlideChange]);
 
-  const currentCycleResult = portfolioAnalysis.current.cycleResults[selectedCycle] || portfolioAnalysis.current.cycleResults[cycles[0]?.key || 'country'];
   const overallResult = portfolioAnalysis.current.overall;
+
+  const handleNextSlide = () => {
+    if (currentSlide < 1) {
+      setCurrentSlide(currentSlide + 1);
+    } else if (onNext) {
+      // Last slide - navigate to Market Tab
+      onNext();
+    }
+  };
+
+  const handlePrevSlide = () => {
+    if (currentSlide > 0) {
+      setCurrentSlide(currentSlide - 1);
+    } else if (onBack) {
+      // First slide - go back to previous tab
+      onBack();
+    }
+  };
+
+  const getSlideDirection = (slideIndex: number): 'left' | 'right' | 'none' => {
+    if (slideIndex === currentSlide) return 'none';
+    return slideIndex < currentSlide ? 'left' : 'right';
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -47,258 +64,100 @@ export default function PortfolioTab({ portfolioAnalysis, onBack, onNext }: Port
 
   return (
     <div className="space-y-6 md:space-y-8">
-      {/* Slider Input */}
-      <div className="bg-white rounded-2xl p-4 md:p-6 border border-gray-200 shadow-sm">
-        <label className="block text-xs md:text-sm font-medium text-gray-700 mb-3 md:mb-4">
-          Your Answer
-        </label>
-        <div className="flex items-center gap-2 md:gap-4 mb-3">
-          <span className="text-xs md:text-sm text-gray-600 whitespace-nowrap flex-shrink-0">Not Confident</span>
-          <input
-            type="range"
-            min="1"
-            max="10"
-            defaultValue="5"
-            className="flex-1 h-2 bg-teal-200 rounded-lg appearance-none cursor-pointer accent-teal-600 min-w-0"
-          />
-          <span className="text-xs md:text-sm text-gray-600 whitespace-nowrap flex-shrink-0">Very Confident</span>
-        </div>
-        <div className="flex justify-between text-[10px] md:text-xs text-gray-500 px-1 md:px-2">
-          {[1,2,3,4,5,6,7,8,9,10].map(n => <span key={n} className="w-6 text-center">{n}</span>)}
-        </div>
-      </div>
-
-      {/* Navigation Buttons */}
-      <div className="flex flex-col sm:flex-row gap-3 sm:justify-between">
-        {onBack && (
-          <button
-            onClick={onBack}
-            className="w-full sm:w-auto px-6 py-3 bg-white border border-gray-300 text-gray-700 text-sm md:text-base font-semibold rounded-xl hover:bg-gray-50 transition-all shadow-sm hover:shadow flex items-center justify-center gap-2"
-          >
-            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back: Goal
-          </button>
-        )}
-        {onNext && (
-          <button
-            onClick={onNext}
-            className="w-full sm:w-auto px-6 md:px-8 py-3 md:py-3.5 bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-sm md:text-base font-semibold rounded-xl hover:from-cyan-700 hover:to-blue-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 sm:ml-auto"
-          >
-            Next: Market Analysis
-            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        )}
-      </div>
-
-      {/* Talk to Advisor Button */}
-      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-4 md:p-6 text-white">
-        <p className="text-sm md:text-base text-teal-100 mb-3 md:mb-4">
-          Want personalized guidance? Work with a Clockwise Approved Advisor.
-        </p>
-        <a
-          href="https://calendly.com/clockwisecapital/appointments"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center justify-center gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-white text-teal-600 text-sm md:text-base font-semibold rounded-lg hover:bg-gray-100 transition-colors w-full md:w-auto"
-        >
-          Talk to an Advisor
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </a>
-      </div>
-
-      {/* Portfolio Performance Overview */}
-      <div className="bg-white rounded-2xl p-4 md:p-6 border border-gray-200 shadow-sm">
-        <div className="flex items-center justify-between mb-4 md:mb-6">
-          <div>
-            <div className="text-base md:text-xl font-bold text-gray-900">Portfolio Performance Analysis</div>
-            <p className="text-xs md:text-sm text-gray-600 mt-1">
-              Monte Carlo simulation across all economic cycles
+      {/* SECTION 1: Recommendation - Always Visible */}
+      <div className="bg-gradient-to-br from-blue-900/30 to-cyan-900/30 rounded-2xl p-4 md:p-6 border border-blue-800 shadow-sm">
+        <div className="flex items-start gap-3 md:gap-4">
+          <div className="flex-shrink-0">
+            <div className="w-10 h-10 md:w-14 md:h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-md">
+              <svg className="w-5 h-5 md:w-7 md:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm md:text-lg font-bold text-blue-300 mb-1 md:mb-2">Portfolio Recommendation</div>
+            <p className="text-xs md:text-base text-gray-300 leading-relaxed">
+              Your portfolio shows a {formatPercent(overallResult.expectedReturn)} median expected return with {overallResult.confidence} confidence. Given the current market conditions and cycle positioning, we recommend {overallResult.expectedReturn > 0.15 ? 'maintaining your current allocation while monitoring for rebalancing opportunities' : 'reviewing your risk exposure and considering strategic adjustments'}.
             </p>
           </div>
-          <div className="text-right">
-            <div className="text-xs md:text-sm text-gray-600">Total Value</div>
-            <div className="text-lg md:text-2xl font-bold text-blue-900">
+        </div>
+      </div>
+
+      {/* SECTION 2: Carousel - PowerPoint Style Slides */}
+      <CarouselContainer
+        currentSlide={currentSlide}
+        totalSlides={2}
+        onSlideChange={setCurrentSlide}
+        onNext={handleNextSlide}
+        onPrev={handlePrevSlide}
+        nextButtonText={currentSlide === 1 ? 'Go to Market Analysis' : 'Next'}
+      >
+        {/* SLIDE 1: Portfolio Performance Analysis */}
+        <CarouselSlide isActive={currentSlide === 0} direction={getSlideDirection(0)}>
+          <h2 className="text-xl md:text-2xl font-bold text-gray-100 mb-4">Portfolio Performance Analysis</h2>
+          <p className="text-sm text-gray-400 mb-6">
+            Monte Carlo simulation across all economic cycles
+          </p>
+
+          {/* Total Portfolio Value */}
+          <div className="bg-gray-700/50 rounded-lg p-4 border border-gray-700 mb-6">
+            <div className="text-sm text-gray-400 mb-1">Total Portfolio Value</div>
+            <div className="text-3xl md:text-4xl font-bold text-blue-400">
               {formatCurrency(portfolioAnalysis.current.totalValue)}
             </div>
           </div>
-        </div>
 
         {/* Overall Expected Performance */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <div className="text-sm text-gray-600 mb-1">Expected Return</div>
-            <div className="text-3xl font-bold text-gray-900">
+          <div className="bg-gray-700 rounded-lg p-4 border border-gray-600">
+            <div className="text-sm text-gray-400 mb-1">Expected Return</div>
+            <div className="text-3xl font-bold text-gray-100">
               {formatPercent(overallResult.expectedReturn)}
             </div>
-            <div className="text-xs text-gray-500 mt-1">Median (50th percentile)</div>
+            <div className="text-xs text-gray-400 mt-1">Median (50th percentile)</div>
             <div className="text-xs text-teal-600 mt-2 font-medium">
               Confidence: {overallResult.confidence}
             </div>
           </div>
 
-          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-            <div className="text-sm text-emerald-700 mb-1">Expected Upside</div>
-            <div className="text-3xl font-bold text-gray-900">
+          <div className="bg-emerald-900/20 border border-emerald-800 rounded-lg p-4">
+            <div className="text-sm text-emerald-400 mb-1">Expected Upside</div>
+            <div className="text-3xl font-bold text-gray-100">
               {formatPercent(overallResult.expectedUpside)}
             </div>
             <div className="text-xs text-gray-600 mt-1">95th percentile</div>
-            <div className="text-xs text-gray-600 mt-2">
+            <div className="text-xs text-gray-400 mt-2">
               Value: {formatCurrency(portfolioAnalysis.current.totalValue * (1 + overallResult.expectedUpside))}
             </div>
           </div>
 
-          <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
-            <div className="text-sm text-rose-700 mb-1">Expected Downside</div>
-            <div className="text-3xl font-bold text-gray-900">
+          <div className="bg-rose-900/10 border border-rose-900/30 rounded-lg p-4">
+            <div className="text-sm text-rose-300 mb-1">Expected Downside</div>
+            <div className="text-3xl font-bold text-gray-100">
               {formatPercent(overallResult.expectedDownside)}
             </div>
-            <div className="text-xs text-gray-600 mt-1">5th percentile</div>
-            <div className="text-xs text-gray-600 mt-2">
+            <div className="text-xs text-gray-400 mt-1">5th percentile</div>
+            <div className="text-xs text-gray-400 mt-2">
               Value: {formatCurrency(portfolioAnalysis.current.totalValue * (1 + overallResult.expectedDownside))}
             </div>
           </div>
         </div>
-      </div>
+        </CarouselSlide>
 
-      {/* Cycle-by-Cycle Analysis */}
-      <CollapsibleSection 
-        title="Performance By Cycle" 
-        subtitle="See how your portfolio is expected to perform under different economic cycle conditions"
-      >
-
-        {/* Cycle Selector */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Select Cycle
-          </label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {cycles.map((cycle) => (
-              <button
-                key={cycle.key}
-                onClick={() => setSelectedCycle(cycle.key)}
-                className={`px-4 py-3 rounded-lg font-medium transition-all ${
-                  selectedCycle === cycle.key
-                    ? 'bg-teal-600 text-white shadow-md hover:bg-teal-700'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {cycle.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Selected Cycle Results */}
-        <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
-          <div className="text-lg font-semibold text-gray-900 mb-4">
-            {cycles.find(c => c.key === selectedCycle)?.name} Impact
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-lg p-4 border border-gray-200">
-              <div className="text-xs text-gray-600 mb-1">Expected Return</div>
-              <div className="text-2xl font-bold text-gray-900">
-                {formatPercent(currentCycleResult.expectedReturn)}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">Next 12 months (median)</div>
-            </div>
-
-            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-              <div className="text-xs text-emerald-700 mb-1">Upside Scenario</div>
-              <div className="text-2xl font-bold text-gray-900">
-                {formatPercent(currentCycleResult.expectedUpside)}
-              </div>
-              <div className="text-xs text-gray-600 mt-1">95th percentile</div>
-            </div>
-
-            <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
-              <div className="text-xs text-rose-700 mb-1">Downside Scenario</div>
-              <div className="text-2xl font-bold text-gray-900">
-                {formatPercent(currentCycleResult.expectedDownside)}
-              </div>
-              <div className="text-xs text-gray-600 mt-1">5th percentile</div>
-            </div>
-          </div>
-
-          {currentCycleResult.maxDrawdown && (
-            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <div>
-                  <div className="text-sm font-semibold text-amber-900">Maximum Drawdown Risk</div>
-                  <div className="text-xs text-amber-700">
-                    Potential loss from peak: <span className="font-bold">{formatPercent(currentCycleResult.maxDrawdown)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="text-xs text-blue-900">
-              <strong>Analysis Confidence:</strong> {currentCycleResult.confidence}
-            </div>
-          </div>
-        </div>
-
-        {/* Comparison Table */}
-        <div className="mt-6">
-          <div className="text-sm font-semibold text-gray-900 mb-3">All Cycles Comparison</div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cycle</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Expected Return</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Upside (95th)</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Downside (5th)</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {cycles.map((cycle) => {
-                  const result = portfolioAnalysis.current.cycleResults[cycle.key];
-                  return (
-                    <tr key={cycle.key} className={selectedCycle === cycle.key ? 'bg-teal-50' : ''}>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{cycle.name}</td>
-                      <td className="px-4 py-3 text-sm text-right text-gray-900 font-semibold">
-                        {formatPercent(result.expectedReturn)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right text-emerald-600 font-semibold">
-                        {formatPercent(result.expectedUpside)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right text-rose-600 font-semibold">
-                        {formatPercent(result.expectedDownside)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </CollapsibleSection>
-
-      {/* Disclaimer */}
-      <CollapsibleSection 
-        title="Important Disclaimer" 
-        subtitle="Please read before making investment decisions"
-      >
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+        {/* SLIDE 2: Important Disclaimer */}
+        <CarouselSlide isActive={currentSlide === 1} direction={getSlideDirection(1)}>
+          <h2 className="text-xl md:text-2xl font-bold text-gray-100 mb-4">Important Disclaimer</h2>
+          <p className="text-sm text-gray-400 mb-6">
+            Please read before making investment decisions
+          </p>
+        <div className="bg-amber-900/20 border border-amber-800 rounded-lg p-4">
         <div className="flex items-start gap-3">
           <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <div>
-            <div className="text-sm font-semibold text-amber-900 mb-1">Important Disclaimer</div>
-            <p className="text-xs text-amber-800">
+            <div className="text-sm font-semibold text-amber-300 mb-1">Important Disclaimer</div>
+            <p className="text-xs text-amber-400 leading-relaxed">
               These projections are based on Monte Carlo simulations using historical data and AI-powered cycle analysis. 
               Past performance does not guarantee future results. These are hypothetical scenarios and should not be 
               considered as investment advice. Please consult with a financial advisor before making investment decisions.
@@ -306,7 +165,59 @@ export default function PortfolioTab({ portfolioAnalysis, onBack, onNext }: Port
           </div>
         </div>
         </div>
-      </CollapsibleSection>
+
+          {/* Additional Disclaimer Points */}
+          <div className="mt-6 space-y-4">
+            <div className="bg-gray-700/50 rounded-lg p-4 border border-gray-700">
+              <h4 className="text-sm font-semibold text-gray-100 mb-2">Simulation Limitations</h4>
+              <p className="text-xs text-gray-400">
+                Monte Carlo simulations are mathematical models that use historical data to project potential outcomes. 
+                While useful for understanding risk and return distributions, they cannot predict actual future performance.
+              </p>
+            </div>
+
+            <div className="bg-gray-700/50 rounded-lg p-4 border border-gray-700">
+              <h4 className="text-sm font-semibold text-gray-100 mb-2">Market Conditions</h4>
+              <p className="text-xs text-gray-400">
+                Market conditions change continuously. Economic cycles, geopolitical events, and other factors can significantly 
+                impact actual returns. Regular portfolio reviews and adjustments are recommended.
+              </p>
+            </div>
+
+            <div className="bg-gray-700/50 rounded-lg p-4 border border-gray-700">
+              <h4 className="text-sm font-semibold text-gray-100 mb-2">Professional Advice</h4>
+              <p className="text-xs text-gray-400">
+                This analysis is for informational purposes only. Consider working with a qualified financial advisor to develop 
+                a personalized investment strategy aligned with your specific circumstances and goals.
+              </p>
+            </div>
+          </div>
+        </CarouselSlide>
+      </CarouselContainer>
+
+      {/* SECTION 3: Next Steps - Always Visible */}
+      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-4 md:p-6 text-white">
+        <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">Next Step</h3>
+        <p className="text-sm md:text-base text-teal-100 mb-4 md:mb-6">
+          Work 1:1 with a strategist to optimize allocations for the current cycle.
+        </p>
+        <div className="flex justify-center">
+          <a
+            href="https://calendly.com/clockwisecapital/appointments"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-6 md:px-8 py-3 bg-white text-teal-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors text-center flex items-center justify-center gap-2 text-sm md:text-base"
+          >
+            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Match me with an advisor
+            <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+        </div>
+      </div>
     </div>
   );
 }

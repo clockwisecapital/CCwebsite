@@ -13,19 +13,17 @@ export default function CollapsibleSection({ title, subtitle, children, defaultO
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between hover:bg-gray-100 transition-colors"
+        className="w-full bg-gray-700 px-6 py-4 border-b border-gray-600 flex items-center justify-between hover:bg-gray-600 transition-colors"
       >
         <div className="text-left">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-          {subtitle && <p className="text-sm text-gray-600 mt-1">{subtitle}</p>}
+          <h3 className="text-lg font-semibold text-gray-100">{title}</h3>
+          {subtitle && <p className="text-sm text-gray-400 mt-1">{subtitle}</p>}
         </div>
         <svg
-          className={`w-5 h-5 text-gray-600 transform transition-transform flex-shrink-0 ml-4 ${
-            isOpen ? 'rotate-180' : ''
-          }`}
+          className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

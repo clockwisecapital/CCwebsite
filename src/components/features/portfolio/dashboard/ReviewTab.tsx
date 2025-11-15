@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import type { IntakeFormData, AnalysisResult } from './PortfolioDashboard';
 import CycleTab from './CycleTab';
 import PortfolioTab from './PortfolioTab';
@@ -13,18 +12,20 @@ interface ReviewTabProps {
   videoId: string | null; // Still needed for prop compatibility
   onReset: () => void;
   onNavigateToAnalyze?: () => void;
+  cycleAnalysisTab: 'market' | 'portfolio' | 'goal';
+  onCycleAnalysisTabChange: (tab: 'market' | 'portfolio' | 'goal') => void;
+  onGoalSlideChange: (slide: number) => void;
+  onPortfolioSlideChange: (slide: number) => void;
+  onMarketSlideChange: (slide: number) => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId: _conversationId, videoId: _videoId, onReset, onNavigateToAnalyze }: ReviewTabProps) {
-  const [showAnalysisAndSync, setShowAnalysisAndSync] = useState(false);
-  const [cycleAnalysisTab, setCycleAnalysisTab] = useState<'market' | 'portfolio' | 'goal'>('goal');
-
+export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId: _conversationId, videoId: _videoId, onReset, onNavigateToAnalyze, cycleAnalysisTab, onCycleAnalysisTabChange, onGoalSlideChange, onPortfolioSlideChange, onMarketSlideChange }: ReviewTabProps) {
   const handleNext = () => {
     if (cycleAnalysisTab === 'goal') {
-      setCycleAnalysisTab('portfolio');
+      onCycleAnalysisTabChange('portfolio');
     } else if (cycleAnalysisTab === 'portfolio') {
-      setCycleAnalysisTab('market');
+      onCycleAnalysisTabChange('market');
     } else if (cycleAnalysisTab === 'market') {
       // Navigate to Analysis tab
       if (onNavigateToAnalyze) {
@@ -35,29 +36,11 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
 
   const handleBack = () => {
     if (cycleAnalysisTab === 'market') {
-      setCycleAnalysisTab('portfolio');
+      onCycleAnalysisTabChange('portfolio');
     } else if (cycleAnalysisTab === 'portfolio') {
-      setCycleAnalysisTab('goal');
+      onCycleAnalysisTabChange('goal');
     }
   };
-
-  // Process impact data (handle both string and array formats)
-  const processImpactData = (data: string | string[] | undefined): string[] => {
-    if (Array.isArray(data)) {
-      return data.map(item => item.startsWith('•') ? item : `• ${item}`);
-    }
-    if (typeof data === 'string') {
-      return data.split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0)
-        .map(line => line.startsWith('•') ? line : `• ${line}`);
-    }
-    return ['• No data available'];
-  };
-
-  const marketImpact = processImpactData(analysisResult.marketImpact);
-  const portfolioImpact = processImpactData(analysisResult.portfolioImpact);
-  const goalImpact = processImpactData(analysisResult.goalImpact);
 
   // Handle missing cycle analysis gracefully
   if (!analysisResult.cycleAnalysis) {
@@ -102,15 +85,15 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
   return (
     <div className="space-y-8">
       {/* Portfolio Intelligence with Dynamic Kronos Recommendations */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-            <div className="border-b border-gray-200">
+      <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+            <div className="border-b border-gray-700">
               <nav className="flex -mb-px">
             <button
-              onClick={() => setCycleAnalysisTab('goal')}
+              onClick={() => onCycleAnalysisTabChange('goal')}
               className={`flex-1 py-3 md:py-4 px-2 md:px-6 text-center font-semibold transition-colors ${
                 cycleAnalysisTab === 'goal'
-                  ? 'border-b-2 border-secondary-teal text-secondary-teal bg-teal-50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  ? 'border-b-2 border-teal-400 text-teal-300 bg-teal-900/20'
+                  : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
               }`}
             >
               <div className="flex items-center justify-center gap-1 md:gap-2">
@@ -119,15 +102,17 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                 </svg>
                 <span className="text-sm md:text-base">Goal</span>
               </div>
-              <div className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 hidden sm:block">Success Probability</div>
+              <div className={`text-[10px] md:text-xs mt-0.5 md:mt-1 hidden sm:block ${
+                cycleAnalysisTab === 'goal' ? 'text-teal-400' : 'text-gray-400'
+              }`}>Success Probability</div>
             </button>
 
             <button
-              onClick={() => setCycleAnalysisTab('portfolio')}
+              onClick={() => onCycleAnalysisTabChange('portfolio')}
               className={`flex-1 py-3 md:py-4 px-2 md:px-6 text-center font-semibold transition-colors ${
                 cycleAnalysisTab === 'portfolio'
-                  ? 'border-b-2 border-secondary-teal text-secondary-teal bg-teal-50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  ? 'border-b-2 border-teal-400 text-teal-300 bg-teal-900/20'
+                  : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
               }`}
             >
               <div className="flex items-center justify-center gap-1 md:gap-2">
@@ -136,15 +121,17 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                 </svg>
                 <span className="text-sm md:text-base">Portfolio</span>
               </div>
-              <div className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 hidden sm:block">Monte Carlo</div>
+              <div className={`text-[10px] md:text-xs mt-0.5 md:mt-1 hidden sm:block ${
+                cycleAnalysisTab === 'portfolio' ? 'text-teal-400' : 'text-gray-400'
+              }`}>Monte Carlo</div>
             </button>
 
             <button
-              onClick={() => setCycleAnalysisTab('market')}
+              onClick={() => onCycleAnalysisTabChange('market')}
               className={`flex-1 py-3 md:py-4 px-2 md:px-6 text-center font-semibold transition-colors ${
                 cycleAnalysisTab === 'market'
-                  ? 'border-b-2 border-secondary-teal text-secondary-teal bg-teal-50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  ? 'border-b-2 border-teal-400 text-teal-300 bg-teal-900/20'
+                  : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700'
               }`}
             >
               <div className="flex items-center justify-center gap-1 md:gap-2">
@@ -153,63 +140,22 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                 </svg>
                 <span className="text-sm md:text-base">Market</span>
               </div>
-              <div className="text-[10px] md:text-xs text-gray-500 mt-0.5 md:mt-1 hidden sm:block">6 Cycles</div>
+              <div className={`text-[10px] md:text-xs mt-0.5 md:mt-1 hidden sm:block ${
+                cycleAnalysisTab === 'market' ? 'text-teal-400' : 'text-gray-400'
+              }`}>6 Cycles</div>
             </button>
           </nav>
         </div>
-
-            {/* Dynamic Kronos Recommendation with Question - Changes based on active tab */}
-            <div className="p-4 md:p-6 border-b border-gray-200">
-              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-4 md:p-6 border border-blue-100 shadow-sm">
-                <div className="flex items-start gap-3 md:gap-4 mb-4 md:mb-6">
-                  <div className="flex-shrink-0">
-                    <div className="w-10 h-10 md:w-14 md:h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-md">
-                      <svg className="w-5 h-5 md:w-7 md:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm md:text-lg font-bold text-blue-900 mb-1 md:mb-2">Kronos Recommendation</div>
-                    <p className="text-xs md:text-base text-gray-700 leading-relaxed">
-                      {cycleAnalysisTab === 'goal' && goalAnalysis.recommendation}
-                      {cycleAnalysisTab === 'market' && (
-                        <>
-                          Based on the current {cycleData.market.phase} phase of the {cycleData.market.name}, our analysis suggests a {cycleData.market.phasePercent < 50 ? 'cautious' : 'strategic'} approach. Historical patterns indicate {(cycleData.market.sp500Backtest.expectedReturn * 100).toFixed(1)}% median returns with significant volatility potential.
-                        </>
-                      )}
-                      {cycleAnalysisTab === 'portfolio' && (
-                        <>
-                          Your portfolio shows a {((portfolioAnalysis.current.overall.expectedReturn) * 100).toFixed(1)}% median expected return with {portfolioAnalysis.current.overall.confidence} confidence. Given the current market conditions and cycle positioning, we recommend {portfolioAnalysis.current.overall.expectedReturn > 0.15 ? 'maintaining your current allocation while monitoring for rebalancing opportunities' : 'reviewing your risk exposure and considering strategic adjustments'}.
-                        </>
-                      )}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Conversational Question - Inside Kronos Recommendation */}
-                <div className="border-t border-blue-200 pt-3 md:pt-4 mt-3 md:mt-4">
-                  <p className="text-gray-800 text-sm md:text-lg font-semibold leading-relaxed mb-1.5 md:mb-2">
-                    {cycleAnalysisTab === 'goal' && 'How important is this Goal?'}
-                    {cycleAnalysisTab === 'portfolio' && 'How confident are you that this portfolio will hit your Goal?'}
-                    {cycleAnalysisTab === 'market' && 'Would it be helpful to speak with a Clockwise Approved Advisor about your Portfolio Risks?'}
-                  </p>
-                  <p className="text-gray-600 text-xs md:text-sm">
-                    {cycleAnalysisTab === 'goal' && 'Scale: Nice-to-have (1) - Critical (10)'}
-                    {cycleAnalysisTab === 'portfolio' && 'Scale: Not Confident (1) - Very Confident (10)'}
-                    {cycleAnalysisTab === 'market' && 'Scale: Not Helpful (1) - Very Helpful (10)'}
-                  </p>
-                </div>
-              </div>
-            </div>
 
             {/* Tab Content */}
             <div className="p-6">
               {cycleAnalysisTab === 'market' && (
                 <CycleTab 
-                  cycleData={cycleData} 
+                  cycleData={cycleData}
+                  portfolioAnalysis={portfolioAnalysis}
                   onNext={handleNext}
                   onBack={handleBack}
+                  onSlideChange={onMarketSlideChange}
                 />
               )}
               {cycleAnalysisTab === 'portfolio' && (
@@ -217,152 +163,18 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                   portfolioAnalysis={portfolioAnalysis}
                   onBack={handleBack}
                   onNext={handleNext}
+                  onSlideChange={onPortfolioSlideChange}
                 />
               )}
               {cycleAnalysisTab === 'goal' && (
                 <GoalTab 
                   goalAnalysis={goalAnalysis}
+                  analysisResult={analysisResult}
                   onNext={handleNext}
+                  onSlideChange={onGoalSlideChange}
                 />
               )}
             </div>
-      </div>
-
-      {/* 2. Portfolio Intelligence Results */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <button
-          onClick={() => setShowAnalysisAndSync(!showAnalysisAndSync)}
-          className="w-full bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between hover:bg-gray-100 transition-colors"
-        >
-          <div className="text-left">
-            <h3 className="text-lg font-semibold text-gray-900">Portfolio Intelligence Results</h3>
-            <p className="text-sm text-gray-600 mt-1">Impact & Recommendation</p>
-          </div>
-          <svg
-            className={`w-5 h-5 text-gray-600 transform transition-transform flex-shrink-0 ml-4 ${
-              showAnalysisAndSync ? 'rotate-180' : ''
-            }`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        {showAnalysisAndSync && (
-          <div className="p-6 space-y-6">
-            {/* Market Impact */}
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3">
-                Market Impact
-              </h4>
-              <ul className="space-y-2 text-gray-700">
-                {marketImpact.map((item, idx) => (
-                  <li key={idx} className="pl-4">{item}</li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Personalized Portfolio Risks */}
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3">
-                Personalized Portfolio Risks
-              </h4>
-              <ul className="space-y-2 text-gray-700">
-                {portfolioImpact.map((item, idx) => (
-                  <li key={idx} className="pl-4">{item}</li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Goal Impact */}
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3">
-                Goal Impact
-              </h4>
-              <ul className="space-y-2 text-gray-700">
-                {goalImpact.map((item, idx) => (
-                  <li key={idx} className="pl-4">{item}</li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Professional Oversight Notice */}
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div>
-                  <p className="text-sm font-semibold text-blue-900 mb-1">Professional oversight suggested</p>
-                  <p className="text-xs text-blue-800">Clockwise portfolio solutions available</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Metrics Table */}
-            {analysisResult.metrics && analysisResult.metrics.length > 0 && (
-              <div className="mt-6 overflow-hidden border border-gray-200 rounded-lg">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Metric
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Current Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Recommendation
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {analysisResult.metrics.map((row, idx) => (
-                      <tr key={idx}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {row[0]}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                          {row[1]}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                          {row[2]}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Scenario Stress Testing - Hidden as requested */}
-
-      {/* Next Steps / CTA - Moved to Bottom */}
-      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-4 md:p-8 text-white">
-        <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">Next Step</h3>
-        <p className="text-sm md:text-base text-teal-100 mb-4 md:mb-6">
-          Work 1:1 with a strategist to optimize allocations for the current cycle.
-        </p>
-        <div className="flex justify-center">
-          <a
-            href="https://calendly.com/clockwisecapital/appointments"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-6 md:px-8 py-3 bg-white text-teal-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors text-center flex items-center justify-center gap-2 text-sm md:text-base"
-          >
-            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            Match me with an advisor
-            <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </a>
-        </div>
       </div>
     </div>
   );

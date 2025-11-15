@@ -185,7 +185,7 @@ Buttons:
 - Email: email input (required, validated)
 
 Privacy Notice:
-"We'll email your personalized cycle analysis and portfolio review. 
+"We'll prepare your personalized portfolio analysis. 
 We never sell your data. Privacy Policy."
 
 Actions:
