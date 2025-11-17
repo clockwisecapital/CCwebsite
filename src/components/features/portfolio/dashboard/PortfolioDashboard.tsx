@@ -240,7 +240,7 @@ export default function PortfolioDashboard() {
       return {
         id: 'kronos-thinking',
         title: 'Kronos is Analyzing Your Portfolio...',
-        videoSrc: '/kronos-thinking.mp4' // New video placeholder
+        videoSrc: '/kronos-thinking.mp4'
       };
     }
 
@@ -252,21 +252,21 @@ export default function PortfolioDashboard() {
           return {
             id: 'probability-goal',
             title: 'Probability of Reaching Your Goal',
-            videoSrc: '/kronos-probability-goal.mp4' // New video placeholder
+            videoSrc: '/kronos-probability-goal.mp4'
           };
         }
         if (goalSlide === 1) {
           return {
             id: 'projected-values',
             title: 'Projected Portfolio Values',
-            videoSrc: '/kronos-projected-values.mp4' // New video placeholder
+            videoSrc: '/kronos-projected-values.mp4'
           };
         }
         if (goalSlide === 2) {
+          // Slide 2 (Portfolio Intelligence) - No video
           return {
-            id: 'portfolio-intelligence',
-            title: 'Portfolio Intelligence Results',
-            videoSrc: '/kronos-intro-no-watermark.mp4' // Reuse intro for now
+            id: 'portfolio-intelligence-no-video',
+            title: 'Portfolio Intelligence Results'
           };
         }
       }
@@ -277,14 +277,14 @@ export default function PortfolioDashboard() {
           return {
             id: 'portfolio-performance',
             title: 'Portfolio Performance Analysis',
-            videoSrc: '/kronos-portfolio-performance.mp4' // New video placeholder
+            videoSrc: '/kronos-portfolio-performance.mp4'
           };
         }
         if (portfolioSlide === 1) {
+          // Slide 1 (Disclaimer) - No video
           return {
-            id: 'disclaimer',
-            title: 'Important Disclaimer',
-            videoSrc: '/kronos-intro-no-watermark.mp4' // Reuse intro for disclaimer
+            id: 'disclaimer-no-video',
+            title: 'Important Disclaimer'
           };
         }
       }
@@ -295,21 +295,21 @@ export default function PortfolioDashboard() {
           return {
             id: 'cycle-analysis',
             title: 'Market Cycle Analysis',
-            videoSrc: '/kronos-cycle-analysis.mp4' // New video placeholder
+            videoSrc: '/kronos-cycle-analysis.mp4'
           };
         }
         if (marketSlide === 1) {
+          // Slide 1 (Historical Analog) - No video
           return {
-            id: 'historical-analog',
-            title: 'Historical Market Analog',
-            videoSrc: '/kronos-intro-no-watermark.mp4' // Reuse intro for now
+            id: 'historical-analog-no-video',
+            title: 'Historical Market Analog'
           };
         }
         if (marketSlide === 2) {
+          // Slide 2 (Performance By Cycle) - No video
           return {
-            id: 'performance-by-cycle',
-            title: 'Performance By Cycle',
-            videoSrc: '/kronos-intro-no-watermark.mp4' // Reuse intro for now
+            id: 'performance-by-cycle-no-video',
+            title: 'Performance By Cycle'
           };
         }
       }
@@ -325,11 +325,10 @@ export default function PortfolioDashboard() {
       };
     }
 
-    // Fallback
+    // Fallback - no video
     return {
-      id: 'intake-intro',
-      title: 'Meet Kronos - Your Portfolio Intelligence Guide',
-      videoSrc: '/kronos-intro-no-watermark.mp4'
+      id: 'no-video',
+      title: 'Portfolio Dashboard'
     };
   }, [activeTab, isAnalyzing, cycleAnalysisTab, videoId, goalSlide, portfolioSlide, marketSlide]);
 
@@ -427,6 +426,7 @@ export default function PortfolioDashboard() {
                 conversationId={conversationId}
                 videoId={videoId}
                 onReset={handleReset}
+                onBack={() => setActiveTab('intake')}
                 onNavigateToAnalyze={() => setActiveTab('analyze')}
                 cycleAnalysisTab={cycleAnalysisTab}
                 onCycleAnalysisTabChange={setCycleAnalysisTab}

@@ -9,10 +9,11 @@ interface GoalTabProps {
   goalAnalysis: GoalAnalysis;
   analysisResult: AnalysisResult;
   onNext?: () => void;
+  onBack?: () => void;
   onSlideChange?: (slide: number) => void;
 }
 
-export default function GoalTab({ goalAnalysis, analysisResult, onNext, onSlideChange }: GoalTabProps) {
+export default function GoalTab({ goalAnalysis, analysisResult, onNext, onBack, onSlideChange }: GoalTabProps) {
   // Carousel state: 0 = Probability, 1 = Projected Values, 2 = Portfolio Intelligence
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -53,6 +54,9 @@ export default function GoalTab({ goalAnalysis, analysisResult, onNext, onSlideC
   const handlePrevSlide = () => {
     if (currentSlide > 0) {
       setCurrentSlide(currentSlide - 1);
+    } else if (onBack) {
+      // First slide - go back to previous tab (Intake)
+      onBack();
     }
   };
 

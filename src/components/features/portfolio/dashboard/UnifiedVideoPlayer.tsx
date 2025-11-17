@@ -17,9 +17,7 @@ interface UnifiedVideoPlayerProps {
 
 export default function UnifiedVideoPlayer({ currentVideo, onVideoReady }: UnifiedVideoPlayerProps) {
   const [isMinimized, setIsMinimized] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const [displayedVideo, setDisplayedVideo] = useState<VideoConfig>(currentVideo);
-  const [nextVideo, setNextVideo] = useState<VideoConfig | null>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
   
@@ -27,6 +25,9 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady }: Unifi
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<'pending' | 'processing' | 'completed' | 'failed'>('pending');
   const [error, setError] = useState<string | null>(null);
+  
+  // Track which videos have been played
+  const [playedVideos, setPlayedVideos] = useState<Set<string>>(new Set());
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const hasNotified = useRef(false);
@@ -76,12 +77,21 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady }: Unifi
     };
   }, [currentVideo.videoId, currentVideo.needsPolling, onVideoReady]);
 
-  // Handle video transitions with cross-fade
+  // Handle video transitions
   useEffect(() => {
     if (currentVideo.id !== previousVideoId.current) {
-      setIsTransitioning(true);
-      setNextVideo(currentVideo);
-      setIsPlaying(true); // Reset to playing on video change
+      // Check if this video has been played before
+      const hasBeenPlayed = playedVideos.has(currentVideo.id);
+      
+      // Update displayed video immediately (key prop handles the switch)
+      setDisplayedVideo(currentVideo);
+      previousVideoId.current = currentVideo.id;
+      
+      // Only autoplay if video hasn't been played before
+      setIsPlaying(!hasBeenPlayed);
+      
+      // Expand player when new video starts
+      setIsMinimized(false);
       
       // Reset video URL and status when switching away from analysis video
       if (previousVideoId.current.includes('analysis')) {
@@ -90,22 +100,14 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady }: Unifi
         setError(null);
         hasNotified.current = false;
       }
-
-      setTimeout(() => {
-        setDisplayedVideo(currentVideo);
-        setNextVideo(null);
-        setIsTransitioning(false);
-        previousVideoId.current = currentVideo.id;
-        
-        // Autoplay after transition
-        if (videoRef.current) {
-          videoRef.current.play().catch(err => {
-            console.log('Autoplay prevented:', err);
-          });
-        }
-      }, 500); // Cross-fade duration
     }
-  }, [currentVideo]);
+  }, [currentVideo, playedVideos]);
+
+  // Don't render video player if there's no video source - check after all hooks
+  const hasVideo = currentVideo.videoSrc || currentVideo.videoId;
+  if (!hasVideo) {
+    return null;
+  }
 
   // Toggle play/pause
   const togglePlayPause = () => {
@@ -120,6 +122,27 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady }: Unifi
         setIsPlaying(true);
       }
     }
+  };
+
+  // Track when video starts playing
+  const handleVideoPlay = () => {
+    setIsPlaying(true);
+    // Mark this video as played
+    setPlayedVideos(prev => new Set(prev).add(currentVideo.id));
+  };
+
+  const handleVideoPause = () => {
+    setIsPlaying(false);
+  };
+
+  // When video ends, pause it and minimize player
+  const handleVideoEnded = () => {
+    setIsPlaying(false);
+    if (videoRef.current) {
+      videoRef.current.pause();
+    }
+    // Auto-minimize after video completes
+    setIsMinimized(true);
   };
 
   const getVideoSource = (): string | null => {
@@ -197,7 +220,7 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady }: Unifi
             >
               {isPlaying ? (
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <rect x="6" y="6" width="12" height="12" rx="1" />
+                  <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
                 </svg>
               ) : (
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -208,7 +231,7 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady }: Unifi
             <button
               onClick={() => setIsMinimized(true)}
               className="text-white/80 hover:text-white transition-colors p-1 hover:bg-white/10 rounded"
-              aria-label="Minimize video player"
+              aria-label="Minimize player"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -219,16 +242,16 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady }: Unifi
 
         {/* Video Container */}
         <div className="relative aspect-video bg-black">
-          {isLoading ? (
-            // Loading state for analysis video
-            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-900/50 to-teal-900/50">
-              <div className="text-center">
-                <div className="relative mb-4">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-teal-500 to-blue-600 flex items-center justify-center shadow-lg animate-pulse mx-auto">
-                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
+        {isLoading ? (
+          // Loading state for analysis video
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-900/50 to-teal-900/50">
+            <div className="text-center">
+              <div className="relative mb-4">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-teal-500 to-blue-600 flex items-center justify-center shadow-lg animate-pulse mx-auto">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
                   <svg className="absolute -inset-2 w-20 h-20 animate-spin mx-auto left-1/2 -ml-10" viewBox="0 0 50 50">
                     <circle 
                       className="opacity-25" 
@@ -267,35 +290,37 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady }: Unifi
             <>
               {/* Main video */}
               <video
+                key={displayedVideo.id}
                 ref={videoRef}
+                src={videoSource}
                 autoPlay
                 muted={isMuted}
                 playsInline
-                loop
-                className={`w-full h-full object-cover transition-opacity duration-500 ${
-                  isTransitioning ? 'opacity-0' : 'opacity-100'
-                }`}
+                onPlay={handleVideoPlay}
+                onPause={handleVideoPause}
+                onEnded={handleVideoEnded}
+                className="w-full h-full object-cover"
                 style={{ pointerEvents: 'none' }} // Disable scrubbing
               >
-                <source src={videoSource} type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
 
-              {/* Next video for cross-fade */}
-              {nextVideo && nextVideo.videoSrc && (
-                <video
-                  autoPlay
-                  muted={isMuted}
-                  playsInline
-                  loop
-                  className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0"
-                  style={{ 
-                    opacity: isTransitioning ? 1 : 0,
-                    pointerEvents: 'none'
-                  }}
+              {/* Play button overlay when paused */}
+              {!isPlaying && (
+                <div 
+                  className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer z-10"
+                  onClick={togglePlayPause}
+                  style={{ pointerEvents: 'auto' }}
                 >
-                  <source src={nextVideo.videoSrc} type="video/mp4" />
-                </video>
+                  <button 
+                    className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-teal-500 to-blue-600 flex items-center justify-center shadow-2xl hover:scale-110 transition-transform duration-300 group"
+                    aria-label="Play video"
+                  >
+                    <svg className="w-8 h-8 md:w-10 md:h-10 text-white ml-1 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </button>
+                </div>
               )}
 
               {/* Error banner for fallback video */}
@@ -321,18 +346,6 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady }: Unifi
               </div>
             </div>
           )}
-        </div>
-
-        {/* Footer info */}
-        <div className="bg-gray-800/50 px-3 py-1.5 flex items-center justify-between text-[10px] text-gray-400">
-          <span className="truncate">Kronos Portfolio Intelligence</span>
-          <span className="flex items-center gap-1 ml-2">
-            <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-              <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-            </svg>
-            {isPlaying ? 'Auto-playing' : 'Paused'}
-          </span>
         </div>
       </div>
     </div>

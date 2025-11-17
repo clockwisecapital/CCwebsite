@@ -11,6 +11,7 @@ interface ReviewTabProps {
   conversationId: string | null;
   videoId: string | null; // Still needed for prop compatibility
   onReset: () => void;
+  onBack?: () => void;
   onNavigateToAnalyze?: () => void;
   cycleAnalysisTab: 'market' | 'portfolio' | 'goal';
   onCycleAnalysisTabChange: (tab: 'market' | 'portfolio' | 'goal') => void;
@@ -20,7 +21,7 @@ interface ReviewTabProps {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId: _conversationId, videoId: _videoId, onReset, onNavigateToAnalyze, cycleAnalysisTab, onCycleAnalysisTabChange, onGoalSlideChange, onPortfolioSlideChange, onMarketSlideChange }: ReviewTabProps) {
+export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId: _conversationId, videoId: _videoId, onReset, onBack, onNavigateToAnalyze, cycleAnalysisTab, onCycleAnalysisTabChange, onGoalSlideChange, onPortfolioSlideChange, onMarketSlideChange }: ReviewTabProps) {
   const handleNext = () => {
     if (cycleAnalysisTab === 'goal') {
       onCycleAnalysisTabChange('portfolio');
@@ -39,6 +40,9 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
       onCycleAnalysisTabChange('portfolio');
     } else if (cycleAnalysisTab === 'portfolio') {
       onCycleAnalysisTabChange('goal');
+    } else if (cycleAnalysisTab === 'goal' && onBack) {
+      // First tab (Goal) - go back to Intake
+      onBack();
     }
   };
 
@@ -171,6 +175,7 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                   goalAnalysis={goalAnalysis}
                   analysisResult={analysisResult}
                   onNext={handleNext}
+                  onBack={handleBack}
                   onSlideChange={onGoalSlideChange}
                 />
               )}
