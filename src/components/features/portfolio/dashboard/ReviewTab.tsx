@@ -26,7 +26,10 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
     if (cycleAnalysisTab === 'goal') {
       onCycleAnalysisTabChange('portfolio');
     } else if (cycleAnalysisTab === 'portfolio') {
-      onCycleAnalysisTabChange('market');
+      // Skip Market Tab and navigate directly to Analysis tab
+      if (onNavigateToAnalyze) {
+        onNavigateToAnalyze();
+      }
     } else if (cycleAnalysisTab === 'market') {
       // Navigate to Analysis tab
       if (onNavigateToAnalyze) {
@@ -173,7 +176,6 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
               {cycleAnalysisTab === 'goal' && (
                 <GoalTab 
                   goalAnalysis={goalAnalysis}
-                  analysisResult={analysisResult}
                   onNext={handleNext}
                   onBack={handleBack}
                   onSlideChange={onGoalSlideChange}

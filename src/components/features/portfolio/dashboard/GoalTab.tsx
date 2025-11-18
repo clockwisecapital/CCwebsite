@@ -2,19 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import type { GoalAnalysis } from '@/types/cycleAnalysis';
-import type { AnalysisResult } from './PortfolioDashboard';
 import { CarouselContainer, CarouselSlide } from './CarouselSlide';
 
 interface GoalTabProps {
   goalAnalysis: GoalAnalysis;
-  analysisResult: AnalysisResult;
   onNext?: () => void;
   onBack?: () => void;
   onSlideChange?: (slide: number) => void;
 }
 
-export default function GoalTab({ goalAnalysis, analysisResult, onNext, onBack, onSlideChange }: GoalTabProps) {
-  // Carousel state: 0 = Probability, 1 = Projected Values, 2 = Portfolio Intelligence
+export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }: GoalTabProps) {
+  // Carousel state: 0 = Probability, 1 = Projected Values
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Notify parent when slide changes for video sync
@@ -24,26 +22,9 @@ export default function GoalTab({ goalAnalysis, analysisResult, onNext, onBack, 
     }
   }, [currentSlide, onSlideChange]);
 
-  // Process impact data for Portfolio Intelligence slide
-  const processImpactData = (data: string | string[] | undefined): string[] => {
-    if (Array.isArray(data)) {
-      return data.map(item => item.startsWith('•') ? item : `• ${item}`);
-    }
-    if (typeof data === 'string') {
-      return data.split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0)
-        .map(line => line.startsWith('•') ? line : `• ${line}`);
-    }
-    return ['• No data available'];
-  };
-
-  const marketImpact = processImpactData(analysisResult.marketImpact);
-  const portfolioImpact = processImpactData(analysisResult.portfolioImpact);
-  const goalImpact = processImpactData(analysisResult.goalImpact);
 
   const handleNextSlide = () => {
-    if (currentSlide < 2) {
+    if (currentSlide < 1) {
       setCurrentSlide(currentSlide + 1);
     } else if (onNext) {
       // Last slide - navigate to Portfolio Tab
@@ -118,11 +99,11 @@ export default function GoalTab({ goalAnalysis, analysisResult, onNext, onBack, 
       {/* SECTION 2: Carousel - PowerPoint Style Slides */}
       <CarouselContainer
         currentSlide={currentSlide}
-        totalSlides={3}
+        totalSlides={2}
         onSlideChange={setCurrentSlide}
         onNext={handleNextSlide}
         onPrev={handlePrevSlide}
-        nextButtonText={currentSlide === 2 ? 'Go to Portfolio Analysis' : 'Next'}
+        nextButtonText={currentSlide === 1 ? 'Go to Portfolio Analysis' : 'Next'}
       >
         {/* SLIDE 1: Probability of Reaching Your Goal */}
         <CarouselSlide isActive={currentSlide === 0} direction={getSlideDirection(0)}>
@@ -274,57 +255,6 @@ export default function GoalTab({ goalAnalysis, analysisResult, onNext, onBack, 
             </div>
           </div>
         </div>
-        </CarouselSlide>
-
-        {/* SLIDE 3: Portfolio Intelligence Results */}
-        <CarouselSlide isActive={currentSlide === 2} direction={getSlideDirection(2)}>
-          <h2 className="text-xl md:text-2xl font-bold text-gray-100 mb-4">Portfolio Intelligence Results</h2>
-          <p className="text-sm text-gray-400 mb-6">Impact & Recommendations</p>
-
-          <div className="space-y-6">
-            {/* Market Impact */}
-            <div>
-              <h4 className="font-semibold text-gray-100 mb-3">Market Impact</h4>
-              <ul className="space-y-2 text-gray-300 text-sm">
-                {marketImpact.map((item, idx) => (
-                  <li key={idx} className="pl-4">{item}</li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Personalized Portfolio Risks */}
-            <div>
-              <h4 className="font-semibold text-gray-100 mb-3">Personalized Portfolio Risks</h4>
-              <ul className="space-y-2 text-gray-300 text-sm">
-                {portfolioImpact.map((item, idx) => (
-                  <li key={idx} className="pl-4">{item}</li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Goal Impact */}
-            <div>
-              <h4 className="font-semibold text-gray-100 mb-3">Goal Impact</h4>
-              <ul className="space-y-2 text-gray-300 text-sm">
-                {goalImpact.map((item, idx) => (
-                  <li key={idx} className="pl-4">{item}</li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Professional Oversight Notice */}
-            <div className="p-4 bg-blue-900/20 border border-blue-800 rounded-lg">
-              <div className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div>
-                  <p className="text-sm font-semibold text-blue-300 mb-1">Professional oversight suggested</p>
-                  <p className="text-xs text-blue-400">Clockwise portfolio solutions available</p>
-                </div>
-              </div>
-            </div>
-          </div>
         </CarouselSlide>
       </CarouselContainer>
 

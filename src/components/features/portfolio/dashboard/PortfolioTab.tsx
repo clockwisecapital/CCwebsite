@@ -14,7 +14,7 @@ interface PortfolioTabProps {
 }
 
 export default function PortfolioTab({ portfolioAnalysis, onBack, onNext, onSlideChange }: PortfolioTabProps) {
-  // Carousel state: 0 = Portfolio Analysis, 1 = Important Disclaimer
+  // Carousel state: 0 = Portfolio Analysis
   const [currentSlide, setCurrentSlide] = useState(0);
   
   // Notify parent when slide changes for video sync
@@ -27,10 +27,8 @@ export default function PortfolioTab({ portfolioAnalysis, onBack, onNext, onSlid
   const overallResult = portfolioAnalysis.current.overall;
 
   const handleNextSlide = () => {
-    if (currentSlide < 1) {
-      setCurrentSlide(currentSlide + 1);
-    } else if (onNext) {
-      // Last slide - navigate to Market Tab
+    if (onNext) {
+      // Navigate to Analysis Tab (skipping Market Tab)
       onNext();
     }
   };
@@ -86,11 +84,11 @@ export default function PortfolioTab({ portfolioAnalysis, onBack, onNext, onSlid
       {/* SECTION 2: Carousel - PowerPoint Style Slides */}
       <CarouselContainer
         currentSlide={currentSlide}
-        totalSlides={2}
+        totalSlides={1}
         onSlideChange={setCurrentSlide}
         onNext={handleNextSlide}
         onPrev={handlePrevSlide}
-        nextButtonText={currentSlide === 1 ? 'Go to Market Analysis' : 'Next'}
+        nextButtonText='Complete Analysis'
       >
         {/* SLIDE 1: Portfolio Performance Analysis */}
         <CarouselSlide isActive={currentSlide === 0} direction={getSlideDirection(0)}>
@@ -142,56 +140,6 @@ export default function PortfolioTab({ portfolioAnalysis, onBack, onNext, onSlid
             </div>
           </div>
         </div>
-        </CarouselSlide>
-
-        {/* SLIDE 2: Important Disclaimer */}
-        <CarouselSlide isActive={currentSlide === 1} direction={getSlideDirection(1)}>
-          <h2 className="text-xl md:text-2xl font-bold text-gray-100 mb-4">Important Disclaimer</h2>
-          <p className="text-sm text-gray-400 mb-6">
-            Please read before making investment decisions
-          </p>
-        <div className="bg-amber-900/20 border border-amber-800 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <div>
-            <div className="text-sm font-semibold text-amber-300 mb-1">Important Disclaimer</div>
-            <p className="text-xs text-amber-400 leading-relaxed">
-              These projections are based on Monte Carlo simulations using historical data and AI-powered cycle analysis. 
-              Past performance does not guarantee future results. These are hypothetical scenarios and should not be 
-              considered as investment advice. Please consult with a financial advisor before making investment decisions.
-            </p>
-          </div>
-        </div>
-        </div>
-
-          {/* Additional Disclaimer Points */}
-          <div className="mt-6 space-y-4">
-            <div className="bg-gray-700/50 rounded-lg p-4 border border-gray-700">
-              <h4 className="text-sm font-semibold text-gray-100 mb-2">Simulation Limitations</h4>
-              <p className="text-xs text-gray-400">
-                Monte Carlo simulations are mathematical models that use historical data to project potential outcomes. 
-                While useful for understanding risk and return distributions, they cannot predict actual future performance.
-              </p>
-            </div>
-
-            <div className="bg-gray-700/50 rounded-lg p-4 border border-gray-700">
-              <h4 className="text-sm font-semibold text-gray-100 mb-2">Market Conditions</h4>
-              <p className="text-xs text-gray-400">
-                Market conditions change continuously. Economic cycles, geopolitical events, and other factors can significantly 
-                impact actual returns. Regular portfolio reviews and adjustments are recommended.
-              </p>
-            </div>
-
-            <div className="bg-gray-700/50 rounded-lg p-4 border border-gray-700">
-              <h4 className="text-sm font-semibold text-gray-100 mb-2">Professional Advice</h4>
-              <p className="text-xs text-gray-400">
-                This analysis is for informational purposes only. Consider working with a qualified financial advisor to develop 
-                a personalized investment strategy aligned with your specific circumstances and goals.
-              </p>
-            </div>
-          </div>
         </CarouselSlide>
       </CarouselContainer>
 
