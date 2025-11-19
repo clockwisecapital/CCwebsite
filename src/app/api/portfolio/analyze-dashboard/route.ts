@@ -40,9 +40,10 @@ interface UserData {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userData, intakeData } = body as {
+    const { userData, intakeData, avatarVariant } = body as {
       userData: UserData;
       intakeData: IntakeFormData;
+      avatarVariant?: 'control' | 'variant-b';
     };
 
     console.log('📊 Dashboard Analysis Request:', {
@@ -105,9 +106,10 @@ export async function POST(request: NextRequest) {
         await saveIntakeForm({
           conversationId: conversation.id,
           sessionId: sessionId,
+          avatarVariant: avatarVariant,
           intakeData: intakeData,
         });
-        console.log('✅ Intake form saved to database');
+        console.log('✅ Intake form saved to database with variant:', avatarVariant);
       }
     } catch (error) {
       console.error('❌ Supabase save failed (non-blocking):', error);

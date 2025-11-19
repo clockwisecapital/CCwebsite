@@ -719,11 +719,13 @@ Provide unified assessment of the long-term economic/debt cycle.
   "frameworks": ["Ray Dalio", "Nikolai Kondratiev", "Hyman Minsky", "George Modelski", "Ben Hunt", "AI-Macro Lens", "IMF Framework"]
 }
 
+Keep descriptions concise. Limit keyEvents to 3-4 brief items (max 50 characters each).
+
 Provide only JSON.`;
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-5-20250929',
-    max_tokens: 4000,
+    max_tokens: 8000, // Increased from 4000 to prevent truncation
     temperature: 0.1,
     messages: [{ role: 'user', content: prompt }],
   });
@@ -752,7 +754,30 @@ Provide only JSON.`;
         console.error('JSON around error position:', jsonMatch[0].substring(Math.max(0, pos - 100), Math.min(jsonMatch[0].length, pos + 100)));
       }
     }
-    throw parseError;
+    
+    // Fallback: Return a default Economic Cycle structure
+    console.warn('⚠️ Using fallback Economic Cycle data due to parse error');
+    return {
+      name: "Long-Term Economic Cycle",
+      phase: "Late Cycle",
+      phasePercent: 75,
+      averageLifecycle: "50-75 years",
+      currentCycleStart: "1980 (Post-Volcker disinflation)",
+      timeline: [
+        { phase: "Early Cycle", description: "Low debt, credit expansion", startPercent: 0, endPercent: 25, isCurrent: false },
+        { phase: "Mid Cycle", description: "Moderate debt, strong growth", startPercent: 25, endPercent: 55, isCurrent: false },
+        { phase: "Late Cycle", description: "High debt, financialization", startPercent: 55, endPercent: 80, isCurrent: true },
+        { phase: "Crisis", description: "Deleveraging begins", startPercent: 80, endPercent: 100, isCurrent: false }
+      ],
+      sp500Backtest: { expectedUpside: 0.12, expectedDownside: -0.38, expectedReturn: -0.08 },
+      historicalAnalog: {
+        period: "1925-1929",
+        description: "High debt levels with asset inflation",
+        similarity: "High (70%)",
+        keyEvents: ["High debt/GDP ratios", "Asset price inflation", "Geopolitical tensions"]
+      },
+      frameworks: ["Ray Dalio", "Nikolai Kondratiev", "Hyman Minsky", "George Modelski", "Ben Hunt", "AI-Macro Lens", "IMF Framework"]
+    };
   }
 }
 

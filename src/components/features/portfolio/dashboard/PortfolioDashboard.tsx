@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import IntakeTab from './IntakeTab';
 import ReviewTab from './ReviewTab';
 import UnifiedVideoPlayer, { type VideoConfig } from './UnifiedVideoPlayer';
+import RatingComponent from './RatingComponent';
+import { useAvatarVariant, getVideoPath } from '@/hooks/useAvatarVariant';
 
 export interface IntakeFormData {
   // Personal
@@ -61,7 +63,14 @@ export interface AnalysisResult {
 }
 
 export default function PortfolioDashboard() {
+  const avatarVariant = useAvatarVariant();
+  const [isVariantLoaded, setIsVariantLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<'intake' | 'review' | 'analyze'>('intake');
+  
+  // Wait for variant to be loaded from localStorage
+  useEffect(() => {
+    setIsVariantLoaded(true);
+  }, [avatarVariant]);
   const [intakeData, setIntakeData] = useState<IntakeFormData | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -84,7 +93,7 @@ export default function PortfolioDashboard() {
   // Effect to start video generation immediately when email submitted (don't wait for analysis)
   useEffect(() => {
     if (emailData && analysisResult && !videoId) {
-      console.log('🎬 Starting video generation immediately with user name:', emailData.firstName);
+      console.log('🎬 Starting video generation process...', { firstName: emailData.firstName, avatarVariant });
       fetch('/api/portfolio/generate-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -94,6 +103,7 @@ export default function PortfolioDashboard() {
             firstName: emailData.firstName,
             lastName: emailData.lastName,
           },
+          avatarVariant: avatarVariant,
         }),
       })
         .then(res => res.json())
@@ -109,7 +119,7 @@ export default function PortfolioDashboard() {
           console.warn('⚠️ Video generation error:', err);
         });
     }
-  }, [emailData, analysisResult, videoId]);
+  }, [emailData, analysisResult, videoId, avatarVariant]);
 
   // Effect to show review tab when analysis is complete
   useEffect(() => {
@@ -151,6 +161,7 @@ export default function PortfolioDashboard() {
           body: JSON.stringify({
             userData,
             intakeData: data,
+            avatarVariant: avatarVariant,
           }),
         }),
         fetch('/api/portfolio/analyze-cycles', {
@@ -231,7 +242,7 @@ export default function PortfolioDashboard() {
       return {
         id: 'intake-intro',
         title: 'Meet Kronos - Your Portfolio Intelligence Guide',
-        videoSrc: '/kronos-intro-no-watermark.mp4'
+        videoSrc: getVideoPath('/kronos-intro-no-watermark.mp4', avatarVariant)
       };
     }
 
@@ -240,7 +251,7 @@ export default function PortfolioDashboard() {
       return {
         id: 'kronos-thinking',
         title: 'Kronos is Analyzing Your Portfolio...',
-        videoSrc: '/kronos-thinking.mp4'
+        videoSrc: getVideoPath('/kronos-thinking.mp4', avatarVariant)
       };
     }
 
@@ -252,14 +263,14 @@ export default function PortfolioDashboard() {
           return {
             id: 'probability-goal',
             title: 'Probability of Reaching Your Goal',
-            videoSrc: '/kronos-probability-goal.mp4'
+            videoSrc: getVideoPath('/kronos-probability-goal.mp4', avatarVariant)
           };
         }
         if (goalSlide === 1) {
           return {
             id: 'projected-values',
             title: 'Projected Portfolio Values',
-            videoSrc: '/kronos-projected-values.mp4'
+            videoSrc: getVideoPath('/kronos-projected-values.mp4', avatarVariant)
           };
         }
       }
@@ -270,7 +281,7 @@ export default function PortfolioDashboard() {
           return {
             id: 'portfolio-performance',
             title: 'Portfolio Performance Analysis',
-            videoSrc: '/kronos-portfolio-performance.mp4'
+            videoSrc: getVideoPath('/kronos-portfolio-performance.mp4', avatarVariant)
           };
         }
       }
@@ -316,7 +327,7 @@ export default function PortfolioDashboard() {
       id: 'no-video',
       title: 'Portfolio Dashboard'
     };
-  }, [activeTab, isAnalyzing, cycleAnalysisTab, videoId, goalSlide, portfolioSlide, marketSlide]);
+  }, [activeTab, isAnalyzing, cycleAnalysisTab, videoId, goalSlide, portfolioSlide, marketSlide, avatarVariant]);
 
   return (
     <div className="min-h-screen bg-gray-900">
@@ -583,6 +594,12 @@ export default function PortfolioDashboard() {
                   </div>
                 )}
 
+                {/* User Rating Component */}
+                <RatingComponent 
+                  conversationId={conversationId}
+                  onRatingSubmitted={(rating) => console.log('User rated experience:', rating)}
+                />
+
                 {/* Next Steps CTA */}
                 <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-4 md:p-8 text-white">
                   <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">Ready to Optimize?</h3>
@@ -612,8 +629,8 @@ export default function PortfolioDashboard() {
         </div>
       </div>
 
-      {/* Unified Video Player */}
-      <UnifiedVideoPlayer currentVideo={currentVideo} />
+      {/* Unified Video Player - only render once variant is loaded */}
+      {isVariantLoaded && <UnifiedVideoPlayer currentVideo={currentVideo} />}
     </div>
   );
 }

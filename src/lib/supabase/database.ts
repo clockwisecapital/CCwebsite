@@ -422,6 +422,7 @@ export async function saveSessionState(data: {
 export async function saveIntakeForm(data: {
   conversationId: string
   sessionId: string
+  avatarVariant?: 'control' | 'variant-b'
   intakeData: {
     age?: number
     experienceLevel?: 'Beginner' | 'Intermediate' | 'Advanced'
@@ -458,6 +459,7 @@ export async function saveIntakeForm(data: {
       .insert({
         conversation_id: data.conversationId,
         session_id: data.sessionId,
+        avatar_variant: data.avatarVariant || 'control',
         age: data.intakeData.age,
         experience_level: data.intakeData.experienceLevel,
         risk_tolerance: data.intakeData.riskTolerance,
@@ -583,5 +585,45 @@ export async function getConversationAnalytics(timeframe: 'day' | 'week' | 'mont
   } catch (error) {
     console.error('Database error fetching analytics:', error)
     return []
+  }
+}
+
+/**
+ * Submit user rating for their experience
+ * Updates the intake form with rating and timestamp
+ */
+export async function submitUserRating(
+  sessionId: string,
+  rating: number
+): Promise<boolean> {
+  try {
+    const supabase = createAdminSupabaseClient()
+    
+    // Get conversation by session ID
+    const conversation = await getConversationBySessionId(sessionId)
+    if (!conversation) {
+      console.error('Conversation not found for session:', sessionId)
+      return false
+    }
+
+    // Update the intake form with the rating
+    const { error } = await supabase
+      .from('intake_forms')
+      .update({
+        user_rating: rating,
+        rating_submitted_at: new Date().toISOString(),
+      } as Record<string, unknown>)
+      .eq('conversation_id', conversation.id)
+
+    if (error) {
+      console.error('Error saving user rating:', error)
+      return false
+    }
+
+    console.log('✅ User rating saved successfully:', { sessionId, rating })
+    return true
+  } catch (error) {
+    console.error('Database error saving rating:', error)
+    return false
   }
 }

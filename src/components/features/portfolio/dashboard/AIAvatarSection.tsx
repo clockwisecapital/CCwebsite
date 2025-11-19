@@ -1,6 +1,19 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { getVideoPath, type AvatarVariant } from '@/hooks/useAvatarVariant';
+
 export default function AIAvatarSection() {
+  const [videoPath, setVideoPath] = useState<string | null>(null);
+  
+  useEffect(() => {
+    // Only run on client - get variant from localStorage
+    const variant = (localStorage.getItem('avatarVariant') || 'control') as AvatarVariant;
+    const path = getVideoPath('/kronos-intro-no-watermark.mp4', variant);
+    setVideoPath(path);
+    console.log('🎬 Loading intro video:', { variant, path });
+  }, []);
+  
   return (
     <div className="bg-gradient-to-br from-blue-900 via-teal-800 to-teal-900 text-white pt-20">
       <div className="w-full px-4 sm:px-8 lg:px-12 py-20 md:py-24">
@@ -9,17 +22,20 @@ export default function AIAvatarSection() {
           <div className="relative w-full bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg overflow-hidden shadow-2xl border border-teal-500/30">
             {/* Video Player */}
             <div className="relative aspect-video">
-              <video
-                controls
-                autoPlay
-                muted
-                playsInline
-                className="w-full h-full object-cover"
-                poster="/placeholder-video.jpg"
-              >
-                <source src="/kronos-intro-no-watermark.mp4" type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
+              {videoPath && (
+                <video
+                  key={videoPath}
+                  src={videoPath}
+                  controls
+                  autoPlay
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                  poster="/placeholder-video.jpg"
+                >
+                  Your browser does not support the video tag.
+                </video>
+              )}
             </div>
 
             {/* Bottom: Compact Intro Content */}

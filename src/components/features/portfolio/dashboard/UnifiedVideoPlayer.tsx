@@ -290,7 +290,7 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady }: Unifi
             <>
               {/* Main video */}
               <video
-                key={displayedVideo.id}
+                key={`${displayedVideo.id}-${videoSource}`}
                 ref={videoRef}
                 src={videoSource}
                 autoPlay

@@ -28,7 +28,8 @@ export {
   saveIntakeForm,
   getIntakeForm,
   getAllIntakeForms,
-  getConversationAnalytics
+  getConversationAnalytics,
+  submitUserRating
 } from './database'
 
 // Types
