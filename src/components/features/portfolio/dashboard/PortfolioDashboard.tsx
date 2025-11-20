@@ -292,7 +292,7 @@ export default function PortfolioDashboard() {
           return {
             id: 'cycle-analysis',
             title: 'Market Cycle Analysis',
-            videoSrc: '/kronos-cycle-analysis.mp4'
+            videoSrc: getVideoPath('/kronos-cycle-analysis.mp4', avatarVariant)
           };
         }
         if (marketSlide === 1) {
