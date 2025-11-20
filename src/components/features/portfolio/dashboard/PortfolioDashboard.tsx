@@ -435,6 +435,12 @@ export default function PortfolioDashboard() {
             
             {activeTab === 'analyze' && videoId && (
               <div className="space-y-6">
+                {/* User Rating Component */}
+                <RatingComponent 
+                  conversationId={conversationId}
+                  onRatingSubmitted={(rating) => console.log('User rated experience:', rating)}
+                />
+
                 {/* Ready to Optimize CTA */}
                 <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-4 md:p-8 text-white">
                   <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">Ready to Optimize?</h3>
@@ -593,12 +599,6 @@ export default function PortfolioDashboard() {
                     </div>
                   </div>
                 )}
-
-                {/* User Rating Component */}
-                <RatingComponent 
-                  conversationId={conversationId}
-                  onRatingSubmitted={(rating) => console.log('User rated experience:', rating)}
-                />
 
                 {/* Next Steps CTA */}
                 <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-4 md:p-8 text-white">
