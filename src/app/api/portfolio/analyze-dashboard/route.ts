@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
       email: userData.email,
       experience: intakeData.experienceLevel,
       portfolioValue: intakeData.portfolio.totalValue,
+      calculatedPortfolioValue,
       calculatedFromHoldings: hasSpecificHoldings,
       specificHoldingsCount: intakeData.specificHoldings?.length || 0
     });
@@ -92,6 +93,15 @@ export async function POST(request: NextRequest) {
       console.error('❌ Portfolio value mismatch!', {
         expected: calculatedPortfolioValue,
         actual: intakeData.portfolio.totalValue
+      });
+    }
+    
+    // Also check if calculatedPortfolioValue is valid for portfolio comparison
+    if (!calculatedPortfolioValue || calculatedPortfolioValue <= 0) {
+      console.warn('⚠️ Portfolio comparison will be skipped - no valid portfolio value', {
+        calculatedPortfolioValue,
+        hasSpecificHoldings,
+        portfolioTotalValue: intakeData.portfolio.totalValue
       });
     }
 
@@ -116,7 +126,11 @@ export async function POST(request: NextRequest) {
     
     if (calculatedPortfolioValue && calculatedPortfolioValue > 0) {
       try {
-        console.log('📊 Fetching portfolio comparison data (1-year Monte Carlo)...');
+        console.log('📊 Fetching portfolio comparison data (1-year Monte Carlo)...', {
+          portfolioValue: calculatedPortfolioValue,
+          hasSpecificHoldings,
+          holdingsCount: intakeData.specificHoldings?.length || 0
+        });
         
         const requestBody = hasSpecificHoldings
           ? {
@@ -145,7 +159,14 @@ export async function POST(request: NextRequest) {
           ? '✓ Using actual user holdings' 
           : '✓ Using proxy ETFs (SPY, AGG, VNQ, GLD, QQQ)');
 
-        const portfolioDataResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/portfolio/get-portfolio-data`, {
+        // Construct the full URL using request headers
+        const host = request.headers.get('host') || 'localhost:3000';
+        const protocol = request.headers.get('x-forwarded-proto') || 'http';
+        const baseUrl = `${protocol}://${host}`;
+        
+        console.log(`📍 Fetching portfolio data from: ${baseUrl}/api/portfolio/get-portfolio-data`);
+
+        const portfolioDataResponse = await fetch(`${baseUrl}/api/portfolio/get-portfolio-data`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestBody)
@@ -156,10 +177,20 @@ export async function POST(request: NextRequest) {
           if (portfolioData.success) {
             portfolioComparison = portfolioData.comparison;
             console.log('✅ Portfolio comparison data fetched with real Monte Carlo');
+          } else {
+            console.warn('⚠️ Portfolio data fetch returned unsuccessful:', portfolioData);
           }
+        } else {
+          console.warn('⚠️ Portfolio data fetch failed with status:', portfolioDataResponse.status);
         }
       } catch (error) {
-        console.warn('⚠️ Portfolio comparison fetch failed (non-blocking):', error);
+        console.error('❌ Portfolio comparison fetch failed (non-blocking):', error);
+        if (error instanceof Error) {
+          console.error('Error details:', {
+            message: error.message,
+            stack: error.stack
+          });
+        }
       }
     }
 
@@ -207,6 +238,13 @@ export async function POST(request: NextRequest) {
       }
     } catch (error) {
       console.error('❌ Supabase save failed (non-blocking):', error);
+    }
+
+    // Log warning if portfolio comparison is missing
+    if (!portfolioComparison) {
+      console.warn('⚠️ Returning analysis WITHOUT portfolio comparison data');
+    } else {
+      console.log('✅ Returning analysis WITH portfolio comparison data');
     }
 
     return NextResponse.json({
