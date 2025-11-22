@@ -8,6 +8,7 @@ import {
   setCachedCycle,
   getCacheStats 
 } from '@/lib/cycle-cache';
+import { createGoalProbabilityInput, calculateGoalProbability, LONG_TERM_AVERAGES } from '@/lib/services/goal-probability';
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
@@ -87,6 +88,21 @@ export async function POST(req: NextRequest) {
 
     console.log('🔍 Starting cycle analysis...');
     const { intakeData } = await req.json();
+
+    // ✅ Calculate portfolio value from holdings FIRST (same as analyze-dashboard)
+    const hasSpecificHoldings = intakeData.specificHoldings && 
+                               intakeData.specificHoldings.length > 0 &&
+                               intakeData.specificHoldings.some((h: { ticker?: string }) => h.ticker && h.ticker.trim().length > 0);
+    
+    if (hasSpecificHoldings) {
+      // Calculate total from dollar amounts if provided
+      const totalFromDollars = intakeData.specificHoldings!.reduce((sum: number, h: { dollarAmount?: number }) => sum + (h.dollarAmount || 0), 0);
+      if (totalFromDollars > 0) {
+        // Update the intakeData with the calculated value
+        intakeData.portfolio.totalValue = totalFromDollars;
+        console.log(`💰 Calculated portfolio value from holdings: $${totalFromDollars.toLocaleString()}`);
+      }
+    }
 
     // Fetch real-time data from external sources
     console.log('📊 Fetching real-time economic data...');
@@ -1195,8 +1211,17 @@ async function analyzePortfolioImpact(
   cycles: Record<string, CycleData>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> {
-  // Use portfolio.totalValue from intake form (not totalInvestment!)
-  const totalValue = intakeData.portfolio?.totalValue || 500000;
+  // Use portfolio.totalValue from intake form (should already be calculated from holdings)
+  const totalValue = intakeData.portfolio?.totalValue;
+  
+  if (!totalValue || totalValue === 0) {
+    console.warn('⚠️ No portfolio value provided to analyzePortfolioImpact');
+    return {
+      analysis: 'Unable to analyze portfolio: no portfolio value provided',
+      totalValue: 0
+    };
+  }
+  
   const portfolio = intakeData.portfolio || {
     stocks: 60,
     bonds: 30,
@@ -1355,51 +1380,79 @@ async function analyzeGoalProbability(intakeData: any, portfolioAnalysis: any): 
   const timeHorizon = intakeData.timeHorizon || 10;
   const monthlyContribution = intakeData.monthlyContribution || 0;
 
-  console.log('🎯 Analyzing goal probability with user data:', {
+  console.log('🎯 Analyzing goal probability with LONG-TERM AVERAGES:', {
     goalAmount,
     currentAmount,
     timeHorizon,
-    monthlyContribution
+    monthlyContribution,
+    longTermAverages: LONG_TERM_AVERAGES
   });
 
-  // Calculate projected values including monthly contributions
-  const avgReturn = portfolioAnalysis.current.overall.expectedReturn;
-  const upsideReturn = portfolioAnalysis.current.overall.expectedUpside;
-  const downsideReturn = portfolioAnalysis.current.overall.expectedDownside;
-
-  // Future value with monthly contributions formula: FV = PV(1+r)^n + PMT * [((1+r)^n - 1) / r]
-  const calculateFutureValue = (principal: number, monthlyPmt: number, annualReturn: number, years: number) => {
-    const monthlyReturn = annualReturn / 12;
-    const months = years * 12;
+  // Create input for goal probability calculation
+  const probabilityInput = createGoalProbabilityInput(intakeData);
+  
+  if (!probabilityInput) {
+    console.warn('Could not create goal probability input, using fallback calculation');
+    // Fallback to simple calculation
+    const avgReturn = portfolioAnalysis.current.overall.expectedReturn;
+    const projectedValue = currentAmount * Math.pow(1 + avgReturn, timeHorizon);
+    const successProbability = Math.min(1, Math.max(0, projectedValue / goalAmount));
     
-    // Future value of principal
-    const fvPrincipal = principal * Math.pow(1 + annualReturn, years);
-    
-    // Future value of monthly contributions (if any)
-    const fvContributions = monthlyPmt > 0 && monthlyReturn !== 0
-      ? monthlyPmt * ((Math.pow(1 + monthlyReturn, months) - 1) / monthlyReturn)
-      : monthlyPmt * months;
-    
-    return fvPrincipal + fvContributions;
-  };
+    return {
+      goalAmount,
+      goalDescription: intakeData.goalDescription || 'Financial Goal',
+      currentAmount,
+      timeHorizon,
+      monthlyContribution,
+      probabilityOfSuccess: {
+        median: successProbability,
+        downside: successProbability * 0.6,
+        upside: Math.min(1, successProbability * 1.4),
+      },
+      projectedValues: {
+        median: projectedValue,
+        downside: projectedValue * 0.6,
+        upside: projectedValue * 1.4,
+      },
+      shortfall: {
+        median: projectedValue - goalAmount,
+        downside: (projectedValue * 0.6) - goalAmount,
+        upside: (projectedValue * 1.4) - goalAmount,
+      },
+      recommendation: 'Unable to calculate detailed probability. Please ensure all required fields are provided.',
+    };
+  }
 
-  const projectedMedian = calculateFutureValue(currentAmount, monthlyContribution, avgReturn, timeHorizon);
-  const projectedUpside = calculateFutureValue(currentAmount, monthlyContribution, upsideReturn, timeHorizon);
-  const projectedDownside = calculateFutureValue(currentAmount, monthlyContribution, downsideReturn, timeHorizon);
+  // Override currentAmount with portfolio analysis value
+  probabilityInput.currentAmount = currentAmount;
 
-  const successProbability = Math.min(1, Math.max(0, projectedMedian / goalAmount));
+  // Calculate goal probability using long-term averages + Monte Carlo
+  const result = calculateGoalProbability(probabilityInput);
+
+  console.log('✅ Goal probability calculated:', {
+    expectedReturn: result.expectedReturn,
+    medianProbability: result.probabilityOfSuccess.median,
+    medianProjectedValue: result.projectedValues.median
+  });
 
   // Generate personalized recommendation
+  const successProbability = result.probabilityOfSuccess.median;
   let recommendation = '';
+  
   if (successProbability >= 0.9) {
-    recommendation = `Excellent! You have a ${Math.round(successProbability * 100)}% probability of reaching your $${goalAmount.toLocaleString()} goal in ${timeHorizon} years. Your current strategy is well-positioned given the economic cycles. Consider maintaining your current allocation and continuing your ${monthlyContribution > 0 ? `$${monthlyContribution.toLocaleString()} monthly contributions` : 'investment discipline'}.`;
+    recommendation = `Excellent! You have a ${Math.round(successProbability * 100)}% probability of reaching your $${goalAmount.toLocaleString()} goal in ${timeHorizon} years. Based on long-term historical averages (Stocks: ${LONG_TERM_AVERAGES.stocks * 100}%, Bonds: ${LONG_TERM_AVERAGES.bonds * 100}%, etc.), your current strategy is well-positioned. Consider maintaining your current allocation and continuing your ${monthlyContribution > 0 ? `$${monthlyContribution.toLocaleString()} monthly contributions` : 'investment discipline'}.`;
   } else if (successProbability >= 0.7) {
-    recommendation = `Good progress! You have a ${Math.round(successProbability * 100)}% probability of reaching your goal. To improve your odds, consider ${monthlyContribution > 0 ? 'increasing your monthly contributions' : 'making monthly contributions'} or adjusting your allocation based on current cycle positioning.`;
+    recommendation = `Good progress! You have a ${Math.round(successProbability * 100)}% probability of reaching your goal. Based on historical returns and current cycle positioning, consider ${monthlyContribution > 0 ? 'increasing your monthly contributions' : 'making monthly contributions'} or adjusting your allocation to higher-return asset classes.`;
   } else if (successProbability >= 0.5) {
-    recommendation = `Moderate success probability of ${Math.round(successProbability * 100)}%. Given current economic cycles (${portfolioAnalysis.current.overall.confidence} confidence), consider: 1) Increasing contributions by $${Math.round((goalAmount - projectedMedian) / (timeHorizon * 12)).toLocaleString()}/month, 2) Extending your time horizon, or 3) Adjusting allocation for better cycle alignment.`;
+    const shortfall = goalAmount - result.projectedValues.median;
+    const additionalMonthly = Math.round(shortfall / (timeHorizon * 12));
+    recommendation = `Moderate success probability of ${Math.round(successProbability * 100)}%. Given long-term averages and current cycles, consider: 1) Increasing contributions by $${additionalMonthly.toLocaleString()}/month, 2) Extending your time horizon, or 3) Increasing allocation to higher-return assets like stocks (${LONG_TERM_AVERAGES.stocks * 100}% historical return).`;
   } else {
-    const requiredMonthly = Math.round((goalAmount - currentAmount * Math.pow(1 + avgReturn, timeHorizon)) / ((Math.pow(1 + avgReturn/12, timeHorizon * 12) - 1) / (avgReturn/12)));
-    recommendation = `Your current path has a ${Math.round(successProbability * 100)}% success probability. To reach your goal, you would need to contribute approximately $${requiredMonthly.toLocaleString()}/month, extend your timeline to ${Math.round(Math.log(goalAmount / currentAmount) / Math.log(1 + avgReturn))} years, or adjust your target goal to $${Math.round(projectedMedian).toLocaleString()}.`;
+    const avgReturn = result.expectedReturn;
+    const requiredMonthly = avgReturn > 0 
+      ? Math.round((goalAmount - currentAmount * Math.pow(1 + avgReturn, timeHorizon)) / ((Math.pow(1 + avgReturn/12, timeHorizon * 12) - 1) / (avgReturn/12)))
+      : Math.round((goalAmount - currentAmount) / (timeHorizon * 12));
+    recommendation = `Your current path has a ${Math.round(successProbability * 100)}% success probability. Based on long-term historical averages, to reach your goal you would need to contribute approximately $${requiredMonthly.toLocaleString()}/month, extend your timeline, or adjust your target goal to $${Math.round(result.projectedValues.median).toLocaleString()}.`;
   }
 
   return {
@@ -1408,21 +1461,10 @@ async function analyzeGoalProbability(intakeData: any, portfolioAnalysis: any): 
     currentAmount,
     timeHorizon,
     monthlyContribution,
-    probabilityOfSuccess: {
-      median: successProbability,
-      downside: Math.min(1, Math.max(0, projectedDownside / goalAmount)),
-      upside: Math.min(1, Math.max(0, projectedUpside / goalAmount)),
-    },
-    projectedValues: {
-      median: projectedMedian,
-      downside: projectedDownside,
-      upside: projectedUpside,
-    },
-    shortfall: {
-      median: projectedMedian - goalAmount,
-      downside: projectedDownside - goalAmount,
-      upside: projectedUpside - goalAmount,
-    },
+    probabilityOfSuccess: result.probabilityOfSuccess,
+    projectedValues: result.projectedValues,
+    shortfall: result.shortfall,
+    expectedReturn: result.expectedReturn,
     recommendation,
   };
 }

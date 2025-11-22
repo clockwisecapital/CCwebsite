@@ -210,6 +210,48 @@ export interface Database {
           }
         ]
       }
+      tgt_price: {
+        Row: {
+          Ticker: string
+          'Consensus Tgt Price': number | null
+        }
+        Insert: {
+          Ticker: string
+          'Consensus Tgt Price'?: number | null
+        }
+        Update: {
+          Ticker?: string
+          'Consensus Tgt Price'?: number | null
+        }
+        Relationships: []
+      }
+      holding_weights: {
+        Row: {
+          StockTicker: string
+          SecurityName: string | null
+          Shares: string | null
+          Price: number | null
+          MarketValue: string | null
+          Weightings: string | null
+        }
+        Insert: {
+          StockTicker: string
+          SecurityName?: string | null
+          Shares?: string | null
+          Price?: number | null
+          MarketValue?: string | null
+          Weightings?: string | null
+        }
+        Update: {
+          StockTicker?: string
+          SecurityName?: string | null
+          Shares?: string | null
+          Price?: number | null
+          MarketValue?: string | null
+          Weightings?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -234,6 +276,14 @@ export type ConversationUpdate = Database['public']['Tables']['conversations']['
 export type Message = Database['public']['Tables']['messages']['Row']
 export type MessageInsert = Database['public']['Tables']['messages']['Insert']
 export type MessageUpdate = Database['public']['Tables']['messages']['Update']
+
+export type TgtPrice = Database['public']['Tables']['tgt_price']['Row']
+export type TgtPriceInsert = Database['public']['Tables']['tgt_price']['Insert']
+export type TgtPriceUpdate = Database['public']['Tables']['tgt_price']['Update']
+
+export type HoldingWeight = Database['public']['Tables']['holding_weights']['Row']
+export type HoldingWeightInsert = Database['public']['Tables']['holding_weights']['Insert']
+export type HoldingWeightUpdate = Database['public']['Tables']['holding_weights']['Update']
 
 export type UserData = Database['public']['Tables']['user_data']['Row']
 export type UserDataInsert = Database['public']['Tables']['user_data']['Insert']

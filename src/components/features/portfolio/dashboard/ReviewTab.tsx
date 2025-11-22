@@ -167,9 +167,9 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
               )}
               {cycleAnalysisTab === 'portfolio' && (
                 <PortfolioTab 
-                  portfolioAnalysis={portfolioAnalysis}
-                  onBack={handleBack}
+                  portfolioComparison={analysisResult.portfolioComparison}
                   onNext={handleNext}
+                  onBack={handleBack}
                   onSlideChange={onPortfolioSlideChange}
                 />
               )}

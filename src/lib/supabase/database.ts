@@ -459,7 +459,7 @@ export async function saveIntakeForm(data: {
       .insert({
         conversation_id: data.conversationId,
         session_id: data.sessionId,
-        avatar_variant: data.avatarVariant || 'control',
+        avatar_variant: data.avatarVariant || 'variant-b',
         age: data.intakeData.age,
         experience_level: data.intakeData.experienceLevel,
         risk_tolerance: data.intakeData.riskTolerance,
@@ -626,4 +626,130 @@ export async function submitUserRating(
     console.error('Database error saving rating:', error)
     return false
   }
+}
+
+// ============================================================================
+// PORTFOLIO DATA
+// ============================================================================
+
+/**
+ * Get target prices for tickers
+ */
+export async function getTgtPrices(tickers: string[]): Promise<Map<string, number>> {
+  try {
+    const supabase = createAdminSupabaseClient()
+    
+    const { data, error } = await supabase
+      .from('tgt_price')
+      .select('*')
+      .in('Ticker', tickers)
+
+    if (error) {
+      console.error('Error fetching TGT prices:', error)
+      return new Map()
+    }
+
+    const pricesMap = new Map<string, number>()
+    
+    if (data) {
+      data.forEach((row) => {
+        const price = row['Consensus Tgt Price']
+        if (price !== null) {
+          pricesMap.set(row.Ticker, price)
+        }
+      })
+    }
+
+    return pricesMap
+  } catch (error) {
+    console.error('Database error fetching TGT prices:', error)
+    return new Map()
+  }
+}
+
+/**
+ * Get all holding weights (TIME portfolio positions)
+ */
+export async function getHoldingWeights(): Promise<Array<{
+  stockTicker: string;
+  securityName: string;
+  shares: number;
+  price: number;
+  marketValue: number;
+  weightings: number;
+}>> {
+  try {
+    const supabase = createAdminSupabaseClient()
+    
+    const { data, error } = await supabase
+      .from('holding_weights')
+      .select('*')
+      .order('Weightings', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching holding weights:', error)
+      return []
+    }
+
+    if (!data) {
+      return []
+    }
+
+    return data.map((row) => ({
+      stockTicker: row.StockTicker,
+      securityName: row.SecurityName || '',
+      shares: typeof row.Shares === 'string' ? parseFloat(row.Shares) : (row.Shares || 0),
+      price: row.Price || 0,
+      marketValue: typeof row.MarketValue === 'string' ? parseFloat(row.MarketValue) : (row.MarketValue || 0),
+      weightings: typeof row.Weightings === 'string' ? parseFloat(row.Weightings) : (row.Weightings || 0)
+    }))
+  } catch (error) {
+    console.error('Database error fetching holding weights:', error)
+    return []
+  }
+}
+
+/**
+ * Update price in holding_weights table
+ */
+export async function updateHoldingPrice(ticker: string, price: number): Promise<boolean> {
+  try {
+    const supabase = createAdminSupabaseClient()
+    
+    const { error } = await supabase
+      .from('holding_weights')
+      .update({ Price: price })
+      .eq('StockTicker', ticker)
+
+    if (error) {
+      console.error(`Error updating price for ${ticker}:`, error)
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error(`Database error updating price for ${ticker}:`, error)
+    return false
+  }
+}
+
+/**
+ * Batch update prices in holding_weights table
+ */
+export async function batchUpdateHoldingPrices(
+  updates: Array<{ ticker: string; price: number }>
+): Promise<{ success: number; failed: number }> {
+  let success = 0
+  let failed = 0
+
+  for (const { ticker, price } of updates) {
+    const result = await updateHoldingPrice(ticker, price)
+    if (result) {
+      success++
+    } else {
+      failed++
+    }
+  }
+
+  return { success, failed }
 }

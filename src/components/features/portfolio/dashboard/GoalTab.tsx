@@ -12,6 +12,11 @@ interface GoalTabProps {
 }
 
 export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }: GoalTabProps) {
+  // NOTE: Goal probability calculations now use:
+  // - Monte Carlo simulations (10,000 iterations)
+  // - Long-term historical averages: Stocks 10%, Bonds 5%, Real Estate 10%, Commodities 5%, Cash 3%
+  // - Formula: Probability Success = Monte Carlo (Asset Allocation × Long-Term Averages)
+  
   // Carousel state: 0 = Probability, 1 = Projected Values
   const [currentSlide, setCurrentSlide] = useState(0);
 

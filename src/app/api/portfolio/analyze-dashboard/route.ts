@@ -28,6 +28,7 @@ interface IntakeFormData {
     name: string;
     ticker?: string;
     percentage: number;
+    dollarAmount?: number;     // Dollar amount of this holding
   }>;
 }
 
@@ -40,25 +41,64 @@ interface UserData {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userData, intakeData, avatarVariant } = body as {
+    const { userData, intakeData } = body as {
       userData: UserData;
       intakeData: IntakeFormData;
-      avatarVariant?: 'control' | 'variant-b';
     };
-
-    console.log('📊 Dashboard Analysis Request:', {
-      email: userData.email,
-      experience: intakeData.experienceLevel,
-      portfolioSum: Object.values(intakeData.portfolio).reduce((sum, val) => sum + val, 0),
-    });
 
     // Generate a session ID
     const sessionId = `dashboard-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+    // Calculate portfolio value from holdings FIRST (before transformation)
+    let calculatedPortfolioValue = intakeData.portfolio.totalValue;
+    const hasSpecificHoldings = intakeData.specificHoldings && 
+                               intakeData.specificHoldings.length > 0 &&
+                               intakeData.specificHoldings.some(h => h.ticker && h.ticker.trim().length > 0);
+    
+    if (hasSpecificHoldings) {
+      // Calculate total from dollar amounts if provided
+      const totalFromDollars = intakeData.specificHoldings!.reduce((sum, h) => sum + (h.dollarAmount || 0), 0);
+      if (totalFromDollars > 0) {
+        calculatedPortfolioValue = totalFromDollars;
+        
+        // Update the intakeData with the calculated value
+        intakeData.portfolio.totalValue = calculatedPortfolioValue;
+      }
+      
+      // Convert holdings to percentage if needed
+      if (calculatedPortfolioValue && calculatedPortfolioValue > 0) {
+        intakeData.specificHoldings = intakeData.specificHoldings!.map(h => {
+          if (h.dollarAmount && h.dollarAmount > 0) {
+            return {
+              ...h,
+              percentage: (h.dollarAmount / calculatedPortfolioValue!) * 100
+            };
+          }
+          return h;
+        });
+      }
+    }
+
+    console.log('📊 Dashboard Analysis Request:', {
+      email: userData.email,
+      experience: intakeData.experienceLevel,
+      portfolioValue: intakeData.portfolio.totalValue,
+      calculatedFromHoldings: hasSpecificHoldings,
+      specificHoldingsCount: intakeData.specificHoldings?.length || 0
+    });
+    
+    // Verify the update was successful
+    if (hasSpecificHoldings && intakeData.portfolio.totalValue !== calculatedPortfolioValue) {
+      console.error('❌ Portfolio value mismatch!', {
+        expected: calculatedPortfolioValue,
+        actual: intakeData.portfolio.totalValue
+      });
+    }
+
     // Load market context
     const marketData = await loadMarketContext();
 
-    // Transform intake data to analysis format
+    // Transform intake data to analysis format (now with correct portfolio value)
     const transformedData = transformIntakeData(intakeData);
 
     // Run portfolio analysis using AI
@@ -68,6 +108,60 @@ export async function POST(request: NextRequest) {
       marketData,
       intakeData
     );
+
+    // ALWAYS fetch portfolio comparison data (using proxy ETFs if no specific holdings)
+    // NOTE: Portfolio comparison uses 1-year Monte Carlo for realistic short-term projections
+    // Goal analysis (in analyze-cycles) uses the user's actual goal timeHorizon
+    let portfolioComparison = null;
+    
+    if (calculatedPortfolioValue && calculatedPortfolioValue > 0) {
+      try {
+        console.log('📊 Fetching portfolio comparison data (1-year Monte Carlo)...');
+        
+        const requestBody = hasSpecificHoldings
+          ? {
+              userHoldings: intakeData.specificHoldings!.map(h => ({
+                ticker: h.ticker || h.name,
+                name: h.name,
+                percentage: h.percentage
+              })),
+              portfolioValue: calculatedPortfolioValue,
+              timeHorizon: 1  // Always use 1 year for portfolio comparison Monte Carlo
+            }
+          : {
+              portfolioAllocation: {
+                stocks: intakeData.portfolio.stocks,
+                bonds: intakeData.portfolio.bonds,
+                cash: intakeData.portfolio.cash,
+                realEstate: intakeData.portfolio.realEstate,
+                commodities: intakeData.portfolio.commodities,
+                alternatives: intakeData.portfolio.alternatives
+              },
+              portfolioValue: calculatedPortfolioValue,
+              timeHorizon: 1  // Always use 1 year for portfolio comparison Monte Carlo
+            };
+
+        console.log(hasSpecificHoldings 
+          ? '✓ Using actual user holdings' 
+          : '✓ Using proxy ETFs (SPY, AGG, VNQ, GLD, QQQ)');
+
+        const portfolioDataResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/portfolio/get-portfolio-data`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (portfolioDataResponse.ok) {
+          const portfolioData = await portfolioDataResponse.json();
+          if (portfolioData.success) {
+            portfolioComparison = portfolioData.comparison;
+            console.log('✅ Portfolio comparison data fetched with real Monte Carlo');
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Portfolio comparison fetch failed (non-blocking):', error);
+      }
+    }
 
     // Save to Supabase (store raw intake data and analysis)
     try {
@@ -106,10 +200,10 @@ export async function POST(request: NextRequest) {
         await saveIntakeForm({
           conversationId: conversation.id,
           sessionId: sessionId,
-          avatarVariant: avatarVariant,
+          avatarVariant: 'variant-b', // Always use variant-b
           intakeData: intakeData,
         });
-        console.log('✅ Intake form saved to database with variant:', avatarVariant);
+        console.log('✅ Intake form saved to database with variant: variant-b');
       }
     } catch (error) {
       console.error('❌ Supabase save failed (non-blocking):', error);
@@ -117,7 +211,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      analysis,
+      analysis: {
+        ...analysis,
+        portfolioComparison
+      },
       conversationId: sessionId,
     });
   } catch (error) {

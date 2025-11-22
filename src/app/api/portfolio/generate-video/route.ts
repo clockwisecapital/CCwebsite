@@ -17,26 +17,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { analysisResult, userData, avatarVariant } = await req.json();
+    const { analysisResult, userData } = await req.json();
     const firstName = userData?.firstName || 'there';
 
-    console.log('🎬 Starting video generation process...', { firstName, avatarVariant });
+    console.log('🎬 Starting video generation process...', { firstName });
 
     // Step 1: Generate video script using Claude
     console.log('📝 Generating video script with Claude for:', firstName);
     const script = await generateVideoScript(analysisResult, firstName);
     console.log('✅ Script generated:', script.substring(0, 100) + '...');
 
-    // Step 2: Select avatar and voice based on variant
-    const avatarId = avatarVariant === 'variant-b' 
-      ? '3ebd326145b149ecbcb4e6d85df4fc1f' // Variant B avatar
-      : '8265a673ce054c97ba07fb31267af777'; // Control avatar (default)
-    
-    const voiceId = avatarVariant === 'variant-b'
-      ? '68a63c5eb8304b4f92a97efea30c50f8' // Variant B voice
-      : '45fa04a45bfa49e38936640d6d447e84'; // Control voice (default)
+    // Step 2: Use variant-b avatar and voice (the selected standard)
+    const avatarId = '3ebd326145b149ecbcb4e6d85df4fc1f'; // Variant B avatar
+    const voiceId = '68a63c5eb8304b4f92a97efea30c50f8'; // Variant B voice
 
-    console.log(`🎥 Calling HeyGen API with avatar: ${avatarId} voice: ${voiceId} variant: ${avatarVariant}`);
+    console.log(`🎥 Calling HeyGen API with avatar: ${avatarId} voice: ${voiceId}`);
     const heygenResponse = await fetch('https://api.heygen.com/v2/video/generate', {
       method: 'POST',
       headers: {

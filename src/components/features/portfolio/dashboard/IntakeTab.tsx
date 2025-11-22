@@ -32,6 +32,8 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [displayGoalAmount, setDisplayGoalAmount] = useState('');
   const [displayMonthlyContribution, setDisplayMonthlyContribution] = useState('');
+  const [displayTotalValue, setDisplayTotalValue] = useState('');
+  const [portfolioValueRange, setPortfolioValueRange] = useState<string>('');
   const [isParsing, setIsParsing] = useState(false);
   const [showExampleModal, setShowExampleModal] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -49,6 +51,9 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
       }
       if (initialData.monthlyContribution) {
         setDisplayMonthlyContribution(initialData.monthlyContribution.toLocaleString('en-US'));
+      }
+      if (initialData.portfolio.totalValue) {
+        setDisplayTotalValue(initialData.portfolio.totalValue.toLocaleString('en-US'));
       }
     }
   }, [initialData]);
@@ -126,28 +131,40 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
     setErrors({});
 
     // Validate current step before proceeding
-    // Step 1: Age
-    if (currentStep === 1 && !formData.age) {
+    // Step 0: Age
+    if (currentStep === 0 && !formData.age) {
       setErrors({ age: 'Age is required' });
       return;
     }
-    // Step 2: Portfolio Description
-    if (currentStep === 2 && (!formData.portfolioDescription || formData.portfolioDescription.trim() === '')) {
-      setErrors({ portfolioDescription: 'Portfolio Description is required' });
-      return;
+    // Step 1: Portfolio - Require at least one investment with ticker
+    if (currentStep === 1) {
+      if (!formData.specificHoldings || formData.specificHoldings.length === 0) {
+        setErrors({ specificHoldings: 'Please add at least one investment to continue' });
+        return;
+      }
+      
+      const hasValidHolding = formData.specificHoldings.some(h => 
+        h.ticker && h.ticker.trim().length > 0 && 
+        (h.dollarAmount && h.dollarAmount > 0 || h.percentage > 0)
+      );
+      
+      if (!hasValidHolding) {
+        setErrors({ specificHoldings: 'Please enter at least one investment with ticker and amount' });
+        return;
+      }
     }
-    // Step 8: First Name
-    if (currentStep === 8 && (!formData.firstName || !formData.firstName.trim())) {
+    // Step 7: First Name
+    if (currentStep === 7 && (!formData.firstName || !formData.firstName.trim())) {
       setErrors({ firstName: 'First name is required' });
       return;
     }
-    // Step 9: Last Name
-    if (currentStep === 9 && (!formData.lastName || !formData.lastName.trim())) {
+    // Step 8: Last Name
+    if (currentStep === 8 && (!formData.lastName || !formData.lastName.trim())) {
       setErrors({ lastName: 'Last name is required' });
       return;
     }
-    // Step 10: Email & Acknowledgement
-    if (currentStep === 10) {
+    // Step 9: Email & Acknowledgement
+    if (currentStep === 9) {
       if (!formData.email || !formData.email.trim()) {
         setErrors({ email: 'Email is required' });
         return;
@@ -162,21 +179,20 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
       }
     }
 
-    // When moving from step 7 to 8, parse the portfolio (but don't submit yet)
-    if (currentStep === 7 && !analysisStarted) {
+    // When moving from step 6 to 7, parse the portfolio (but don't submit yet)
+    if (currentStep === 6 && !analysisStarted) {
       setAnalysisStarted(true);
       // Parse portfolio allocations
       await parsePortfolio();
     }
 
     // Move to next step
-    if (currentStep < 10) {
+    if (currentStep < 9) {
       setCurrentStep(currentStep + 1);
     } else {
-      // On final step (10), submit everything and Show Analysis 
-      if (isPortfolioValid && allocationsParsed) {
-        onSubmit(formData);
-      }
+      // On final step (9), submit everything and Show Analysis 
+      // Submit regardless of portfolio parsing state - backend will handle validation
+      onSubmit(formData);
     }
   };
 
@@ -254,49 +270,21 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
   };
 
   const steps = [
-    { id: 0, title: 'Investment Experience', field: 'experienceLevel' },
-    { id: 1, title: 'Age', field: 'age' },
-    { id: 2, title: 'Portfolio Description', field: 'portfolioDescription' },
-    { id: 3, title: 'Risk Tolerance', field: 'riskTolerance' },
-    { id: 4, title: 'Target Goal Amount', field: 'goalAmount' },
-    { id: 5, title: 'Time Horizon', field: 'timeHorizon' },
-    { id: 6, title: 'Monthly Contribution', field: 'monthlyContribution' },
-    { id: 7, title: 'Goal Description', field: 'goalDescription' },
-    { id: 8, title: 'First Name', field: 'firstName' },
-    { id: 9, title: 'Last Name', field: 'lastName' },
-    { id: 10, title: 'Email & Acknowledgment', field: 'email' },
+    { id: 0, title: 'Age', field: 'age' },
+    { id: 1, title: 'Current Investments', field: 'specificHoldings' },
+    { id: 2, title: 'Risk Tolerance', field: 'riskTolerance' },
+    { id: 3, title: 'Target Goal Amount', field: 'goalAmount' },
+    { id: 4, title: 'Time Horizon', field: 'timeHorizon' },
+    { id: 5, title: 'Monthly Contribution', field: 'monthlyContribution' },
+    { id: 6, title: 'Goal Description', field: 'goalDescription' },
+    { id: 7, title: 'First Name', field: 'firstName' },
+    { id: 8, title: 'Last Name', field: 'lastName' },
+    { id: 9, title: 'Email & Acknowledgment', field: 'email' },
   ];
 
   const renderStepContent = () => {
     switch (currentStep) {
       case 0:
-        // Investment Experience
-        return (
-          <div className="space-y-4">
-            <div className="bg-teal-900/20 border border-teal-800 rounded-2xl p-6 mb-6">
-              <p className="text-gray-200 text-lg leading-relaxed">
-                What&apos;s your investment experience level?
-              </p>
-            </div>
-            <div>
-              <label htmlFor="experienceLevel" className="block text-sm font-medium text-gray-300 mb-2">
-                Your Answer
-              </label>
-              <select
-                id="experienceLevel"
-                value={formData.experienceLevel}
-                onChange={(e) => setFormData(prev => ({ ...prev, experienceLevel: e.target.value as IntakeFormData['experienceLevel'] }))}
-                className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
-              >
-                <option value="Beginner">Beginner</option>
-                <option value="Intermediate">Intermediate</option>
-                <option value="Advanced">Advanced</option>
-              </select>
-            </div>
-          </div>
-        );
-
-      case 1:
         // Age
         return (
           <div className="space-y-4">
@@ -326,19 +314,115 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           </div>
         );
 
-      case 2:
+      case 1:
         // Portfolio Description
         return (
           <div className="space-y-4">
             <div className="bg-teal-900/20 border border-teal-800 rounded-2xl p-6 mb-6">
               <p className="text-gray-200 text-lg leading-relaxed">
-                Let&apos;s understand your current portfolio. What&apos;s your total portfolio value and describe your holdings (Names &amp; Amounts)?
+                Let&apos;s understand your current investments. Enter each position with its ticker, name, and amount for personalized analysis.
               </p>
             </div>
+            
+            {/* Total Portfolio Value Selection */}
+            <div>
+              <label htmlFor="portfolioValueRange" className="block text-sm font-medium text-gray-300 mb-2">
+                Total Portfolio Value
+              </label>
+              <select
+                id="portfolioValueRange"
+                value={portfolioValueRange}
+                onChange={(e) => {
+                  const range = e.target.value;
+                  setPortfolioValueRange(range);
+                  // Set totalValue based on range selection
+                  let value: number | undefined;
+                  switch (range) {
+                    case 'less-than-100k':
+                      value = 100000;
+                      break;
+                    case '100k-500k':
+                      value = 500000;
+                      break;
+                    case '500k-1m':
+                      value = 1000000;
+                      break;
+                    case 'greater-than-1m':
+                      value = 1000000;
+                      break;
+                    case 'custom':
+                      value = formData.portfolio.totalValue;
+                      break;
+                    default:
+                      value = undefined;
+                  }
+                  if (range !== 'custom') {
+                    setFormData(prev => ({
+                      ...prev,
+                      portfolio: {
+                        ...prev.portfolio,
+                        totalValue: value
+                      }
+                    }));
+                  }
+                }}
+                className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
+              >
+                <option value="">Select Range...</option>
+                <option value="less-than-100k">Less than $100k</option>
+                <option value="100k-500k">$100k - $500k</option>
+                <option value="500k-1m">$500k - $1M</option>
+                <option value="greater-than-1m">Greater than $1M</option>
+                <option value="custom">Enter Custom Amount</option>
+              </select>
+            </div>
+
+            {/* Custom Amount Input - Only show if "custom" is selected */}
+            {portfolioValueRange === 'custom' && (
+              <div>
+                <label htmlFor="customTotalValue" className="block text-sm font-medium text-gray-300 mb-2">
+                  Enter Total Portfolio Value
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base">$</span>
+                  <input
+                    type="text"
+                    id="customTotalValue"
+                    value={displayTotalValue}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, '');
+                      if (value) {
+                        const formatted = formatNumberWithCommas(value);
+                        setDisplayTotalValue(formatted);
+                        setFormData(prev => ({
+                          ...prev,
+                          portfolio: {
+                            ...prev.portfolio,
+                            totalValue: parseNumber(formatted)
+                          }
+                        }));
+                      } else {
+                        setDisplayTotalValue('');
+                        setFormData(prev => ({
+                          ...prev,
+                          portfolio: {
+                            ...prev.portfolio,
+                            totalValue: undefined
+                          }
+                        }));
+                      }
+                    }}
+                    className="w-full pl-8 pr-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
+                    placeholder="500,000"
+                  />
+                </div>
+              </div>
+            )}
+
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label htmlFor="portfolioDescription" className="block text-sm font-medium text-gray-700">
-                  Your Answer
+                <label className="block text-sm font-medium text-gray-300">
+                  Describe Your Holdings
                 </label>
                 <button
                   type="button"
@@ -348,32 +432,195 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  See Example
+                  See Examples
                 </button>
               </div>
-              <textarea
-                id="portfolioDescription"
-                rows={6}
-                value={formData.portfolioDescription || ''}
-                onChange={(e) => {
-                  setFormData(prev => ({ ...prev, portfolioDescription: e.target.value }));
-                  setAllocationsParsed(false);
-                }}
-                className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
-                placeholder="Example: I have a $500,000 portfolio with Apple stock ($75,000), Microsoft ($50,000), Vanguard S&P 500 ETF ($100,000)..."
-              />
-              {errors.portfolioDescription && (
-                <p className="mt-2 text-sm text-red-600">{errors.portfolioDescription}</p>
+
+              <p className="text-xs text-gray-400 mb-3">
+                <span className="font-semibold text-teal-400">Enter ticker symbols or tradeable identifiers</span> for each investment. Examples: AAPL (stocks), VOO (ETFs), AGG (bonds), VNQ (REITs), GLD (gold).
+              </p>
+
+              {/* Holdings Total Summary */}
+              {formData.specificHoldings && formData.specificHoldings.length > 0 && (
+                <div className="mb-4 p-3 bg-gray-700/30 rounded-lg border border-gray-600">
+                  {(() => {
+                    const totalDollars = formData.specificHoldings.reduce((sum, h) => sum + (h.dollarAmount || 0), 0);
+                    const totalPercentage = formData.specificHoldings.reduce((sum, h) => sum + (h.percentage || 0), 0);
+                    const hasDollars = totalDollars > 0;
+                    const hasPercentages = totalPercentage > 0;
+
+                    return (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-300">Total Holdings:</span>
+                        <div className="text-sm font-semibold text-teal-400">
+                          {hasDollars && <span>${totalDollars.toLocaleString()}</span>}
+                          {hasDollars && hasPercentages && <span className="text-gray-500 mx-2">•</span>}
+                          {hasPercentages && (
+                            <span className={totalPercentage > 100 ? 'text-amber-400' : ''}>
+                              {totalPercentage.toFixed(1)}%
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
               )}
-              <p className="text-xs text-gray-400 mt-2">
-                AI will categorize your holdings automatically when you complete the questions.
+
+              {/* Holdings List */}
+              {formData.specificHoldings && formData.specificHoldings.length > 0 && (
+                <div className="space-y-3 mb-4">
+                  {formData.specificHoldings.map((holding, index) => {
+                    // Store dollar amount directly on holding for independent tracking
+                    const holdingDollarAmount = holding.dollarAmount || 0;
+                    
+                    return (
+                      <div key={index} className="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          {/* Ticker Symbol */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-400 mb-1">
+                              Ticker / Symbol *
+                            </label>
+                            <input
+                              type="text"
+                              value={holding.ticker || ''}
+                              onChange={(e) => {
+                                const newHoldings = [...(formData.specificHoldings || [])];
+                                newHoldings[index] = { ...newHoldings[index], ticker: e.target.value.toUpperCase() };
+                                setFormData({ ...formData, specificHoldings: newHoldings });
+                              }}
+                              className="w-full px-3 py-2 border border-gray-500 bg-gray-600 text-white rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm uppercase"
+                              placeholder={index === 0 ? "AAPL" : index === 1 ? "VTI" : index === 2 ? "AGG" : "TICKER"}
+                            />
+                          </div>
+
+                          {/* Name */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-400 mb-1">
+                              Name
+                            </label>
+                            <input
+                              type="text"
+                              value={holding.name}
+                              onChange={(e) => {
+                                const newHoldings = [...(formData.specificHoldings || [])];
+                                newHoldings[index] = { ...newHoldings[index], name: e.target.value };
+                                setFormData({ ...formData, specificHoldings: newHoldings });
+                              }}
+                              className="w-full px-3 py-2 border border-gray-500 bg-gray-600 text-white rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                              placeholder={index === 0 ? "Apple Inc." : index === 1 ? "Vanguard Total Stock ETF" : index === 2 ? "iShares Core Bond Fund" : "Investment Name"}
+                            />
+                          </div>
+
+                          {/* Dollar Amount OR Percentage (independent from portfolio total) */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-400 mb-1">
+                              Amount or %
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <div className="relative flex-1">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                                <input
+                                  type="text"
+                                  value={holdingDollarAmount > 0 ? holdingDollarAmount.toLocaleString() : ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value.replace(/[^0-9]/g, '');
+                                    const newHoldings = [...(formData.specificHoldings || [])];
+                                    if (value) {
+                                      const amount = parseInt(value);
+                                      newHoldings[index] = { 
+                                        ...newHoldings[index], 
+                                        dollarAmount: amount,
+                                        percentage: 0 // Clear percentage when dollar is entered
+                                      };
+                                    } else {
+                                      newHoldings[index] = { 
+                                        ...newHoldings[index], 
+                                        dollarAmount: undefined 
+                                      };
+                                    }
+                                    setFormData({ ...formData, specificHoldings: newHoldings });
+                                  }}
+                                  className="w-full pl-6 pr-2 py-2 border border-gray-500 bg-gray-600 text-white rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                                  placeholder="50000"
+                                />
+                              </div>
+                              <span className="text-gray-400 text-sm">or</span>
+                              <div className="relative flex-1">
+                                <input
+                                  type="number"
+                                  value={holding.percentage || ''}
+                                  onChange={(e) => {
+                                    const newHoldings = [...(formData.specificHoldings || [])];
+                                    const percentage = parseFloat(e.target.value) || 0;
+                                    newHoldings[index] = { 
+                                      ...newHoldings[index], 
+                                      percentage: percentage,
+                                      dollarAmount: undefined // Clear dollar when percentage is entered
+                                    };
+                                    setFormData({ ...formData, specificHoldings: newHoldings });
+                                  }}
+                                  className="w-full pr-7 pl-2 py-2 border border-gray-500 bg-gray-600 text-white rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                                  placeholder="25"
+                                  min="0"
+                                  max="100"
+                                  step="0.1"
+                                />
+                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Remove Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newHoldings = formData.specificHoldings?.filter((_, i) => i !== index);
+                            setFormData({ ...formData, specificHoldings: newHoldings });
+                          }}
+                          className="mt-2 text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Remove
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Add Holding Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  const newHoldings = [...(formData.specificHoldings || []), { name: '', ticker: '', percentage: 0 }];
+                  setFormData({ ...formData, specificHoldings: newHoldings });
+                }}
+                className="w-full py-3 px-4 border-2 border-dashed border-gray-600 text-gray-400 hover:text-teal-500 hover:border-teal-500 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add Investment
+              </button>
+
+              {errors.specificHoldings && (
+                <p className="mt-2 text-sm text-red-400">{errors.specificHoldings}</p>
+              )}
+
+              <p className="text-xs text-gray-400 mt-3">
+                <span className="font-semibold text-teal-400">📊 Analysis Tip:</span> Use publicly traded ticker symbols for accurate Monte Carlo simulations based on real market data and historical volatility.
               </p>
             </div>
           </div>
         );
 
 
-      case 3:
+      case 2:
         // Risk Tolerance
         return (
           <div className="space-y-4">
@@ -389,20 +636,20 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                   onClick={() => setFormData(prev => ({ ...prev, riskTolerance: 'low' }))}
                   className={`p-4 rounded-xl border-2 transition-all ${
                     formData.riskTolerance === 'low'
-                      ? 'border-red-500 bg-red-900/20'
+                      ? 'border-blue-500 bg-blue-900/20'
                       : 'border-gray-600 bg-gray-700 hover:border-gray-500'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                      formData.riskTolerance === 'low' ? 'bg-red-500' : 'bg-gray-600'
+                      formData.riskTolerance === 'low' ? 'bg-blue-500' : 'bg-gray-600'
                     }`}>
                       <svg className={`w-5 h-5 ${formData.riskTolerance === 'low' ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                       </svg>
                     </div>
                     <div className="text-left">
-                      <div className={`font-semibold ${formData.riskTolerance === 'low' ? 'text-red-400' : 'text-gray-300'}`}>
+                      <div className={`font-semibold ${formData.riskTolerance === 'low' ? 'text-blue-400' : 'text-gray-300'}`}>
                         Conservative
                       </div>
                       <div className="text-xs text-gray-400">Capital preservation</div>
@@ -415,20 +662,20 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                   onClick={() => setFormData(prev => ({ ...prev, riskTolerance: 'medium' }))}
                   className={`p-4 rounded-xl border-2 transition-all ${
                     formData.riskTolerance === 'medium'
-                      ? 'border-amber-500 bg-amber-900/20'
+                      ? 'border-purple-500 bg-purple-900/20'
                       : 'border-gray-600 bg-gray-700 hover:border-gray-500'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                      formData.riskTolerance === 'medium' ? 'bg-amber-500' : 'bg-gray-600'
+                      formData.riskTolerance === 'medium' ? 'bg-purple-500' : 'bg-gray-600'
                     }`}>
                       <svg className={`w-5 h-5 ${formData.riskTolerance === 'medium' ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
                       </svg>
                     </div>
                     <div className="text-left">
-                      <div className={`font-semibold ${formData.riskTolerance === 'medium' ? 'text-amber-400' : 'text-gray-300'}`}>
+                      <div className={`font-semibold ${formData.riskTolerance === 'medium' ? 'text-purple-400' : 'text-gray-300'}`}>
                         Moderate
                       </div>
                       <div className="text-xs text-gray-400">Balanced growth</div>
@@ -441,20 +688,20 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                   onClick={() => setFormData(prev => ({ ...prev, riskTolerance: 'high' }))}
                   className={`p-4 rounded-xl border-2 transition-all ${
                     formData.riskTolerance === 'high'
-                      ? 'border-green-500 bg-green-900/20'
+                      ? 'border-indigo-500 bg-indigo-900/20'
                       : 'border-gray-600 bg-gray-700 hover:border-gray-500'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                      formData.riskTolerance === 'high' ? 'bg-green-500' : 'bg-gray-600'
+                      formData.riskTolerance === 'high' ? 'bg-indigo-500' : 'bg-gray-600'
                     }`}>
                       <svg className={`w-5 h-5 ${formData.riskTolerance === 'high' ? 'text-white' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                       </svg>
                     </div>
                     <div className="text-left">
-                      <div className={`font-semibold ${formData.riskTolerance === 'high' ? 'text-green-400' : 'text-gray-300'}`}>
+                      <div className={`font-semibold ${formData.riskTolerance === 'high' ? 'text-indigo-400' : 'text-gray-300'}`}>
                         Aggressive
                       </div>
                       <div className="text-xs text-gray-400">Maximum growth</div>
@@ -489,7 +736,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           </div>
         );
 
-      case 4:
+      case 3:
         // Target Goal Amount
         return (
           <div className="space-y-4">
@@ -526,7 +773,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           </div>
         );
 
-      case 5:
+      case 4:
         // Time Horizon
         return (
           <div className="space-y-4">
@@ -551,7 +798,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           </div>
         );
 
-      case 6:
+      case 5:
         // Monthly Contribution
         return (
           <div className="space-y-4">
@@ -589,7 +836,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           </div>
         );
 
-      case 7:
+      case 6:
         // Goal Description
         return (
           <div className="space-y-4">
@@ -613,7 +860,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           </div>
         );
 
-      case 8:
+      case 7:
         // First Name - With Kronos thinking animation
         return (
           <div className="space-y-4">
@@ -653,9 +900,9 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
             </div>
             
             <div className="text-center mb-6">
-              <h3 className="text-xl font-bold text-gray-100 mb-2">I&apos;m thinking...</h3>
+              <h3 className="text-xl font-bold text-gray-100 mb-2">Kronos is recording...</h3>
               <p className="text-gray-300 text-sm">
-                I need about 20-30 seconds to complete your analysis
+                This usually takes 30-60 seconds
               </p>
             </div>
 
@@ -683,7 +930,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           </div>
         );
 
-      case 9:
+      case 8:
         // Last Name - With Kronos thinking animation
         return (
           <div className="space-y-4">
@@ -723,9 +970,9 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
             </div>
             
             <div className="text-center mb-6">
-              <h3 className="text-xl font-bold text-gray-100 mb-2">I&apos;m thinking...</h3>
+              <h3 className="text-xl font-bold text-gray-100 mb-2">Kronos is recording...</h3>
               <p className="text-gray-300 text-sm">
-                I&apos;m analyzing your portfolio across multiple economic cycles
+                This usually takes 30-60 seconds
               </p>
             </div>
 
@@ -753,7 +1000,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           </div>
         );
 
-      case 10:
+      case 9:
         // Email & Acknowledgment - With Kronos thinking animation
         return (
           <div className="space-y-4">
@@ -793,9 +1040,9 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
             </div>
             
             <div className="text-center mb-6">
-              <h3 className="text-xl font-bold text-gray-100 mb-2">I&apos;m thinking...</h3>
+              <h3 className="text-xl font-bold text-gray-100 mb-2">Kronos is recording...</h3>
               <p className="text-gray-300 text-sm">
-                I need about 20-30 seconds to complete your analysis
+                This usually takes 30-60 seconds
               </p>
             </div>
 
@@ -898,10 +1145,10 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
         <button
           type="button"
           onClick={handleNext}
-          disabled={isParsing || (isAnalyzing && currentStep === 10)}
+          disabled={isParsing || (isAnalyzing && currentStep === 9)}
           className="px-8 py-3 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
         >
-          {isParsing && currentStep === 7 ? (
+          {isParsing && currentStep === 6 ? (
             <>
               <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -909,7 +1156,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
               </svg>
               Processing...
             </>
-          ) : currentStep === 10 ? (
+          ) : currentStep === 9 ? (
             'Show Analysis '
           ) : (
             'Next →'
@@ -924,7 +1171,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-gray-900">Portfolio Description Examples</h3>
+                <h3 className="text-xl font-bold text-gray-900">Investment Examples - Any Asset Type Welcome!</h3>
                 <button
                   onClick={() => setShowExampleModal(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -935,35 +1182,50 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                 </button>
               </div>
               
+              <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-teal-900 font-medium mb-2">
+                  ✓ We accept <strong>ALL investment types</strong> - just use their ticker symbol:
+                </p>
+                <p className="text-xs text-teal-800">
+                  Stocks, ETFs, Mutual Funds, Bonds, REITs, Commodities, Crypto - anything with a publicly traded ticker works!
+                </p>
+              </div>
+              
               <div className="space-y-6">
                 <div>
                   <p className="text-sm text-gray-600 mb-4">
-                    To get the most accurate allocation, include the following in your description:
+                    Enter each investment using its <strong>ticker symbol or tradeable identifier</strong>, along with name and amount:
                   </p>
                   <ul className="space-y-2 text-sm text-gray-700">
                     <li className="flex items-start gap-2">
                       <svg className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
-                      <span><strong>Total portfolio value</strong> (e.g., &ldquo;$500,000 portfolio&rdquo;)</span>
+                      <span><strong>Stocks:</strong> AAPL (Apple Inc.) - $50,000 or 25%</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <svg className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
-                      <span><strong>Specific holdings with amounts</strong> (e.g., &ldquo;Apple stock $75,000, Microsoft $50,000&rdquo;)</span>
+                      <span><strong>ETFs:</strong> VTI (Vanguard Total Stock) - $75,000 or 30%</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <svg className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
-                      <span><strong>Fund names or tickers</strong> (e.g., &ldquo;Vanguard S&P 500 ETF (VOO)&rdquo;, &ldquo;Vanguard Total Bond (BND)&rdquo;)</span>
+                      <span><strong>Bonds:</strong> AGG (iShares Core Bond) - $40,000 or 20%</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <svg className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
-                      <span><strong>Asset types</strong> (stocks, bonds, REITs, gold, crypto, cash, etc.)</span>
+                      <span><strong>Real Estate:</strong> VNQ (Vanguard REIT) - $25,000 or 10%</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <svg className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span><strong>Commodities:</strong> GLD (Gold ETF) - $10,000 or 5%</span>
                     </li>
                   </ul>
                 </div>
