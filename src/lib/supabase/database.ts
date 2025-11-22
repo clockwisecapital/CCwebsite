@@ -639,30 +639,56 @@ export async function getTgtPrices(tickers: string[]): Promise<Map<string, numbe
   try {
     const supabase = createAdminSupabaseClient()
     
+    console.log(`📊 Querying tgt_price table for ${tickers.length} tickers:`, tickers.slice(0, 10).join(', '), '...');
+    
     const { data, error } = await supabase
       .from('tgt_price')
       .select('*')
       .in('Ticker', tickers)
 
     if (error) {
-      console.error('Error fetching TGT prices:', error)
+      console.error('❌ Error fetching TGT prices:', error)
       return new Map()
     }
+
+    console.log(`✅ tgt_price query returned ${data?.length || 0} rows`);
 
     const pricesMap = new Map<string, number>()
     
     if (data) {
+      console.log('📋 Sample row structure:', data[0]);
+      
       data.forEach((row) => {
-        const price = row['Consensus Tgt Price']
-        if (price !== null) {
-          pricesMap.set(row.Ticker, price)
+        // Use the correct column name from database schema
+        const priceRaw = row['Consensus Tgt Price'];
+        
+        if (priceRaw !== null && priceRaw !== undefined) {
+          // Parse the price (it might be a string)
+          const priceStr = String(priceRaw);
+          
+          // Skip invalid values like #N/A, N/A, etc.
+          if (priceStr.includes('#N/A') || priceStr.toUpperCase() === 'N/A' || priceStr.trim() === '') {
+            console.warn(`  ⚠️ ${row.Ticker}: Invalid target price "${priceStr}" - skipping`);
+            return;
+          }
+          
+          const price = parseFloat(priceStr);
+          
+          if (!isNaN(price) && price > 0) {
+            pricesMap.set(row.Ticker, price);
+            console.log(`  ✓ ${row.Ticker}: $${price.toFixed(2)}`);
+          } else {
+            console.warn(`  ⚠️ ${row.Ticker}: Could not parse price "${priceStr}" to valid number`);
+          }
+        } else {
+          console.warn(`  ⚠️ ${row.Ticker}: price is ${priceRaw} (null/undefined)`);
         }
       })
     }
 
     return pricesMap
   } catch (error) {
-    console.error('Database error fetching TGT prices:', error)
+    console.error('❌ Database error fetching TGT prices:', error)
     return new Map()
   }
 }

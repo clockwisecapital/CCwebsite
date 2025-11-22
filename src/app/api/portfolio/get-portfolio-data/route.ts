@@ -72,6 +72,13 @@ export async function POST(request: NextRequest) {
     // 3. Fetch target prices
     console.log('Fetching target prices...');
     const targetPrices = await getTgtPrices(allTickers);
+    console.log(`📊 Target prices fetched: ${targetPrices.size} of ${allTickers.length} tickers`);
+    console.log('✓ Tickers with target prices:', Array.from(targetPrices.keys()).join(', '));
+    
+    const missingTargets = allTickers.filter(t => !targetPrices.has(t));
+    if (missingTargets.length > 0) {
+      console.warn('⚠️ Missing target prices for:', missingTargets.join(', '));
+    }
 
     // 4. Run Monte Carlo simulations
     console.log('Running Monte Carlo simulations...');
@@ -172,6 +179,28 @@ export async function POST(request: NextRequest) {
 
     // Calculate weighted average expected return for TIME portfolio
     const timeExpectedReturn = calculateWeightedReturn(timePositions);
+    
+    // Log TIME portfolio stats
+    const missingTargetPrices = timePositions.filter(p => p.targetPrice === null);
+    const validExpectedReturns = timePositions.filter(p => p.expectedReturn !== null && !isNaN(p.expectedReturn));
+    
+    console.log('📊 TIME Portfolio stats:', {
+      totalPositions: timePositions.length,
+      withTargetPrice: timePositions.filter(p => p.targetPrice !== null).length,
+      withoutTargetPrice: missingTargetPrices.length,
+      withValidExpectedReturn: validExpectedReturns.length,
+      calculatedReturn: timeExpectedReturn,
+      sample: timePositions.slice(0, 3).map(p => ({
+        ticker: p.ticker,
+        currentPrice: p.currentPrice,
+        targetPrice: p.targetPrice,
+        expectedReturn: p.expectedReturn
+      }))
+    });
+    
+    if (missingTargetPrices.length > 0) {
+      console.warn('⚠️ TIME Portfolio missing target prices for:', missingTargetPrices.map(p => p.ticker).join(', '));
+    }
 
     // Get top 5 TIME positions by weight
     const timeTopPositions = [...timePositions]
@@ -233,12 +262,15 @@ function calculateWeightedReturn(positions: PositionAnalysis[]): number {
   let weightedReturn = 0;
 
   positions.forEach(position => {
-    if (position.expectedReturn !== null) {
+    if (position.expectedReturn !== null && !isNaN(position.expectedReturn)) {
       weightedReturn += position.expectedReturn * position.weight;
       totalWeight += position.weight;
     }
   });
 
-  return totalWeight > 0 ? weightedReturn / 100 : 0;
+  const result = totalWeight > 0 ? weightedReturn / 100 : 0;
+  
+  // Safeguard against NaN
+  return isNaN(result) ? 0 : result;
 }
 
