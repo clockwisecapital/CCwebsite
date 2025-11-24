@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { IntakeFormData } from './PortfolioDashboard';
+import { parseCSV, validateCSVFile, type ParseResult } from '@/lib/utils/csvParser';
 
 interface IntakeTabProps {
   onSubmit: (data: IntakeFormData) => void;
@@ -43,6 +44,11 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
   const [acknowledged, setAcknowledged] = useState(false);
   const [analysisStarted, setAnalysisStarted] = useState(false);
 
+  // CSV Upload state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [csvUploadStatus, setCsvUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  const [csvParseResult, setCsvParseResult] = useState<ParseResult | null>(null);
+
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);
@@ -66,6 +72,69 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
 
   const parseNumber = (value: string): number => {
     return parseInt(value.replace(/,/g, '')) || 0;
+  };
+
+  // CSV Upload Handlers
+  const handleDownloadTemplate = () => {
+    const link = document.createElement('a');
+    link.href = '/templates/portfolio-holdings-template.csv';
+    link.download = 'portfolio-holdings-template.csv';
+    link.click();
+  };
+
+  const handleCSVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Reset previous results
+    setCsvParseResult(null);
+    setCsvUploadStatus('uploading');
+
+    // Validate file
+    const validation = validateCSVFile(file);
+    if (!validation.valid) {
+      setCsvUploadStatus('error');
+      setCsvParseResult({
+        success: false,
+        holdings: [],
+        errors: [validation.error || 'Invalid file'],
+        warnings: [],
+        skippedRows: 0,
+      });
+      return;
+    }
+
+    // Read and parse file
+    try {
+      const text = await file.text();
+      const result = parseCSV(text);
+      setCsvParseResult(result);
+
+      if (result.success) {
+        // Add parsed holdings to form data
+        setFormData(prev => ({
+          ...prev,
+          specificHoldings: [...(prev.specificHoldings || []), ...result.holdings],
+        }));
+        setCsvUploadStatus('success');
+      } else {
+        setCsvUploadStatus('error');
+      }
+    } catch (error) {
+      setCsvUploadStatus('error');
+      setCsvParseResult({
+        success: false,
+        holdings: [],
+        errors: [`Failed to read file: ${error instanceof Error ? error.message : 'Unknown error'}`],
+        warnings: [],
+        skippedRows: 0,
+      });
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   // Calculate portfolio sum excluding totalValue
@@ -439,6 +508,96 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
               <p className="text-xs text-gray-400 mb-3">
                 <span className="font-semibold text-teal-400">Enter ticker symbols or tradeable identifiers</span> for each investment. Examples: AAPL (stocks), VOO (ETFs), AGG (bonds), VNQ (REITs), GLD (gold).
               </p>
+
+              {/* CSV Upload Section */}
+              <div className="mb-4 p-4 bg-gray-700/30 rounded-lg border border-gray-600">
+                <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={handleCSVUpload}
+                    className="hidden"
+                    aria-label="Upload CSV file"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={csvUploadStatus === 'uploading'}
+                    className="flex-1 py-2.5 px-4 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    {csvUploadStatus === 'uploading' ? 'Uploading...' : 'Upload CSV'}
+                  </button>
+                  <span className="text-xs text-gray-400">or</span>
+                  <button
+                    type="button"
+                    onClick={handleDownloadTemplate}
+                    className="flex-1 py-2.5 px-4 border border-gray-600 hover:border-teal-500 text-gray-300 hover:text-teal-400 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Download Template
+                  </button>
+                </div>
+
+                {/* Upload Status Messages */}
+                {csvParseResult && (
+                  <div className="mt-3">
+                    {csvParseResult.success && (
+                      <div className="p-3 bg-green-900/30 border border-green-700 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <svg className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <div className="flex-1">
+                            <p className="text-sm text-green-300 font-medium">
+                              Successfully imported {csvParseResult.holdings.length} holding{csvParseResult.holdings.length !== 1 ? 's' : ''}
+                            </p>
+                            {csvParseResult.skippedRows > 0 && (
+                              <p className="text-xs text-green-400 mt-1">
+                                Skipped {csvParseResult.skippedRows} empty or invalid row{csvParseResult.skippedRows !== 1 ? 's' : ''}
+                              </p>
+                            )}
+                            {csvParseResult.warnings.length > 0 && (
+                              <div className="mt-2 space-y-1">
+                                {csvParseResult.warnings.map((warning, idx) => (
+                                  <p key={idx} className="text-xs text-yellow-400">⚠️ {warning}</p>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {!csvParseResult.success && csvParseResult.errors.length > 0 && (
+                      <div className="p-3 bg-red-900/30 border border-red-700 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <div className="flex-1">
+                            <p className="text-sm text-red-300 font-medium mb-2">Upload failed:</p>
+                            <div className="space-y-1">
+                              {csvParseResult.errors.map((error, idx) => (
+                                <p key={idx} className="text-xs text-red-400">• {error}</p>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="text-center text-sm text-gray-400 mb-4">
+                — or enter manually —
+              </div>
 
               {/* Holdings Total Summary */}
               {formData.specificHoldings && formData.specificHoldings.length > 0 && (

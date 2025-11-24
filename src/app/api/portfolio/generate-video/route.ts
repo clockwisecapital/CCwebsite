@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     console.log('✅ Script generated:', script.substring(0, 100) + '...');
 
     // Step 2: Use variant-b avatar and voice (the selected standard)
-    const avatarId = '3ebd326145b149ecbcb4e6d85df4fc1f'; // Variant B avatar
+    const avatarId = 'f9ee50e70d8841a889be4f79ef1ef66e'; // Variant B avatar
     const voiceId = '68a63c5eb8304b4f92a97efea30c50f8'; // Variant B voice
 
     console.log(`🎥 Calling HeyGen API with avatar: ${avatarId} voice: ${voiceId}`);
