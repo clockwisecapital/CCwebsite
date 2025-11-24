@@ -495,8 +495,8 @@ Provide analysis in this JSON format with three distinct impact sections:
   "goalImpact": "Return 3-4 bullet points (start with '•'). Make it DEEPLY PERSONAL using their exact numbers:\n- Calculate and mention: 'Your goal of $${(goals?.goal_amount as number || 0).toLocaleString()} in ${goals?.horizon_years || 0} years...'\n${portfolioValue > 0 ? `- 'Your current $${portfolioValue.toLocaleString()} needs X% annual growth to reach your goal...'` : '- Emphasize importance of knowing portfolio value for planning'}\n- Create urgency: explain how THEIR specific timeline is at risk\n- Show how Clockwise solutions specifically address THEIR goal/timeline/risk profile\n${isNewInvestor ? '- NEW INVESTOR: Focus on importance of starting right with professional guidance' : '- Show the gap between where they are and where they need to be'}\nMake them FEEL the urgency and opportunity.",
   "metrics": [
     ["Current Risk Level", "X/10", "Needs professional management"],
-    ["Market Timing", "Static approach", "Daily adaptation needed"], 
-    ["Expert Guidance", "DIY strategy", "Professional oversight required"],
+    ["Market Timing", "Static approach", "Cycle adaptation needed"], 
+    ["Expert Guidance", "Static strategy risk", "Professional oversight required"],
     ["Portfolio Optimization", "Suboptimal", "Clockwise solutions available"]
   ]
 }`;
@@ -535,8 +535,8 @@ Provide analysis in this JSON format with three distinct impact sections:
       recommendation: 'Consider professional portfolio management to optimize your path to financial goals.',
       metrics: [
         ['Current Risk Level', '7/10', 'Needs professional management'],
-        ['Market Timing', 'Static approach', 'Daily adaptation needed'],
-        ['Expert Guidance', 'DIY strategy', 'Professional oversight required'],
+        ['Market Timing', 'Static approach', 'Cycle adaptation needed'],
+        ['Expert Guidance', 'Static strategy risk', 'Professional oversight required'],
         ['Portfolio Optimization', 'Suboptimal', 'Clockwise solutions available'],
       ],
     };

@@ -1922,8 +1922,8 @@ Provide analysis in this JSON format with three distinct impact sections:
   "goalImpact": "Return 3-4 bullet points (start with '•'). Make it DEEPLY PERSONAL using their exact numbers:\n- Calculate and mention specific: 'Your goal of $" + (goalsData?.goal_amount as number || 0).toLocaleString() + " in " + (goalsData?.horizon_years || 0) + " years...'\n- If portfolio value known: 'Your current $" + actualPortfolioValue + " needs X% annual growth...'\n- Create urgency: explain how THEIR specific timeline is at risk\n- Show how Clockwise solutions specifically address THEIR goal/timeline/risk profile\n- If new investor: focus on the importance of starting right with professional guidance\nMake them FEEL the gap between where they are and where they need to be.",
   "metrics": [
     ["Current Risk Level", "X/10", "Needs professional management"],
-    ["Market Timing", "Static approach", "Daily adaptation needed"], 
-    ["Expert Guidance", "DIY strategy", "Professional oversight required"],
+    ["Market Timing", "Static approach", "Cycle adaptation needed"], 
+    ["Expert Guidance", "Static strategy risk", "Professional oversight required"],
     ["Portfolio Optimization", "Suboptimal", "Clockwise solutions available"]
   ]
 }`;
@@ -1966,12 +1966,12 @@ Provide analysis in this JSON format with three distinct impact sections:
           ? 'Today\'s market presents unique challenges for new investors. With elevated valuations and increasing complexity, starting with professional guidance gives you a significant advantage in building wealth efficiently.'
           : 'Current market dynamics reveal several concerning trends for individual investors. The combination of stretched valuations, cycle transitions, and sector concentration risks suggests your portfolio may face headwinds that require professional navigation.',
         recommendation: portfolioData?.new_investor 
-          ? 'Starting your investment journey with professional management positions you for long-term success. Clockwise\'s TIME ETF offers daily adaptation to market cycles, while our Diversified Portfolios provide comprehensive risk management. Book a consultation to discover which solution aligns best with your goals.'
+          ? 'Starting your investment journey with professional management positions you for long-term success. Clockwise\'s TIME ETF offers cycle adaptation to market conditions, while our Diversified Portfolios provide comprehensive risk management. Book a consultation to discover which solution aligns best with your goals.'
           : 'Your current portfolio shows initiative, but today\'s market environment demands more sophisticated approaches. Clockwise\'s cycle-aware strategies and daily rebalancing capabilities address risks that traditional portfolios miss. Schedule a consultation to explore how our adaptive solutions can optimize your path to financial goals.',
         metrics: [
           ['Current Risk Level', '7/10', 'Needs professional management'],
-          ['Market Timing', 'Static approach', 'Daily adaptation needed'],
-          ['Expert Guidance', 'DIY strategy', 'Professional oversight required'],
+          ['Market Timing', 'Static approach', 'Cycle adaptation needed'],
+          ['Expert Guidance', 'Static strategy risk', 'Professional oversight required'],
           ['Portfolio Optimization', 'Suboptimal', 'Clockwise solutions available']
         ]
       };

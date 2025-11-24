@@ -404,7 +404,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                 onChange={(e) => {
                   const range = e.target.value;
                   setPortfolioValueRange(range);
-                  // Set totalValue based on range selection
+                  // Set totalValue based on range selection (use top end of range)
                   let value: number | undefined;
                   switch (range) {
                     case 'less-than-100k':
@@ -417,7 +417,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                       value = 1000000;
                       break;
                     case 'greater-than-1m':
-                      value = 1000000;
+                      value = 2000000; // Assume $2M for greater than $1M
                       break;
                     case 'custom':
                       value = formData.portfolio.totalValue;
@@ -425,13 +425,26 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                     default:
                       value = undefined;
                   }
-                  if (range !== 'custom') {
+                  if (range !== 'custom' && range !== '') {
+                    // Auto-add SPY as the default holding with the full portfolio value
                     setFormData(prev => ({
                       ...prev,
                       portfolio: {
                         ...prev.portfolio,
                         totalValue: value
-                      }
+                      },
+                      specificHoldings: [{ 
+                        ticker: 'SPY', 
+                        name: 'S&P 500 ETF', 
+                        dollarAmount: value, 
+                        percentage: 100 
+                      }]
+                    }));
+                  } else if (range === 'custom') {
+                    // Clear auto-added SPY when switching to custom
+                    setFormData(prev => ({
+                      ...prev,
+                      specificHoldings: []
                     }));
                   }
                 }}
@@ -448,333 +461,317 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
 
             {/* Custom Amount Input - Only show if "custom" is selected */}
             {portfolioValueRange === 'custom' && (
-              <div>
-                <label htmlFor="customTotalValue" className="block text-sm font-medium text-gray-300 mb-2">
-                  Enter Total Portfolio Value
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base">$</span>
-                  <input
-                    type="text"
-                    id="customTotalValue"
-                    value={displayTotalValue}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9]/g, '');
-                      if (value) {
-                        const formatted = formatNumberWithCommas(value);
-                        setDisplayTotalValue(formatted);
-                        setFormData(prev => ({
-                          ...prev,
-                          portfolio: {
-                            ...prev.portfolio,
-                            totalValue: parseNumber(formatted)
-                          }
-                        }));
-                      } else {
-                        setDisplayTotalValue('');
-                        setFormData(prev => ({
-                          ...prev,
-                          portfolio: {
-                            ...prev.portfolio,
-                            totalValue: undefined
-                          }
-                        }));
-                      }
+              <>
+                <div>
+                  <label htmlFor="customTotalValue" className="block text-sm font-medium text-gray-300 mb-2">
+                    Enter Total Portfolio Value
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base">$</span>
+                    <input
+                      type="text"
+                      id="customTotalValue"
+                      value={displayTotalValue}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^0-9]/g, '');
+                        if (value) {
+                          const formatted = formatNumberWithCommas(value);
+                          setDisplayTotalValue(formatted);
+                          setFormData(prev => ({
+                            ...prev,
+                            portfolio: {
+                              ...prev.portfolio,
+                              totalValue: parseNumber(formatted)
+                            }
+                          }));
+                        } else {
+                          setDisplayTotalValue('');
+                          setFormData(prev => ({
+                            ...prev,
+                            portfolio: {
+                              ...prev.portfolio,
+                              totalValue: undefined
+                            }
+                          }));
+                        }
+                      }}
+                      className="w-full pl-8 pr-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
+                      placeholder="500,000"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-300">
+                      Describe Your Holdings
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowExampleModal(true)}
+                      className="text-xs text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      See Examples
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-gray-400 mb-3">
+                    <span className="font-semibold text-teal-400">Enter ticker symbols or tradeable identifiers</span> for each investment. Examples: AAPL (stocks), VOO (ETFs), AGG (bonds), VNQ (REITs), GLD (gold).
+                  </p>
+
+                  {/* Add Holding Button - Primary action */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newHoldings = [...(formData.specificHoldings || []), { name: '', ticker: '', percentage: 0 }];
+                      setFormData({ ...formData, specificHoldings: newHoldings });
                     }}
-                    className="w-full pl-8 pr-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
-                    placeholder="500,000"
-                  />
-                </div>
-              </div>
-            )}
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Describe Your Holdings
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowExampleModal(true)}
-                  className="text-xs text-teal-600 hover:text-teal-700 font-medium flex items-center gap-1"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  See Examples
-                </button>
-              </div>
-
-              <p className="text-xs text-gray-400 mb-3">
-                <span className="font-semibold text-teal-400">Enter ticker symbols or tradeable identifiers</span> for each investment. Examples: AAPL (stocks), VOO (ETFs), AGG (bonds), VNQ (REITs), GLD (gold).
-              </p>
-
-              {/* CSV Upload Section */}
-              <div className="mb-4 p-4 bg-gray-700/30 rounded-lg border border-gray-600">
-                <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".csv"
-                    onChange={handleCSVUpload}
-                    className="hidden"
-                    aria-label="Upload CSV file"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={csvUploadStatus === 'uploading'}
-                    className="flex-1 py-2.5 px-4 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                    className="w-full py-3 px-4 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-semibold mb-4"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
-                    {csvUploadStatus === 'uploading' ? 'Uploading...' : 'Upload CSV'}
+                    Add Investment
                   </button>
-                  <span className="text-xs text-gray-400">or</span>
-                  <button
-                    type="button"
-                    onClick={handleDownloadTemplate}
-                    className="flex-1 py-2.5 px-4 border border-gray-600 hover:border-teal-500 text-gray-300 hover:text-teal-400 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Download Template
-                  </button>
-                </div>
 
-                {/* Upload Status Messages */}
-                {csvParseResult && (
-                  <div className="mt-3">
-                    {csvParseResult.success && (
-                      <div className="p-3 bg-green-900/30 border border-green-700 rounded-lg">
-                        <div className="flex items-start gap-2">
-                          <svg className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <div className="flex-1">
-                            <p className="text-sm text-green-300 font-medium">
-                              Successfully imported {csvParseResult.holdings.length} holding{csvParseResult.holdings.length !== 1 ? 's' : ''}
-                            </p>
-                            {csvParseResult.skippedRows > 0 && (
-                              <p className="text-xs text-green-400 mt-1">
-                                Skipped {csvParseResult.skippedRows} empty or invalid row{csvParseResult.skippedRows !== 1 ? 's' : ''}
-                              </p>
-                            )}
-                            {csvParseResult.warnings.length > 0 && (
-                              <div className="mt-2 space-y-1">
-                                {csvParseResult.warnings.map((warning, idx) => (
-                                  <p key={idx} className="text-xs text-yellow-400">⚠️ {warning}</p>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                  {/* Holdings Total Summary */}
+                  {formData.specificHoldings && formData.specificHoldings.length > 0 && (
+                    <div className="mb-4 p-3 bg-gray-700/30 rounded-lg border border-gray-600">
+                      {(() => {
+                        const totalDollars = formData.specificHoldings.reduce((sum, h) => sum + (h.dollarAmount || 0), 0);
+                        const totalPercentage = formData.specificHoldings.reduce((sum, h) => sum + (h.percentage || 0), 0);
+                        const hasDollars = totalDollars > 0;
+                        const hasPercentages = totalPercentage > 0;
 
-                    {!csvParseResult.success && csvParseResult.errors.length > 0 && (
-                      <div className="p-3 bg-red-900/30 border border-red-700 rounded-lg">
-                        <div className="flex items-start gap-2">
-                          <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <div className="flex-1">
-                            <p className="text-sm text-red-300 font-medium mb-2">Upload failed:</p>
-                            <div className="space-y-1">
-                              {csvParseResult.errors.map((error, idx) => (
-                                <p key={idx} className="text-xs text-red-400">• {error}</p>
-                              ))}
+                        return (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-300">Total Holdings:</span>
+                            <div className="text-sm font-semibold text-teal-400">
+                              {hasDollars && <span>${totalDollars.toLocaleString()}</span>}
+                              {hasDollars && hasPercentages && <span className="text-gray-500 mx-2">•</span>}
+                              {hasPercentages && (
+                                <span className={totalPercentage > 100 ? 'text-amber-400' : ''}>
+                                  {totalPercentage.toFixed(1)}%
+                                </span>
+                              )}
                             </div>
                           </div>
-                        </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Holdings List */}
+                  {formData.specificHoldings && formData.specificHoldings.length > 0 && (
+                    <div className="space-y-3 mb-4">
+                      {formData.specificHoldings.map((holding, index) => {
+                        // Store dollar amount directly on holding for independent tracking
+                        const holdingDollarAmount = holding.dollarAmount || 0;
+                        
+                        return (
+                          <div key={index} className="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {/* Ticker Symbol */}
+                              <div>
+                                <label className="block text-xs font-medium text-gray-400 mb-1">
+                                  Ticker / Symbol *
+                                </label>
+                                <input
+                                  type="text"
+                                  value={holding.ticker || ''}
+                                  onChange={(e) => {
+                                    const newHoldings = [...(formData.specificHoldings || [])];
+                                    newHoldings[index] = { ...newHoldings[index], ticker: e.target.value.toUpperCase() };
+                                    setFormData({ ...formData, specificHoldings: newHoldings });
+                                  }}
+                                  className="w-full px-3 py-2 border border-gray-500 bg-gray-600 text-white rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm uppercase"
+                                  placeholder={index === 0 ? "AAPL" : index === 1 ? "VTI" : index === 2 ? "AGG" : "TICKER"}
+                                />
+                              </div>
+
+                              {/* Dollar Amount OR Percentage (independent from portfolio total) */}
+                              <div>
+                                <label className="block text-xs font-medium text-gray-400 mb-1">
+                                  Amount or %
+                                </label>
+                                <div className="flex items-center gap-2">
+                                  <div className="relative flex-1">
+                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                                    <input
+                                      type="text"
+                                      value={holdingDollarAmount > 0 ? holdingDollarAmount.toLocaleString() : ''}
+                                      onChange={(e) => {
+                                        const value = e.target.value.replace(/[^0-9]/g, '');
+                                        const newHoldings = [...(formData.specificHoldings || [])];
+                                        if (value) {
+                                          const amount = parseInt(value);
+                                          newHoldings[index] = { 
+                                            ...newHoldings[index], 
+                                            dollarAmount: amount,
+                                            percentage: 0 // Clear percentage when dollar is entered
+                                          };
+                                        } else {
+                                          newHoldings[index] = { 
+                                            ...newHoldings[index], 
+                                            dollarAmount: undefined 
+                                          };
+                                        }
+                                        setFormData({ ...formData, specificHoldings: newHoldings });
+                                      }}
+                                      className="w-full pl-6 pr-2 py-2 border border-gray-500 bg-gray-600 text-white rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                                      placeholder="50000"
+                                    />
+                                  </div>
+                                  <span className="text-gray-400 text-sm">or</span>
+                                  <div className="relative flex-1">
+                                    <input
+                                      type="number"
+                                      value={holding.percentage || ''}
+                                      onChange={(e) => {
+                                        const newHoldings = [...(formData.specificHoldings || [])];
+                                        const percentage = parseFloat(e.target.value) || 0;
+                                        newHoldings[index] = { 
+                                          ...newHoldings[index], 
+                                          percentage: percentage,
+                                          dollarAmount: undefined // Clear dollar when percentage is entered
+                                        };
+                                        setFormData({ ...formData, specificHoldings: newHoldings });
+                                      }}
+                                      className="w-full pr-7 pl-2 py-2 border border-gray-500 bg-gray-600 text-white rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                                      placeholder="25"
+                                      min="0"
+                                      max="100"
+                                      step="0.1"
+                                    />
+                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Remove Button */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newHoldings = formData.specificHoldings?.filter((_, i) => i !== index);
+                                setFormData({ ...formData, specificHoldings: newHoldings });
+                              }}
+                              className="mt-2 text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              Remove
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className="text-center text-sm text-gray-400 my-4">
+                    — or upload from file —
+                  </div>
+
+                  {/* CSV Upload Section */}
+                  <div className="mb-4 p-4 bg-gray-700/30 rounded-lg border border-gray-600">
+                    <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".csv"
+                        onChange={handleCSVUpload}
+                        className="hidden"
+                        aria-label="Upload CSV file"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={csvUploadStatus === 'uploading'}
+                        className="flex-1 py-2.5 px-4 border border-gray-600 hover:border-teal-500 text-gray-300 hover:text-teal-400 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        {csvUploadStatus === 'uploading' ? 'Uploading...' : 'Upload CSV'}
+                      </button>
+                      <span className="text-xs text-gray-400">or</span>
+                      <button
+                        type="button"
+                        onClick={handleDownloadTemplate}
+                        className="flex-1 py-2.5 px-4 border border-gray-600 hover:border-teal-500 text-gray-300 hover:text-teal-400 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Download Template
+                      </button>
+                    </div>
+
+                    {/* Upload Status Messages */}
+                    {csvParseResult && (
+                      <div className="mt-3">
+                        {csvParseResult.success && (
+                          <div className="p-3 bg-green-900/30 border border-green-700 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <svg className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <div className="flex-1">
+                                <p className="text-sm text-green-300 font-medium">
+                                  Successfully imported {csvParseResult.holdings.length} holding{csvParseResult.holdings.length !== 1 ? 's' : ''}
+                                </p>
+                                {csvParseResult.skippedRows > 0 && (
+                                  <p className="text-xs text-green-400 mt-1">
+                                    Skipped {csvParseResult.skippedRows} empty or invalid row{csvParseResult.skippedRows !== 1 ? 's' : ''}
+                                  </p>
+                                )}
+                                {csvParseResult.warnings.length > 0 && (
+                                  <div className="mt-2 space-y-1">
+                                    {csvParseResult.warnings.map((warning, idx) => (
+                                      <p key={idx} className="text-xs text-yellow-400">⚠️ {warning}</p>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {!csvParseResult.success && csvParseResult.errors.length > 0 && (
+                          <div className="p-3 bg-red-900/30 border border-red-700 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <div className="flex-1">
+                                <p className="text-sm text-red-300 font-medium mb-2">Upload failed:</p>
+                                <div className="space-y-1">
+                                  {csvParseResult.errors.map((error, idx) => (
+                                    <p key={idx} className="text-xs text-red-400">• {error}</p>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-                )}
-              </div>
 
-              <div className="text-center text-sm text-gray-400 mb-4">
-                — or enter manually —
-              </div>
+                  {errors.specificHoldings && (
+                    <p className="mt-2 text-sm text-red-400">{errors.specificHoldings}</p>
+                  )}
 
-              {/* Holdings Total Summary */}
-              {formData.specificHoldings && formData.specificHoldings.length > 0 && (
-                <div className="mb-4 p-3 bg-gray-700/30 rounded-lg border border-gray-600">
-                  {(() => {
-                    const totalDollars = formData.specificHoldings.reduce((sum, h) => sum + (h.dollarAmount || 0), 0);
-                    const totalPercentage = formData.specificHoldings.reduce((sum, h) => sum + (h.percentage || 0), 0);
-                    const hasDollars = totalDollars > 0;
-                    const hasPercentages = totalPercentage > 0;
-
-                    return (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-300">Total Holdings:</span>
-                        <div className="text-sm font-semibold text-teal-400">
-                          {hasDollars && <span>${totalDollars.toLocaleString()}</span>}
-                          {hasDollars && hasPercentages && <span className="text-gray-500 mx-2">•</span>}
-                          {hasPercentages && (
-                            <span className={totalPercentage > 100 ? 'text-amber-400' : ''}>
-                              {totalPercentage.toFixed(1)}%
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
+                  <p className="text-xs text-gray-400 mt-3">
+                    <span className="font-semibold text-teal-400">📊 Analysis Tip:</span> Use publicly traded ticker symbols for accurate Monte Carlo simulations based on real market data and historical volatility.
+                  </p>
                 </div>
-              )}
-
-              {/* Holdings List */}
-              {formData.specificHoldings && formData.specificHoldings.length > 0 && (
-                <div className="space-y-3 mb-4">
-                  {formData.specificHoldings.map((holding, index) => {
-                    // Store dollar amount directly on holding for independent tracking
-                    const holdingDollarAmount = holding.dollarAmount || 0;
-                    
-                    return (
-                      <div key={index} className="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          {/* Ticker Symbol */}
-                          <div>
-                            <label className="block text-xs font-medium text-gray-400 mb-1">
-                              Ticker / Symbol *
-                            </label>
-                            <input
-                              type="text"
-                              value={holding.ticker || ''}
-                              onChange={(e) => {
-                                const newHoldings = [...(formData.specificHoldings || [])];
-                                newHoldings[index] = { ...newHoldings[index], ticker: e.target.value.toUpperCase() };
-                                setFormData({ ...formData, specificHoldings: newHoldings });
-                              }}
-                              className="w-full px-3 py-2 border border-gray-500 bg-gray-600 text-white rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm uppercase"
-                              placeholder={index === 0 ? "AAPL" : index === 1 ? "VTI" : index === 2 ? "AGG" : "TICKER"}
-                            />
-                          </div>
-
-                          {/* Name */}
-                          <div>
-                            <label className="block text-xs font-medium text-gray-400 mb-1">
-                              Name
-                            </label>
-                            <input
-                              type="text"
-                              value={holding.name}
-                              onChange={(e) => {
-                                const newHoldings = [...(formData.specificHoldings || [])];
-                                newHoldings[index] = { ...newHoldings[index], name: e.target.value };
-                                setFormData({ ...formData, specificHoldings: newHoldings });
-                              }}
-                              className="w-full px-3 py-2 border border-gray-500 bg-gray-600 text-white rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
-                              placeholder={index === 0 ? "Apple Inc." : index === 1 ? "Vanguard Total Stock ETF" : index === 2 ? "iShares Core Bond Fund" : "Investment Name"}
-                            />
-                          </div>
-
-                          {/* Dollar Amount OR Percentage (independent from portfolio total) */}
-                          <div>
-                            <label className="block text-xs font-medium text-gray-400 mb-1">
-                              Amount or %
-                            </label>
-                            <div className="flex items-center gap-2">
-                              <div className="relative flex-1">
-                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                                <input
-                                  type="text"
-                                  value={holdingDollarAmount > 0 ? holdingDollarAmount.toLocaleString() : ''}
-                                  onChange={(e) => {
-                                    const value = e.target.value.replace(/[^0-9]/g, '');
-                                    const newHoldings = [...(formData.specificHoldings || [])];
-                                    if (value) {
-                                      const amount = parseInt(value);
-                                      newHoldings[index] = { 
-                                        ...newHoldings[index], 
-                                        dollarAmount: amount,
-                                        percentage: 0 // Clear percentage when dollar is entered
-                                      };
-                                    } else {
-                                      newHoldings[index] = { 
-                                        ...newHoldings[index], 
-                                        dollarAmount: undefined 
-                                      };
-                                    }
-                                    setFormData({ ...formData, specificHoldings: newHoldings });
-                                  }}
-                                  className="w-full pl-6 pr-2 py-2 border border-gray-500 bg-gray-600 text-white rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
-                                  placeholder="50000"
-                                />
-                              </div>
-                              <span className="text-gray-400 text-sm">or</span>
-                              <div className="relative flex-1">
-                                <input
-                                  type="number"
-                                  value={holding.percentage || ''}
-                                  onChange={(e) => {
-                                    const newHoldings = [...(formData.specificHoldings || [])];
-                                    const percentage = parseFloat(e.target.value) || 0;
-                                    newHoldings[index] = { 
-                                      ...newHoldings[index], 
-                                      percentage: percentage,
-                                      dollarAmount: undefined // Clear dollar when percentage is entered
-                                    };
-                                    setFormData({ ...formData, specificHoldings: newHoldings });
-                                  }}
-                                  className="w-full pr-7 pl-2 py-2 border border-gray-500 bg-gray-600 text-white rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
-                                  placeholder="25"
-                                  min="0"
-                                  max="100"
-                                  step="0.1"
-                                />
-                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Remove Button */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newHoldings = formData.specificHoldings?.filter((_, i) => i !== index);
-                            setFormData({ ...formData, specificHoldings: newHoldings });
-                          }}
-                          className="mt-2 text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                          Remove
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Add Holding Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  const newHoldings = [...(formData.specificHoldings || []), { name: '', ticker: '', percentage: 0 }];
-                  setFormData({ ...formData, specificHoldings: newHoldings });
-                }}
-                className="w-full py-3 px-4 border-2 border-dashed border-gray-600 text-gray-400 hover:text-teal-500 hover:border-teal-500 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm font-medium"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Add Investment
-              </button>
-
-              {errors.specificHoldings && (
-                <p className="mt-2 text-sm text-red-400">{errors.specificHoldings}</p>
-              )}
-
-              <p className="text-xs text-gray-400 mt-3">
-                <span className="font-semibold text-teal-400">📊 Analysis Tip:</span> Use publicly traded ticker symbols for accurate Monte Carlo simulations based on real market data and historical volatility.
-              </p>
-            </div>
+              </>
+            )}
           </div>
         );
 

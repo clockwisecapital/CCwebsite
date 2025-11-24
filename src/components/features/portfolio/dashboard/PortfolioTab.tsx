@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import type { PortfolioComparison } from '@/types/portfolio';
+import type { PortfolioComparison, PositionAnalysis } from '@/types/portfolio';
 
 interface PortfolioTabProps {
   portfolioComparison?: PortfolioComparison | null;
@@ -40,6 +40,34 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
 
   const formatPercent = (value: number) => {
     return `${(value * 100).toFixed(1)}%`;
+  };
+
+  // Calculate weighted average upside/downside from positions
+  const calculatePortfolioMetrics = (positions: PositionAnalysis[]) => {
+    let totalWeight = 0;
+    let weightedUpside = 0;
+    let weightedDownside = 0;
+
+    positions.forEach(position => {
+      if (position.monteCarlo) {
+        const weight = position.weight / 100; // Convert percentage to decimal
+        totalWeight += weight;
+        weightedUpside += position.monteCarlo.upside * weight;
+        weightedDownside += position.monteCarlo.downside * weight;
+      }
+    });
+
+    // Normalize if not all positions have Monte Carlo data
+    if (totalWeight > 0 && totalWeight < 1) {
+      weightedUpside = weightedUpside / totalWeight;
+      weightedDownside = weightedDownside / totalWeight;
+    }
+
+    return {
+      upside: weightedUpside,
+      downside: weightedDownside,
+      hasData: totalWeight > 0
+    };
   };
 
   // ALWAYS show comparison view (will use proxy ETFs if no specific holdings provided)
@@ -87,7 +115,7 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
               </p>
             )}
             
-            {/* Total Value and Expected Return */}
+            {/* Total Value and Portfolio Metrics */}
             <div className="mb-6 space-y-3">
               <div className="bg-gray-700/50 rounded-lg p-4">
                 <div className="text-sm text-gray-400 mb-1">Total Portfolio Value</div>
@@ -95,12 +123,32 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
                   {formatCurrency(portfolioComparison.userPortfolio.totalValue)}
                 </div>
               </div>
-              <div className="bg-gray-700/50 rounded-lg p-4">
-                <div className="text-sm text-gray-400 mb-1">Expected Return (Weighted Avg)</div>
-                <div className="text-2xl font-bold text-gray-100">
-                  {formatPercent(portfolioComparison.userPortfolio.expectedReturn)}
-                </div>
-              </div>
+              {/* Portfolio Performance Metrics */}
+              {(() => {
+                const metrics = calculatePortfolioMetrics(portfolioComparison.userPortfolio.positions);
+                return (
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-gray-700/50 rounded-lg p-3">
+                      <div className="text-xs text-gray-400 mb-1">Expected Return</div>
+                      <div className={`text-lg font-bold ${portfolioComparison.userPortfolio.expectedReturn > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {formatPercent(portfolioComparison.userPortfolio.expectedReturn)}
+                      </div>
+                    </div>
+                    <div className="bg-gray-700/50 rounded-lg p-3">
+                      <div className="text-xs text-gray-400 mb-1">Upside (95th)</div>
+                      <div className="text-lg font-bold text-emerald-400">
+                        {metrics.hasData ? formatPercent(metrics.upside) : 'N/A'}
+                      </div>
+                    </div>
+                    <div className="bg-gray-700/50 rounded-lg p-3">
+                      <div className="text-xs text-gray-400 mb-1">Downside (5th)</div>
+                      <div className="text-lg font-bold text-rose-400">
+                        {metrics.hasData ? formatPercent(metrics.downside) : 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Top 5 Positions */}
@@ -155,7 +203,7 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
           <div className="bg-gradient-to-br from-teal-900/20 to-blue-900/20 rounded-lg p-6 border border-teal-800">
             <h3 className="text-xl font-bold text-teal-300 mb-4">TIME Portfolio</h3>
             
-            {/* Total Value and Expected Return */}
+            {/* Total Value and Portfolio Metrics */}
             <div className="mb-6 space-y-3">
               <div className="bg-teal-900/20 rounded-lg p-4 border border-teal-800">
                 <div className="text-sm text-teal-400 mb-1">Total Portfolio Value</div>
@@ -163,12 +211,32 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
                   {formatCurrency(portfolioComparison.timePortfolio.totalValue)}
                 </div>
               </div>
-              <div className="bg-teal-900/20 rounded-lg p-4 border border-teal-800">
-                <div className="text-sm text-teal-400 mb-1">Expected Return (Weighted Avg)</div>
-                <div className="text-2xl font-bold text-white">
-                  {formatPercent(portfolioComparison.timePortfolio.expectedReturn)}
-                </div>
-              </div>
+              {/* Portfolio Performance Metrics */}
+              {(() => {
+                const metrics = calculatePortfolioMetrics(portfolioComparison.timePortfolio.positions);
+                return (
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-teal-900/20 rounded-lg p-3 border border-teal-800">
+                      <div className="text-xs text-teal-400 mb-1">Expected Return</div>
+                      <div className={`text-lg font-bold ${portfolioComparison.timePortfolio.expectedReturn > 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                        {formatPercent(portfolioComparison.timePortfolio.expectedReturn)}
+                      </div>
+                    </div>
+                    <div className="bg-teal-900/20 rounded-lg p-3 border border-teal-800">
+                      <div className="text-xs text-teal-400 mb-1">Upside (95th)</div>
+                      <div className="text-lg font-bold text-emerald-300">
+                        {metrics.hasData ? formatPercent(metrics.upside) : 'N/A'}
+                      </div>
+                    </div>
+                    <div className="bg-teal-900/20 rounded-lg p-3 border border-teal-800">
+                      <div className="text-xs text-teal-400 mb-1">Downside (5th)</div>
+                      <div className="text-lg font-bold text-rose-300">
+                        {metrics.hasData ? formatPercent(metrics.downside) : 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Top 5 Positions */}
@@ -244,6 +312,31 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
               </svg>
             </button>
           </div>
+        </div>
+
+        {/* SECTION 4: Monte Carlo Disclaimer */}
+        <div className="mt-6 pt-4 border-t border-gray-700">
+          <p className="text-[10px] md:text-xs text-gray-500 leading-relaxed">
+            <span className="font-semibold text-gray-400">Clockwise Kronos – Monte Carlo Simulation Disclaimer:</span>{' '}
+            The Monte Carlo return projections shown for the User Portfolio and the TIME Portfolio are hypothetical in nature and are provided solely for illustrative purposes. They do not represent actual or guaranteed future performance. The scenarios shown are based on statistical modeling that incorporates assumptions about returns, volatility, correlations, and market behavior. Actual market conditions may differ significantly from those assumed, resulting in outcomes that vary materially from the projections.
+          </p>
+          <p className="text-[10px] md:text-xs text-gray-500 leading-relaxed mt-2">
+            Monte Carlo simulations illustrate a range of possible outcomes, not a single expected result. They cannot account for all economic, market, geopolitical, interest rate, or liquidity events that may impact future portfolio performance. Past performance does not guarantee future results, and all investments carry the risk of loss, including the potential loss of principal.
+          </p>
+          <p className="text-[10px] md:text-xs text-gray-500 leading-relaxed mt-2">
+            Holdings in the TIME Portfolio are subject to change without notice as part of Clockwise Capital&apos;s active risk-managed investment process. For the most current information, investors can review the full list of holdings at:{' '}
+            <a 
+              href="https://clockwisefunds.com/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-teal-500 hover:text-teal-400 underline"
+            >
+              https://clockwisefunds.com/
+            </a>
+          </p>
+          <p className="text-[10px] md:text-xs text-gray-500 leading-relaxed mt-2">
+            The information provided does not constitute investment, tax, legal, or financial advice. Investors should evaluate their own financial circumstances, objectives, and risk tolerance, and are encouraged to consult with a qualified financial professional before making investment decisions.
+          </p>
         </div>
       </div>
     );
