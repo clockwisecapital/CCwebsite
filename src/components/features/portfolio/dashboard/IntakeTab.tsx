@@ -1056,7 +1056,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
             </div>
             
             <div className="text-center mb-6">
-              <h3 className="text-xl font-bold text-gray-100 mb-2">Kronos is recording...</h3>
+              <h3 className="text-xl font-bold text-gray-100 mb-2">Kronos is thinking...</h3>
               <p className="text-gray-300 text-sm">
                 This usually takes 30-60 seconds
               </p>
@@ -1126,7 +1126,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
             </div>
             
             <div className="text-center mb-6">
-              <h3 className="text-xl font-bold text-gray-100 mb-2">Kronos is recording...</h3>
+              <h3 className="text-xl font-bold text-gray-100 mb-2">Kronos is thinking...</h3>
               <p className="text-gray-300 text-sm">
                 This usually takes 30-60 seconds
               </p>
@@ -1196,7 +1196,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
             </div>
             
             <div className="text-center mb-6">
-              <h3 className="text-xl font-bold text-gray-100 mb-2">Kronos is recording...</h3>
+              <h3 className="text-xl font-bold text-gray-100 mb-2">Kronos is thinking...</h3>
               <p className="text-gray-300 text-sm">
                 This usually takes 30-60 seconds
               </p>
@@ -1234,8 +1234,8 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                   onChange={(e) => setAcknowledged(e.target.checked)}
                   className="mt-1 w-5 h-5 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
                 />
-                <span className="text-sm text-gray-700">
-                  <strong>Acknowledgement:</strong> This is for education only and not investing advice. 
+                <span className="text-sm text-gray-300">
+                  <strong className="text-gray-200">Acknowledgement:</strong> This is for education only and not investing advice. 
                   AI makes mistakes and should not be relied upon for investing decisions.
                 </span>
               </label>
@@ -1293,16 +1293,17 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
           type="button"
           onClick={handleBack}
           disabled={currentStep === 0}
-          className="px-6 py-3 text-gray-200 font-medium rounded-xl hover:bg-gray-700 disabled:opacity-0 disabled:cursor-not-allowed transition-all"
+          className="px-4 sm:px-6 py-3 text-gray-200 font-medium rounded-xl hover:bg-gray-700 disabled:opacity-0 disabled:cursor-not-allowed transition-all text-sm sm:text-base"
         >
-          ← Back
+          <span className="hidden sm:inline">← Back</span>
+          <span className="sm:hidden">← Back</span>
         </button>
 
         <button
           type="button"
           onClick={handleNext}
           disabled={isParsing || (isAnalyzing && currentStep === 9)}
-          className="px-8 py-3 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+          className="px-6 sm:px-8 py-3 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex items-center gap-2 text-sm sm:text-base"
         >
           {isParsing && currentStep === 6 ? (
             <>
@@ -1310,12 +1311,19 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
-              Processing...
+              <span className="hidden sm:inline">Processing...</span>
+              <span className="sm:hidden">...</span>
             </>
           ) : currentStep === 9 ? (
-            'Show Analysis '
+            <>
+              <span className="hidden sm:inline">Show Analysis</span>
+              <span className="sm:hidden">Next</span>
+            </>
           ) : (
-            'Next →'
+            <>
+              <span className="hidden sm:inline">Next →</span>
+              <span className="sm:hidden">Next</span>
+            </>
           )}
         </button>
       </div>
