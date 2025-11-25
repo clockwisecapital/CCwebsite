@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
               input_text: script,
               voice_id: voiceId,
               speed: 1.0,
-              emotion: 'soothing',
+              emotion: 'Soothing',
             },
           },
         ],
