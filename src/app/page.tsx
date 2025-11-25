@@ -104,7 +104,7 @@ export default function Home() {
           {/* Buttons with enhanced hover effects */}
           <div className={`flex flex-col sm:flex-row justify-center md:justify-start gap-4 mt-6 transition-all duration-1000 delay-1200 transform ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
             <button 
-              onClick={() => router.push('/scenario-testing-lab')} 
+              onClick={() => router.push('/portfolio')} 
               className="group relative overflow-hidden bg-[#1FAAA3] text-white font-sans font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300"
             >
               <span className="absolute top-0 left-0 w-full h-full transform -translate-x-full bg-white/5 skew-x-12 group-hover:translate-x-full transition-transform duration-700 ease-in-out"></span>
