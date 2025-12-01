@@ -2,7 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTgtPrices, getHoldingWeights } from '@/lib/supabase/database';
 import { fetchBatchCurrentPrices, runBatchMonteCarloSimulations } from '@/lib/services/monte-carlo';
 import { createProxyPortfolio, getProxyMessage, REPRESENTATIVE_ETFS } from '@/lib/services/proxy-portfolio';
+import { LONG_TERM_AVERAGES } from '@/lib/services/goal-probability';
 import type { PortfolioComparison, PositionAnalysis } from '@/types/portfolio';
+
+interface PortfolioAllocation {
+  stocks: number;
+  bonds: number;
+  cash: number;
+  realEstate: number;
+  commodities: number;
+  alternatives: number;
+}
 
 interface RequestBody {
   userHoldings?: Array<{
@@ -10,26 +20,67 @@ interface RequestBody {
     name: string;
     percentage: number;  // Percentage of portfolio
   }>;
-  portfolioAllocation?: {
-    stocks: number;
-    bonds: number;
-    cash: number;
-    realEstate: number;
-    commodities: number;
-    alternatives: number;
-  };
+  portfolioAllocation?: PortfolioAllocation;
   portfolioValue: number;
   timeHorizon?: number;  // Years for Monte Carlo simulation
 }
 
 /**
+ * Calculate expected return for years 2+ based on asset allocation and long-term averages
+ */
+function calculateLongTermReturn(allocation: PortfolioAllocation): number {
+  const total = allocation.stocks + allocation.bonds + allocation.cash + 
+                allocation.realEstate + allocation.commodities + allocation.alternatives;
+  
+  if (total === 0) return 0;
+  
+  const normalize = (value: number) => value / total;
+  
+  return (
+    normalize(allocation.stocks) * LONG_TERM_AVERAGES.stocks +
+    normalize(allocation.bonds) * LONG_TERM_AVERAGES.bonds +
+    normalize(allocation.cash) * LONG_TERM_AVERAGES.cash +
+    normalize(allocation.realEstate) * LONG_TERM_AVERAGES.realEstate +
+    normalize(allocation.commodities) * LONG_TERM_AVERAGES.commodities +
+    normalize(allocation.alternatives) * LONG_TERM_AVERAGES.alternatives
+  );
+}
+
+/**
+ * Calculate blended return: Year 1 = FactSet target, Years 2+ = long-term asset class average
+ */
+function calculateBlendedReturn(
+  factSetReturn: number,
+  longTermReturn: number,
+  timeHorizon: number
+): number {
+  if (timeHorizon <= 1) {
+    return factSetReturn;
+  }
+  
+  // Weight: 1 year of FactSet + (timeHorizon - 1) years of long-term average
+  return (factSetReturn + (timeHorizon - 1) * longTermReturn) / timeHorizon;
+}
+
+/**
  * Get comprehensive portfolio data for comparison view
  * Fetches user portfolio data, TIME portfolio data, target prices, and runs Monte Carlo simulations
+ * 
+ * Returns blended expected return:
+ * - Year 1: FactSet 12-month price targets
+ * - Years 2+: Long-term asset class averages
  */
 export async function POST(request: NextRequest) {
   try {
     const body: RequestBody = await request.json();
     const { userHoldings, portfolioAllocation, portfolioValue, timeHorizon = 1 } = body;
+    
+    // Calculate long-term return based on asset allocation (for years 2+)
+    const longTermReturn = portfolioAllocation 
+      ? calculateLongTermReturn(portfolioAllocation)
+      : LONG_TERM_AVERAGES.stocks; // Default to stocks if no allocation provided
+    
+    console.log(`📊 Time horizon: ${timeHorizon} years, Long-term return: ${(longTermReturn * 100).toFixed(1)}%`);
 
     // Determine if using actual holdings or proxy ETFs
     const isUsingProxy = !userHoldings || userHoldings.length === 0;
@@ -145,7 +196,13 @@ export async function POST(request: NextRequest) {
     });
 
     // Calculate weighted average expected return for user portfolio
-    const userExpectedReturn = calculateWeightedReturn(userPositions);
+    // This is the Year 1 FactSet-based return
+    const userYear1Return = calculateWeightedReturn(userPositions);
+    
+    // Calculate blended return: Year 1 FactSet + Years 2+ long-term averages
+    const userExpectedReturn = calculateBlendedReturn(userYear1Return, longTermReturn, timeHorizon);
+    
+    console.log(`📊 User Portfolio - Year 1: ${(userYear1Return * 100).toFixed(1)}%, Blended (${timeHorizon}yr): ${(userExpectedReturn * 100).toFixed(1)}%`);
 
     // Get top 5 user positions by weight
     const userTopPositions = [...userPositions]
@@ -178,7 +235,14 @@ export async function POST(request: NextRequest) {
       });
 
     // Calculate weighted average expected return for TIME portfolio
-    const timeExpectedReturn = calculateWeightedReturn(timePositions);
+    // This is the Year 1 FactSet-based return
+    const timeYear1Return = calculateWeightedReturn(timePositions);
+    
+    // TIME portfolio is predominantly stocks, use stocks average for long-term
+    const timeLongTermReturn = LONG_TERM_AVERAGES.stocks;
+    const timeExpectedReturn = calculateBlendedReturn(timeYear1Return, timeLongTermReturn, timeHorizon);
+    
+    console.log(`📊 TIME Portfolio - Year 1: ${(timeYear1Return * 100).toFixed(1)}%, Blended (${timeHorizon}yr): ${(timeExpectedReturn * 100).toFixed(1)}%`);
     
     // Log TIME portfolio stats
     const missingTargetPrices = timePositions.filter(p => p.targetPrice === null);
@@ -225,7 +289,8 @@ export async function POST(request: NextRequest) {
         expectedReturn: timeExpectedReturn,
         positions: timePositions,
         topPositions: timeTopPositions
-      }
+      },
+      timeHorizon // Include time horizon for display labels
     };
 
     console.log('✅ Portfolio data fetched successfully');

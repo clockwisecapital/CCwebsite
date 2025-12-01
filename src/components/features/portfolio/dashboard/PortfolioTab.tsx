@@ -73,6 +73,8 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
   // ALWAYS show comparison view (will use proxy ETFs if no specific holdings provided)
   if (portfolioComparison) {
     const isUsingProxy = portfolioComparison.userPortfolio.isUsingProxy;
+    const timeHorizon = portfolioComparison.timeHorizon || 1;
+    const timeLabel = timeHorizon === 1 ? '1yr' : `${timeHorizon}yr`;
     return (
       <div className="space-y-6 md:space-y-8">
         {/* SECTION 1: Recommendation - Always Visible */}
@@ -88,7 +90,7 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
             <div className="flex-1 min-w-0">
               <div className="text-sm md:text-lg font-bold text-blue-300 mb-1 md:mb-2">Portfolio Comparison</div>
               <p className="text-xs md:text-base text-gray-300 leading-relaxed">
-                Compare your portfolio&apos;s expected performance against the Clockwise TIME portfolio based on current market conditions, target prices, and Monte Carlo simulations.
+                Compare your portfolio&apos;s expected performance against the Clockwise TIME portfolio. Returns blend 12-month analyst price targets with long-term asset class averages over your {timeHorizon}-year horizon.
               </p>
             </div>
           </div>
@@ -129,19 +131,19 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
                 return (
                   <div className="grid grid-cols-3 gap-2">
                     <div className="bg-gray-700/50 rounded-lg p-3">
-                      <div className="text-xs text-gray-400 mb-1">Expected Return</div>
+                      <div className="text-xs text-gray-400 mb-1">Expected Return ({timeLabel})</div>
                       <div className={`text-lg font-bold ${portfolioComparison.userPortfolio.expectedReturn > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                         {formatPercent(portfolioComparison.userPortfolio.expectedReturn)}
                       </div>
                     </div>
                     <div className="bg-gray-700/50 rounded-lg p-3">
-                      <div className="text-xs text-gray-400 mb-1">Upside (95th)</div>
+                      <div className="text-xs text-gray-400 mb-1">Upside ({timeLabel})</div>
                       <div className="text-lg font-bold text-emerald-400">
                         {metrics.hasData ? formatPercent(metrics.upside) : 'N/A'}
                       </div>
                     </div>
                     <div className="bg-gray-700/50 rounded-lg p-3">
-                      <div className="text-xs text-gray-400 mb-1">Downside (5th)</div>
+                      <div className="text-xs text-gray-400 mb-1">Downside ({timeLabel})</div>
                       <div className="text-lg font-bold text-rose-400">
                         {metrics.hasData ? formatPercent(metrics.downside) : 'N/A'}
                       </div>
@@ -217,19 +219,19 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
                 return (
                   <div className="grid grid-cols-3 gap-2">
                     <div className="bg-teal-900/20 rounded-lg p-3 border border-teal-800">
-                      <div className="text-xs text-teal-400 mb-1">Expected Return</div>
+                      <div className="text-xs text-teal-400 mb-1">Expected Return ({timeLabel})</div>
                       <div className={`text-lg font-bold ${portfolioComparison.timePortfolio.expectedReturn > 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
                         {formatPercent(portfolioComparison.timePortfolio.expectedReturn)}
                       </div>
                     </div>
                     <div className="bg-teal-900/20 rounded-lg p-3 border border-teal-800">
-                      <div className="text-xs text-teal-400 mb-1">Upside (95th)</div>
+                      <div className="text-xs text-teal-400 mb-1">Upside ({timeLabel})</div>
                       <div className="text-lg font-bold text-emerald-300">
                         {metrics.hasData ? formatPercent(metrics.upside) : 'N/A'}
                       </div>
                     </div>
                     <div className="bg-teal-900/20 rounded-lg p-3 border border-teal-800">
-                      <div className="text-xs text-teal-400 mb-1">Downside (5th)</div>
+                      <div className="text-xs text-teal-400 mb-1">Downside ({timeLabel})</div>
                       <div className="text-lg font-bold text-rose-300">
                         {metrics.hasData ? formatPercent(metrics.downside) : 'N/A'}
                       </div>

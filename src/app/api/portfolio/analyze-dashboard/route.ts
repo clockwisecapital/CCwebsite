@@ -132,6 +132,19 @@ export async function POST(request: NextRequest) {
           holdingsCount: intakeData.specificHoldings?.length || 0
         });
         
+        // Use user's actual time horizon for blended return calculation
+        const userTimeHorizon = intakeData.timeHorizon || 10;
+        
+        // Always include portfolio allocation for long-term return calculation
+        const portfolioAllocation = {
+          stocks: intakeData.portfolio.stocks,
+          bonds: intakeData.portfolio.bonds,
+          cash: intakeData.portfolio.cash,
+          realEstate: intakeData.portfolio.realEstate,
+          commodities: intakeData.portfolio.commodities,
+          alternatives: intakeData.portfolio.alternatives
+        };
+        
         const requestBody = hasSpecificHoldings
           ? {
               userHoldings: intakeData.specificHoldings!.map(h => ({
@@ -139,20 +152,14 @@ export async function POST(request: NextRequest) {
                 name: h.name,
                 percentage: h.percentage
               })),
+              portfolioAllocation, // Include for long-term return calculation
               portfolioValue: calculatedPortfolioValue,
-              timeHorizon: 1  // Always use 1 year for portfolio comparison Monte Carlo
+              timeHorizon: userTimeHorizon
             }
           : {
-              portfolioAllocation: {
-                stocks: intakeData.portfolio.stocks,
-                bonds: intakeData.portfolio.bonds,
-                cash: intakeData.portfolio.cash,
-                realEstate: intakeData.portfolio.realEstate,
-                commodities: intakeData.portfolio.commodities,
-                alternatives: intakeData.portfolio.alternatives
-              },
+              portfolioAllocation,
               portfolioValue: calculatedPortfolioValue,
-              timeHorizon: 1  // Always use 1 year for portfolio comparison Monte Carlo
+              timeHorizon: userTimeHorizon
             };
 
         console.log(hasSpecificHoldings 

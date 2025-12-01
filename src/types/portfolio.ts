@@ -42,7 +42,7 @@ export interface PositionAnalysis {
 export interface PortfolioComparison {
   userPortfolio: {
     totalValue: number;
-    expectedReturn: number;           // Weighted average
+    expectedReturn: number;           // Blended weighted average (Year 1 FactSet + Years 2+ long-term)
     positions: PositionAnalysis[];
     topPositions: PositionAnalysis[];  // Top 5 by weight
     isUsingProxy: boolean;            // True if using representative ETFs
@@ -50,10 +50,11 @@ export interface PortfolioComparison {
   };
   timePortfolio: {
     totalValue: number;
-    expectedReturn: number;           // Weighted average
+    expectedReturn: number;           // Blended weighted average (Year 1 FactSet + Years 2+ long-term)
     positions: PositionAnalysis[];
     topPositions: PositionAnalysis[];  // Top 5 by weight
   };
+  timeHorizon?: number;               // Time horizon in years (for display labels)
 }
 
 export interface YahooFinanceQuote {
