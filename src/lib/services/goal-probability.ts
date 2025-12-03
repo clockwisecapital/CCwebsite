@@ -109,6 +109,7 @@ export function calculateExpectedReturn(portfolio: GoalProbabilityInput['portfol
 
 /**
  * Run Monte Carlo simulation for goal probability
+ * Returns projected values AND actual probability of reaching goal
  */
 function runGoalMonteCarloSimulation(
   currentAmount: number,
@@ -118,11 +119,18 @@ function runGoalMonteCarloSimulation(
   expectedReturn: number,
   volatility: number = 0.15, // Default 15% annual volatility
   simulations: number = 10000
-): { median: number; upside: number; downside: number } {
+): { 
+  median: number; 
+  upside: number; 
+  downside: number;
+  probabilityOfSuccess: number; // Actual probability (% of simulations reaching goal)
+} {
   const results: number[] = [];
   const monthlyReturn = expectedReturn / 12;
   const monthlyVolatility = volatility / Math.sqrt(12);
   const months = timeHorizon * 12;
+  
+  let successCount = 0; // Count simulations that reach the goal
 
   for (let sim = 0; sim < simulations; sim++) {
     let portfolioValue = currentAmount;
@@ -137,15 +145,24 @@ function runGoalMonteCarloSimulation(
     }
 
     results.push(portfolioValue);
+    
+    // Count if this simulation reached the goal
+    if (portfolioValue >= goalAmount) {
+      successCount++;
+    }
   }
 
   // Sort to find percentiles
   results.sort((a, b) => a - b);
+  
+  // Calculate actual probability: # of successes / total simulations
+  const probabilityOfSuccess = successCount / simulations;
 
   return {
     downside: results[Math.floor(simulations * 0.05)],
     median: results[Math.floor(simulations * 0.50)],
-    upside: results[Math.floor(simulations * 0.95)]
+    upside: results[Math.floor(simulations * 0.95)],
+    probabilityOfSuccess
   };
 }
 
@@ -161,6 +178,7 @@ function randomNormal(mean: number, stdDev: number): number {
 
 /**
  * Calculate probability of reaching goal
+ * Uses actual Monte Carlo simulation counting (not ratio)
  */
 export function calculateGoalProbability(input: GoalProbabilityInput): GoalProbabilityResult {
   // Calculate expected return based on asset allocation
@@ -177,8 +195,8 @@ export function calculateGoalProbability(input: GoalProbabilityInput): GoalProba
     cashWeight * 0.01 +       // Cash: 1% volatility
     (1 - stockWeight - bondWeight - cashWeight) * 0.12; // Other: 12% volatility
 
-  // Run Monte Carlo simulation
-  const projectedValues = runGoalMonteCarloSimulation(
+  // Run Monte Carlo simulation - now returns actual probability
+  const simulationResult = runGoalMonteCarloSimulation(
     input.currentAmount,
     input.goalAmount,
     input.timeHorizon,
@@ -187,29 +205,43 @@ export function calculateGoalProbability(input: GoalProbabilityInput): GoalProba
     estimatedVolatility
   );
 
-  // Calculate probability of success for each scenario
-  const calculateProbability = (projectedValue: number) => {
-    if (input.goalAmount === 0) return 1.0;
-    const probability = Math.min(1.0, projectedValue / input.goalAmount);
-    return probability;
-  };
-
+  // Use actual probability from simulation (% of simulations that reached goal)
+  // The median probability is the main figure - downside/upside show projected values context
   const probabilityOfSuccess = {
-    downside: calculateProbability(projectedValues.downside),
-    median: calculateProbability(projectedValues.median),
-    upside: calculateProbability(projectedValues.upside)
+    // Main probability: actual % of simulations that reached goal
+    median: simulationResult.probabilityOfSuccess,
+    // For context: if you hit downside scenario, what % of goal would you reach?
+    downside: Math.min(1.0, simulationResult.downside / input.goalAmount),
+    // For context: if you hit upside scenario, what % of goal would you reach?
+    upside: Math.min(1.0, simulationResult.upside / input.goalAmount)
   };
+  
+  console.log(`🎯 Goal Probability Calculation:`, {
+    currentAmount: input.currentAmount,
+    goalAmount: input.goalAmount,
+    timeHorizon: input.timeHorizon,
+    expectedReturn: (expectedReturn * 100).toFixed(1) + '%',
+    volatility: (estimatedVolatility * 100).toFixed(1) + '%',
+    actualProbability: (simulationResult.probabilityOfSuccess * 100).toFixed(1) + '%',
+    projectedMedian: simulationResult.median,
+    projectedDownside: simulationResult.downside,
+    projectedUpside: simulationResult.upside
+  });
 
   // Calculate shortfall (difference from goal)
   const shortfall = {
-    downside: projectedValues.downside - input.goalAmount,
-    median: projectedValues.median - input.goalAmount,
-    upside: projectedValues.upside - input.goalAmount
+    downside: simulationResult.downside - input.goalAmount,
+    median: simulationResult.median - input.goalAmount,
+    upside: simulationResult.upside - input.goalAmount
   };
 
   return {
     probabilityOfSuccess,
-    projectedValues,
+    projectedValues: {
+      median: simulationResult.median,
+      downside: simulationResult.downside,
+      upside: simulationResult.upside
+    },
     shortfall,
     expectedReturn
   };

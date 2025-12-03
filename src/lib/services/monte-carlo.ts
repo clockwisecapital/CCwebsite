@@ -8,8 +8,9 @@
 import type { MonteCarloResult, HistoricalPrice } from '@/types/portfolio';
 
 const YAHOO_FINANCE_API = 'https://query1.finance.yahoo.com/v8/finance/chart';
-const SIMULATIONS = 10000;
+const SIMULATIONS = 5000;  // Reduced from 10K - still statistically valid, 2x faster
 const TRADING_DAYS_PER_YEAR = 252;
+const CONCURRENCY_LIMIT = 5; // Max concurrent Yahoo Finance requests to avoid rate limiting
 
 /**
  * Fetch historical price data from Yahoo Finance
@@ -158,13 +159,41 @@ export async function runMonteCarloSimulation(
     const medianIdx = Math.floor(SIMULATIONS * 0.50);   // 50th percentile
     const upsideIdx = Math.floor(SIMULATIONS * 0.95);   // 95th percentile
     
-    const median = finalReturns[medianIdx];
-    const upside = finalReturns[upsideIdx];
-    const downside = finalReturns[downsideIdx];
+    // Get total returns at each percentile
+    const totalMedian = finalReturns[medianIdx];
+    const totalUpside = finalReturns[upsideIdx];
+    const totalDownside = finalReturns[downsideIdx];
     
-    // Sanity check: if results are extreme, log warning
-    if (Math.abs(upside) > 5 || Math.abs(downside) > 1) {
-      console.warn(`⚠️ ${ticker} Monte Carlo results seem extreme:`, {
+    // ANNUALIZE the returns so they're comparable to expected returns
+    // Formula: (1 + totalReturn)^(1/years) - 1
+    // Handle negative returns carefully (can't take root of negative)
+    const annualizeReturn = (totalReturn: number, years: number): number => {
+      if (years <= 1) return totalReturn;
+      
+      const growthFactor = 1 + totalReturn;
+      if (growthFactor <= 0) {
+        // Total loss scenario - cap at -99% annualized
+        return -0.99;
+      }
+      return Math.pow(growthFactor, 1 / years) - 1;
+    };
+    
+    const median = annualizeReturn(totalMedian, timeHorizon);
+    const upside = annualizeReturn(totalUpside, timeHorizon);
+    const downside = annualizeReturn(totalDownside, timeHorizon);
+    
+    console.log(`📊 ${ticker} Monte Carlo (${timeHorizon}yr):`, {
+      totalUpside: (totalUpside * 100).toFixed(1) + '%',
+      totalMedian: (totalMedian * 100).toFixed(1) + '%', 
+      totalDownside: (totalDownside * 100).toFixed(1) + '%',
+      annualizedUpside: (upside * 100).toFixed(1) + '%',
+      annualizedMedian: (median * 100).toFixed(1) + '%',
+      annualizedDownside: (downside * 100).toFixed(1) + '%'
+    });
+    
+    // Sanity check: if ANNUALIZED results are extreme, log warning
+    if (Math.abs(upside) > 0.5 || Math.abs(downside) > 0.5) {
+      console.warn(`⚠️ ${ticker} Monte Carlo annualized results seem extreme:`, {
         upside: (upside * 100).toFixed(1) + '%',
         median: (median * 100).toFixed(1) + '%',
         downside: (downside * 100).toFixed(1) + '%',
@@ -189,25 +218,49 @@ export async function runMonteCarloSimulation(
 }
 
 /**
- * Run Monte Carlo simulations for multiple tickers in parallel
+ * Run Monte Carlo simulations with controlled concurrency
+ * Processes tickers in batches to avoid overwhelming Yahoo Finance API
  */
 export async function runBatchMonteCarloSimulations(
   tickers: Array<{ ticker: string; currentPrice: number }>,
   timeHorizon: number = 1
 ): Promise<Map<string, MonteCarloResult>> {
   const results = new Map<string, MonteCarloResult>();
+  const totalTickers = tickers.length;
   
-  const promises = tickers.map(({ ticker, currentPrice }) =>
-    runMonteCarloSimulation(ticker, currentPrice, timeHorizon)
-  );
+  console.log(`🚀 Starting Monte Carlo for ${totalTickers} tickers (batches of ${CONCURRENCY_LIMIT})`);
+  const startTime = Date.now();
   
-  const simulationResults = await Promise.all(promises);
-  
-  simulationResults.forEach((result, idx) => {
-    if (result) {
-      results.set(tickers[idx].ticker, result);
+  // Process in batches with concurrency limit
+  for (let i = 0; i < totalTickers; i += CONCURRENCY_LIMIT) {
+    const batch = tickers.slice(i, i + CONCURRENCY_LIMIT);
+    const batchNum = Math.floor(i / CONCURRENCY_LIMIT) + 1;
+    const totalBatches = Math.ceil(totalTickers / CONCURRENCY_LIMIT);
+    
+    console.log(`📊 Processing batch ${batchNum}/${totalBatches}: ${batch.map(t => t.ticker).join(', ')}`);
+    
+    // Process this batch in parallel
+    const batchPromises = batch.map(({ ticker, currentPrice }) =>
+      runMonteCarloSimulation(ticker, currentPrice, timeHorizon)
+    );
+    
+    const batchResults = await Promise.all(batchPromises);
+    
+    // Store results
+    batchResults.forEach((result, idx) => {
+      if (result) {
+        results.set(batch[idx].ticker, result);
+      }
+    });
+    
+    // Small delay between batches to be nice to Yahoo Finance API
+    if (i + CONCURRENCY_LIMIT < totalTickers) {
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
-  });
+  }
+  
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+  console.log(`✅ Monte Carlo complete: ${results.size}/${totalTickers} tickers in ${elapsed}s`);
   
   return results;
 }
@@ -240,19 +293,36 @@ export async function fetchCurrentPrice(ticker: string): Promise<number | null> 
 }
 
 /**
- * Fetch current prices for multiple tickers
+ * Fetch current prices for multiple tickers with controlled concurrency
  */
 export async function fetchBatchCurrentPrices(tickers: string[]): Promise<Map<string, number>> {
   const prices = new Map<string, number>();
+  const totalTickers = tickers.length;
   
-  const promises = tickers.map(ticker => fetchCurrentPrice(ticker));
-  const results = await Promise.all(promises);
+  console.log(`💰 Fetching prices for ${totalTickers} tickers (batches of ${CONCURRENCY_LIMIT})`);
+  const startTime = Date.now();
   
-  results.forEach((price, idx) => {
-    if (price !== null) {
-      prices.set(tickers[idx], price);
+  // Process in batches
+  for (let i = 0; i < totalTickers; i += CONCURRENCY_LIMIT) {
+    const batch = tickers.slice(i, i + CONCURRENCY_LIMIT);
+    
+    const batchPromises = batch.map(ticker => fetchCurrentPrice(ticker));
+    const batchResults = await Promise.all(batchPromises);
+    
+    batchResults.forEach((price, idx) => {
+      if (price !== null) {
+        prices.set(batch[idx], price);
+      }
+    });
+    
+    // Small delay between batches
+    if (i + CONCURRENCY_LIMIT < totalTickers) {
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
-  });
+  }
+  
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+  console.log(`✅ Prices fetched: ${prices.size}/${totalTickers} in ${elapsed}s`);
   
   return prices;
 }

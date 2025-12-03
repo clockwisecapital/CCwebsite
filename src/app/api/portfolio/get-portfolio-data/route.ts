@@ -48,6 +48,7 @@ function calculateLongTermReturn(allocation: PortfolioAllocation): number {
 
 /**
  * Calculate blended return: Year 1 = FactSet target, Years 2+ = long-term asset class average
+ * Uses COMPOUND returns (not simple average) for mathematical accuracy
  */
 function calculateBlendedReturn(
   factSetReturn: number,
@@ -58,8 +59,24 @@ function calculateBlendedReturn(
     return factSetReturn;
   }
   
-  // Weight: 1 year of FactSet + (timeHorizon - 1) years of long-term average
-  return (factSetReturn + (timeHorizon - 1) * longTermReturn) / timeHorizon;
+  // Compound: (1 + Year1) * (1 + LongTerm)^(Years-1) = Total Growth
+  // Then annualize: TotalGrowth^(1/Years) - 1
+  const year1Growth = 1 + factSetReturn;
+  const remainingYearsGrowth = Math.pow(1 + longTermReturn, timeHorizon - 1);
+  const totalGrowth = year1Growth * remainingYearsGrowth;
+  
+  // Annualize the compounded return
+  const annualizedReturn = Math.pow(totalGrowth, 1 / timeHorizon) - 1;
+  
+  console.log(`📊 Blended return calculation:`, {
+    factSetReturn: (factSetReturn * 100).toFixed(1) + '%',
+    longTermReturn: (longTermReturn * 100).toFixed(1) + '%',
+    timeHorizon: timeHorizon + ' years',
+    totalGrowth: (totalGrowth * 100).toFixed(1) + '%',
+    annualizedReturn: (annualizedReturn * 100).toFixed(1) + '%'
+  });
+  
+  return annualizedReturn;
 }
 
 /**
