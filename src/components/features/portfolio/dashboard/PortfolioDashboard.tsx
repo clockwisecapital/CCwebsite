@@ -73,6 +73,7 @@ export default function PortfolioDashboard() {
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [videoId, setVideoId] = useState<string | null>(null);
   const [cycleAnalysisTab, setCycleAnalysisTab] = useState<'market' | 'portfolio' | 'goal'>('goal');
+  const [cyclesLoading, setCyclesLoading] = useState(false); // Track if market cycles are still loading
   
   // Track carousel slides for video sync
   const [goalSlide, setGoalSlide] = useState(0);
@@ -127,6 +128,7 @@ export default function PortfolioDashboard() {
     setIntakeData(data);
     setIsAnalyzing(true);
     setAnalysisComplete(false);
+    setCyclesLoading(true); // Start with cycles loading
 
     // Personal info should always be collected in the intake form now
     if (data.firstName && data.lastName && data.email) {
@@ -137,65 +139,92 @@ export default function PortfolioDashboard() {
       });
     }
 
+    const userData = { 
+      email: data.email || 'temp@temp.com', 
+      firstName: data.firstName || 'Temp', 
+      lastName: data.lastName || 'User' 
+    };
+
     try {
-      // Start both APIs in parallel and wait for both to complete
-      console.log('🚀 Starting parallel analysis (dashboard + cycles)...');
+      // PHASE 1: Fast APIs - Dashboard + Goal Analysis (show results quickly)
+      console.log('🚀 Phase 1: Starting fast analysis (dashboard + goal)...');
       
-      const userData = { 
-        email: data.email || 'temp@temp.com', 
-        firstName: data.firstName || 'Temp', 
-        lastName: data.lastName || 'User' 
-      };
-      
-      const [dashboardResponse, cycleResponse] = await Promise.all([
+      const [dashboardResponse, goalResponse] = await Promise.all([
         fetch('/api/portfolio/analyze-dashboard', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userData,
-            intakeData: data,
-          }),
+          body: JSON.stringify({ userData, intakeData: data }),
         }),
-        fetch('/api/portfolio/analyze-cycles', {
+        fetch('/api/portfolio/analyze-goal', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            intakeData: data,
-          }),
+          body: JSON.stringify({ intakeData: data }),
         })
       ]);
 
-      // Check both responses
       if (!dashboardResponse.ok) {
         throw new Error('Dashboard analysis failed');
       }
-      if (!cycleResponse.ok) {
-        throw new Error('Cycle analysis failed');
-      }
-
-      // Parse both results in parallel
-      const [dashboardResult, cycleResult] = await Promise.all([
+      
+      const [dashboardResult, goalResult] = await Promise.all([
         dashboardResponse.json(),
-        cycleResponse.json()
+        goalResponse.json()
       ]);
 
-      console.log('✅ Both analyses completed successfully');
+      console.log('✅ Phase 1 complete - showing Goal & Portfolio tabs');
       
-      // Combine results immediately
+      // Show initial results with goal analysis (Market tab will show loading)
       setAnalysisResult({
         ...dashboardResult.analysis,
-        cycleAnalysis: cycleResult.cycleAnalysis,
+        cycleAnalysis: goalResult.success ? {
+          goalAnalysis: goalResult.goalAnalysis,
+          cycles: null, // Will be filled in Phase 2
+          portfolioAnalysis: null, // Will be filled in Phase 2
+        } : null,
       });
       setConversationId(dashboardResult.conversationId);
-      setAnalysisComplete(true);
+      setAnalysisComplete(true); // Show review tab now
+      setIsAnalyzing(false); // Stop main loading spinner
+
+      // PHASE 2: Slow APIs - Cycle Analysis (load in background)
+      console.log('🚀 Phase 2: Starting cycle analysis in background...');
+      
+      fetch('/api/portfolio/analyze-cycles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intakeData: data }),
+      })
+        .then(response => {
+          if (!response.ok) throw new Error('Cycle analysis failed');
+          return response.json();
+        })
+        .then(cycleResult => {
+          console.log('✅ Phase 2 complete - updating Market tab');
+          
+          // Update with full cycle data
+          setAnalysisResult(prev => prev ? {
+            ...prev,
+            cycleAnalysis: {
+              ...cycleResult.cycleAnalysis,
+              // Keep the fast goal analysis if cycle's goal failed
+              goalAnalysis: cycleResult.cycleAnalysis?.goalAnalysis || prev.cycleAnalysis?.goalAnalysis,
+            },
+          } : null);
+          setCyclesLoading(false);
+        })
+        .catch(error => {
+          console.error('❌ Cycle analysis error:', error);
+          setCyclesLoading(false);
+          // Don't alert - user already has Goal & Portfolio tabs working
+        });
+
     } catch (error) {
       console.error('Analysis error:', error);
       alert('Analysis failed. Please try again.');
-      // Reset state to allow retry
       setAnalysisResult(null);
       setAnalysisComplete(false);
-    } finally {
       setIsAnalyzing(false);
+      setCyclesLoading(false);
     }
   };
 
@@ -422,6 +451,7 @@ export default function PortfolioDashboard() {
                 onGoalSlideChange={setGoalSlide}
                 onPortfolioSlideChange={setPortfolioSlide}
                 onMarketSlideChange={setMarketSlide}
+                cyclesLoading={cyclesLoading}
               />
             )}
             

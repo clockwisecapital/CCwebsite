@@ -124,6 +124,7 @@ export async function POST(req: NextRequest) {
     console.log('🤖 Analyzing cycles (checking cache first for consistency)...');
     console.log('Cache stats:', getCacheStats());
     
+    const cycleStartTime = Date.now();
     const [countryAnalysis, technologyAnalysis, economicAnalysis, businessAnalysis, marketAnalysis, companyAnalysis] = await Promise.all([
       analyzeCountryCycleWithCache(realTimeData, dataHash),
       analyzeTechnologyCycleWithCache(realTimeData, dataHash),
@@ -132,9 +133,10 @@ export async function POST(req: NextRequest) {
       analyzeMarketCycleWithCache(realTimeData, dataHash),
       analyzeCompanyCycleWithCache(realTimeData, dataHash),
     ]);
-    console.log('✅ All cycle analyses completed');
+    console.log(`✅ All cycle analyses completed (${Date.now() - cycleStartTime}ms)`);
 
     // Run portfolio and goal analysis
+    const portfolioStartTime = Date.now();
     const portfolioAnalysis = await analyzePortfolioImpact(intakeData, {
       country: countryAnalysis,
       technology: technologyAnalysis,
@@ -143,8 +145,11 @@ export async function POST(req: NextRequest) {
       market: marketAnalysis,
       company: companyAnalysis,
     });
+    console.log(`✅ Portfolio impact analysis completed (${Date.now() - portfolioStartTime}ms)`);
 
+    const goalStartTime = Date.now();
     const goalAnalysis = await analyzeGoalProbability(intakeData, portfolioAnalysis);
+    console.log(`✅ Goal probability analysis completed (${Date.now() - goalStartTime}ms)`);
 
     const cycleAnalysisResult: CycleAnalysisResult = {
       cycles: {
@@ -1202,8 +1207,19 @@ CRITICAL: Return ONLY the JSON object. No explanations, no markdown.`;
 }
 
 // ======================
-// PORTFOLIO ANALYSIS
+// PORTFOLIO ANALYSIS (with caching)
 // ======================
+
+// Simple in-memory cache for portfolio impact analysis
+const portfolioImpactCache = new Map<string, { result: unknown; timestamp: number }>();
+const PORTFOLIO_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+function getPortfolioCacheKey(portfolio: { stocks: number; bonds: number; cash: number; realEstate: number; commodities: number; alternatives: number }, cycles: Record<string, CycleData>): string {
+  // Create cache key from portfolio allocation and cycle phases
+  const portfolioKey = `${portfolio.stocks}-${portfolio.bonds}-${portfolio.cash}-${portfolio.realEstate}-${portfolio.commodities}-${portfolio.alternatives}`;
+  const cycleKey = Object.values(cycles).map(c => `${c.phase}-${c.phasePercent}`).join('|');
+  return `${portfolioKey}:${cycleKey}`;
+}
 
 async function analyzePortfolioImpact(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1211,6 +1227,8 @@ async function analyzePortfolioImpact(
   cycles: Record<string, CycleData>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> {
+  const startTime = Date.now();
+  
   // Use portfolio.totalValue from intake form (should already be calculated from holdings)
   const totalValue = intakeData.portfolio?.totalValue;
   
@@ -1230,6 +1248,20 @@ async function analyzePortfolioImpact(
     commodities: 0,
     alternatives: 0
   };
+
+  // Check cache first (based on allocation + cycle phases, not dollar value)
+  const cacheKey = getPortfolioCacheKey(portfolio, cycles);
+  const cached = portfolioImpactCache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < PORTFOLIO_CACHE_TTL) {
+    console.log(`✅ Portfolio impact analysis from cache (${Date.now() - startTime}ms)`);
+    // Update totalValue in cached result since it may differ
+    const result = { ...cached.result as Record<string, unknown> };
+    if (result.current && typeof result.current === 'object') {
+      (result.current as Record<string, unknown>).totalValue = totalValue;
+    }
+    return result;
+  }
 
   console.log('📊 Analyzing portfolio with user data:', {
     totalValue,
@@ -1354,7 +1386,12 @@ Return ONLY this JSON structure:
     try {
       const cleanedJSON = cleanJSON(jsonMatch[0]);
       const analysis = JSON.parse(cleanedJSON);
-      console.log('✅ Portfolio analysis completed with user data');
+      
+      // Cache the result (without specific dollar value)
+      portfolioImpactCache.set(cacheKey, { result: analysis, timestamp: Date.now() });
+      
+      const elapsed = Date.now() - startTime;
+      console.log(`✅ Portfolio analysis completed with user data (${elapsed}ms) - cached for future use`);
       return analysis;
     } catch (parseError) {
       console.error('❌ Portfolio Analysis: JSON parse error');

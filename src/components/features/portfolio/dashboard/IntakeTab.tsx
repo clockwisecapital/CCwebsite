@@ -404,20 +404,20 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                 onChange={(e) => {
                   const range = e.target.value;
                   setPortfolioValueRange(range);
-                  // Set totalValue based on range selection (use top end of range)
+                  // Set totalValue based on range selection (use representative midpoint)
                   let value: number | undefined;
                   switch (range) {
                     case 'less-than-100k':
-                      value = 100000;
+                      value = 50000;    // $0-$100k → $50k
                       break;
                     case '100k-500k':
-                      value = 500000;
+                      value = 300000;   // $100k-$500k → $300k
                       break;
                     case '500k-1m':
-                      value = 1000000;
+                      value = 750000;   // $500k-$1M → $750k
                       break;
-                    case 'greater-than-1m':
-                      value = 2000000; // Assume $2M for greater than $1M
+                    case '1m-2m-plus':
+                      value = 1500000;  // $1M-$2M+ → $1.5M
                       break;
                     case 'custom':
                       value = formData.portfolio.totalValue;
@@ -427,11 +427,18 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                   }
                   if (range !== 'custom' && range !== '') {
                     // Auto-add SPY as the default holding with the full portfolio value
+                    // Also set stocks to 100% since SPY is a stock ETF
                     setFormData(prev => ({
                       ...prev,
                       portfolio: {
                         ...prev.portfolio,
-                        totalValue: value
+                        totalValue: value,
+                        stocks: 100,      // SPY is 100% stocks
+                        bonds: 0,
+                        cash: 0,
+                        realEstate: 0,
+                        commodities: 0,
+                        alternatives: 0
                       },
                       specificHoldings: [{ 
                         ticker: 'SPY', 
@@ -451,10 +458,10 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                 className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
               >
                 <option value="">Select Range...</option>
-                <option value="less-than-100k">Less than $100k</option>
+                <option value="less-than-100k">$0 - $100k</option>
                 <option value="100k-500k">$100k - $500k</option>
                 <option value="500k-1m">$500k - $1M</option>
-                <option value="greater-than-1m">Greater than $1M</option>
+                <option value="1m-2m-plus">$1M - $2M+</option>
                 <option value="custom">Enter Custom Amount</option>
               </select>
             </div>

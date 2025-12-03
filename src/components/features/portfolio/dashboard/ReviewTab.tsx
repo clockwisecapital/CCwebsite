@@ -18,10 +18,11 @@ interface ReviewTabProps {
   onGoalSlideChange: (slide: number) => void;
   onPortfolioSlideChange: (slide: number) => void;
   onMarketSlideChange: (slide: number) => void;
+  cyclesLoading?: boolean; // True while market cycles are still loading
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId: _conversationId, videoId: _videoId, onReset, onBack, onNavigateToAnalyze, cycleAnalysisTab, onCycleAnalysisTabChange, onGoalSlideChange, onPortfolioSlideChange, onMarketSlideChange }: ReviewTabProps) {
+export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId: _conversationId, videoId: _videoId, onReset, onBack, onNavigateToAnalyze, cycleAnalysisTab, onCycleAnalysisTabChange, onGoalSlideChange, onPortfolioSlideChange, onMarketSlideChange, cyclesLoading = false }: ReviewTabProps) {
   const handleNext = () => {
     if (cycleAnalysisTab === 'goal') {
       onCycleAnalysisTabChange('portfolio');
@@ -49,8 +50,8 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
     }
   };
 
-  // Handle missing cycle analysis gracefully
-  if (!analysisResult.cycleAnalysis) {
+  // Handle missing goal analysis (only show error if even goal is missing)
+  if (!analysisResult.cycleAnalysis?.goalAnalysis) {
     return (
       <div className="space-y-8">
         <div className="bg-red-50 border border-red-200 rounded-lg p-8">
@@ -61,7 +62,7 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
             <h2 className="text-2xl font-bold text-red-900">Analysis Incomplete</h2>
           </div>
           <p className="text-red-800 mb-4">
-            The cycle analysis data is missing. This may be due to an API error or timeout.
+            The analysis data is missing. This may be due to an API error or timeout.
           </p>
           <button
             onClick={onReset}
@@ -74,19 +75,21 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
     );
   }
 
-  const allCycles = analysisResult.cycleAnalysis.cycles;
+  // Cycles may be null if still loading (progressive loading)
+  const allCycles = analysisResult.cycleAnalysis?.cycles;
+  const cyclesAvailable = allCycles && allCycles.market;
   
   // Show all 6 cycles - Market (S&P 500) is primary/default
-  const cycleData = {
+  const cycleData = cyclesAvailable ? {
     market: allCycles.market,
     country: allCycles.country,
     technology: allCycles.technology,
     economic: allCycles.economic,
     business: allCycles.business,
     company: allCycles.company,
-  };
+  } : null;
   
-  const portfolioAnalysis = analysisResult.cycleAnalysis.portfolioAnalysis;
+  const portfolioAnalysis = analysisResult.cycleAnalysis?.portfolioAnalysis;
   const goalAnalysis = analysisResult.cycleAnalysis.goalAnalysis;
 
   return (
@@ -142,14 +145,18 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
               }`}
             >
               <div className="flex items-center justify-center gap-1 md:gap-2">
-                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
-                </svg>
+                {cyclesLoading ? (
+                  <div className="w-4 h-4 md:w-5 md:h-5 border-2 border-teal-500/30 rounded-full border-t-teal-500 animate-spin"></div>
+                ) : (
+                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                  </svg>
+                )}
                 <span className="text-sm md:text-base">Market</span>
               </div>
               <div className={`text-[10px] md:text-xs mt-0.5 md:mt-1 hidden sm:block ${
                 cycleAnalysisTab === 'market' ? 'text-teal-400' : 'text-gray-400'
-              }`}>6 Cycles</div>
+              }`}>{cyclesLoading ? 'Loading...' : '6 Cycles'}</div>
             </button>
           </nav>
         </div>
@@ -157,13 +164,35 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
             {/* Tab Content */}
             <div className="p-6">
               {cycleAnalysisTab === 'market' && (
-                <CycleTab 
-                  cycleData={cycleData}
-                  portfolioAnalysis={portfolioAnalysis}
-                  onNext={handleNext}
-                  onBack={handleBack}
-                  onSlideChange={onMarketSlideChange}
-                />
+                cyclesLoading || !cycleData ? (
+                  // Loading state for Market tab while cycles load in background
+                  <div className="flex flex-col items-center justify-center py-16 space-y-6">
+                    <div className="relative">
+                      <div className="w-16 h-16 border-4 border-teal-500/30 rounded-full"></div>
+                      <div className="absolute top-0 left-0 w-16 h-16 border-4 border-teal-500 rounded-full border-t-transparent animate-spin"></div>
+                    </div>
+                    <div className="text-center">
+                      <h3 className="text-xl font-semibold text-white mb-2">Analyzing Market Cycles</h3>
+                      <p className="text-gray-400 max-w-md">
+                        Kronos is analyzing 6 market cycles including economic, technology, and business cycles. This takes about 60-90 seconds...
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 text-teal-400 text-sm">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Goal and Portfolio tabs are ready to view</span>
+                    </div>
+                  </div>
+                ) : (
+                  <CycleTab 
+                    cycleData={cycleData}
+                    portfolioAnalysis={portfolioAnalysis}
+                    onNext={handleNext}
+                    onBack={handleBack}
+                    onSlideChange={onMarketSlideChange}
+                  />
+                )
               )}
               {cycleAnalysisTab === 'portfolio' && (
                 <PortfolioTab 
