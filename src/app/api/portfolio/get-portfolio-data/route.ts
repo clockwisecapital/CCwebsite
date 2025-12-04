@@ -216,10 +216,18 @@ export async function POST(request: NextRequest) {
     // This is the Year 1 FactSet-based return
     const userYear1Return = calculateWeightedReturn(userPositions);
     
-    // Calculate blended return: Year 1 FactSet + Years 2+ long-term averages
-    const userExpectedReturn = calculateBlendedReturn(userYear1Return, longTermReturn, timeHorizon);
+    // For single proxy ETF (e.g., 100% SPY), use the ETF's own return without blending
+    // Otherwise, blend Year 1 FactSet with Years 2+ long-term asset class averages
+    const isSingleProxy = isUsingProxy && finalUserHoldings.length === 1;
     
-    console.log(`📊 User Portfolio - Year 1: ${(userYear1Return * 100).toFixed(1)}%, Blended (${timeHorizon}yr): ${(userExpectedReturn * 100).toFixed(1)}%`);
+    console.log(`🔍 Debug - isUsingProxy: ${isUsingProxy}, finalUserHoldings.length: ${finalUserHoldings.length}, isSingleProxy: ${isSingleProxy}`);
+    console.log(`🔍 Debug - userYear1Return: ${(userYear1Return * 100).toFixed(1)}%, longTermReturn: ${(longTermReturn * 100).toFixed(1)}%, timeHorizon: ${timeHorizon}`);
+    
+    const userExpectedReturn = isSingleProxy 
+      ? userYear1Return  // Use ETF's own expected return for all years
+      : calculateBlendedReturn(userYear1Return, longTermReturn, timeHorizon);
+    
+    console.log(`📊 User Portfolio - Year 1: ${(userYear1Return * 100).toFixed(1)}%, ${isSingleProxy ? 'Single proxy' : `Blended (${timeHorizon}yr)`}: ${(userExpectedReturn * 100).toFixed(1)}%`);
 
     // Get top 5 user positions by weight
     const userTopPositions = [...userPositions]

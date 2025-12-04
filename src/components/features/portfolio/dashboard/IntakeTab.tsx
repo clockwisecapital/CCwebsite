@@ -205,21 +205,28 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
       setErrors({ age: 'Age is required' });
       return;
     }
-    // Step 1: Portfolio - Require at least one investment with ticker
+    // Step 1: Portfolio - Require either specific holdings OR a portfolio value range
     if (currentStep === 1) {
-      if (!formData.specificHoldings || formData.specificHoldings.length === 0) {
+      const hasPortfolioValue = formData.portfolio.totalValue && formData.portfolio.totalValue > 0;
+      const hasSpecificHoldings = formData.specificHoldings && formData.specificHoldings.length > 0;
+      
+      // If no portfolio value and no specific holdings, require at least one
+      if (!hasPortfolioValue && !hasSpecificHoldings) {
         setErrors({ specificHoldings: 'Please add at least one investment to continue' });
         return;
       }
       
-      const hasValidHolding = formData.specificHoldings.some(h => 
-        h.ticker && h.ticker.trim().length > 0 && 
-        (h.dollarAmount && h.dollarAmount > 0 || h.percentage > 0)
-      );
-      
-      if (!hasValidHolding) {
-        setErrors({ specificHoldings: 'Please enter at least one investment with ticker and amount' });
-        return;
+      // If they have specific holdings, validate they're complete
+      if (hasSpecificHoldings && formData.specificHoldings) {
+        const hasValidHolding = formData.specificHoldings.some(h => 
+          h.ticker && h.ticker.trim().length > 0 && 
+          (h.dollarAmount && h.dollarAmount > 0 || h.percentage > 0)
+        );
+        
+        if (!hasValidHolding) {
+          setErrors({ specificHoldings: 'Please enter at least one investment with ticker and amount' });
+          return;
+        }
       }
     }
     // Step 7: First Name
@@ -426,29 +433,23 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
                       value = undefined;
                   }
                   if (range !== 'custom' && range !== '') {
-                    // Auto-add SPY as the default holding with the full portfolio value
-                    // Also set stocks to 100% since SPY is a stock ETF
+                    // Set 100% stocks allocation - proxy system will use SPY automatically
                     setFormData(prev => ({
                       ...prev,
                       portfolio: {
                         ...prev.portfolio,
                         totalValue: value,
-                        stocks: 100,      // SPY is 100% stocks
+                        stocks: 100,      // Proxy system will use SPY
                         bonds: 0,
                         cash: 0,
                         realEstate: 0,
                         commodities: 0,
                         alternatives: 0
                       },
-                      specificHoldings: [{ 
-                        ticker: 'SPY', 
-                        name: 'S&P 500 ETF', 
-                        dollarAmount: value, 
-                        percentage: 100 
-                      }]
+                      specificHoldings: []  // No specific holdings - use proxy
                     }));
                   } else if (range === 'custom') {
-                    // Clear auto-added SPY when switching to custom
+                    // Clear any holdings when switching to custom
                     setFormData(prev => ({
                       ...prev,
                       specificHoldings: []

@@ -72,7 +72,6 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
 
   // ALWAYS show comparison view (will use proxy ETFs if no specific holdings provided)
   if (portfolioComparison) {
-    const isUsingProxy = portfolioComparison.userPortfolio.isUsingProxy;
     const timeHorizon = portfolioComparison.timeHorizon || 1;
     const timeLabel = timeHorizon === 1 ? '1yr' : `${timeHorizon}yr`;
     return (
@@ -102,20 +101,7 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
           <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
             <div className="flex items-start justify-between mb-4">
               <h3 className="text-xl font-bold text-white">Your Portfolio</h3>
-              {isUsingProxy && (
-                <div className="flex items-center gap-1 text-xs text-amber-400 bg-amber-900/20 px-2 py-1 rounded">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Using Market Proxies
-                </div>
-              )}
             </div>
-            {isUsingProxy && portfolioComparison.userPortfolio.proxyMessage && (
-              <p className="text-xs text-gray-400 mb-4 italic">
-                {portfolioComparison.userPortfolio.proxyMessage}
-              </p>
-            )}
             
             {/* Total Value and Portfolio Metrics */}
             <div className="mb-6 space-y-3">
@@ -163,9 +149,6 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-white">{position.ticker}</span>
-                          {position.isProxy && (
-                            <span className="text-xs text-amber-400 bg-amber-900/20 px-1.5 py-0.5 rounded">Proxy</span>
-                          )}
                         </div>
                         <div className="text-xs text-gray-400">
                           {position.assetClass ? `${position.assetClass} • ` : ''}{position.name}
