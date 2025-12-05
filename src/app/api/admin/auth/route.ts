@@ -15,7 +15,35 @@ const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'clockwise
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password } = await request.json()
+    // Check if request has a body
+    const contentType = request.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      return NextResponse.json(
+        { success: false, message: 'Content-Type must be application/json' },
+        { status: 400 }
+      )
+    }
+
+    // Try to parse JSON body
+    let body: { username?: string; password?: string }
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json(
+        { success: false, message: 'Invalid JSON body' },
+        { status: 400 }
+      )
+    }
+
+    const { username, password } = body
+
+    // Check if credentials were provided
+    if (!username || !password) {
+      return NextResponse.json(
+        { success: false, message: 'Username and password are required' },
+        { status: 400 }
+      )
+    }
 
     // Validate credentials
     if (username !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {

@@ -1,15 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-// import { useRouter } from 'next/navigation' // Removed unused import
+import { useRouter } from 'next/navigation'
 
 export default function AdminLoginPage() {
   const [credentials, setCredentials] = useState({ username: '', password: '' })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  // const router = useRouter() // Removed unused router
+  const router = useRouter()
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
     setIsLoading(true)
     setError('')
 
@@ -17,31 +18,21 @@ export default function AdminLoginPage() {
       const response = await fetch('/api/admin/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials)
+        body: JSON.stringify(credentials),
+        credentials: 'include'
       })
 
       const data = await response.json()
 
       if (data.success) {
-        console.log('Login successful, testing authentication...')
-        
-        // Test authentication before redirecting
-        const testResponse = await fetch('/api/admin/test', {
-          method: 'GET',
-          credentials: 'include'
-        })
-        
-        const testData = await testResponse.json()
-        console.log('Auth test result:', testData)
-        
-        if (testData.success) {
-          console.log('Authentication verified, redirecting to dashboard')
-        } else {
-          setError('Authentication failed after login. Please try again.')
-        }
+        console.log('Login successful, redirecting to dashboard...')
+        // Redirect to dashboard
+        router.push('/admin/dashboard')
       } else {
         setError(data.message || 'Login failed')
       }
+    } catch {
+      setError('Network error. Please try again.')
     } finally {
       setIsLoading(false)
     }

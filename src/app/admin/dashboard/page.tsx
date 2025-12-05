@@ -12,7 +12,9 @@ import {
   HiCalendarDays,
   HiUser,
   HiCheckCircle,
-  HiArrowDownTray
+  HiArrowDownTray,
+  HiShieldCheck,
+  HiSquares2X2
 } from 'react-icons/hi2'
 import type { DisplaySpec, DisplayBlock } from '@/lib/supabase/types'
 
@@ -28,6 +30,20 @@ interface DashboardData {
     newInvestors: number
     highValueLeads: number
   }
+  portfolioInsights: {
+    avgExpectedReturn: number | null
+    avgPortfolioValue: number | null
+    totalAUM: number
+    assetAllocationDistribution: Record<string, number>
+    riskDistribution: { low: number; medium: number; high: number }
+    completedAnalysisWithData: number
+    avgTimePortfolioReturn: number | null
+    returnComparison: {
+      userAvg: number | null
+      timeAvg: number | null
+      difference: number | null
+    }
+  }
   conversations: Array<{
     id: string
     user_email: string
@@ -35,8 +51,13 @@ interface DashboardData {
     leadScore: number
     status: string
     goals: { type?: string; amount?: number; timeline?: number }
-    portfolio: { value?: number; holdings: number; newInvestor?: boolean }
+    portfolio: { value?: number; holdings: number; newInvestor?: boolean; allocation?: { stocks: number; bonds: number; cash: number } | null }
     hasAnalysis: boolean
+    analysisMetrics?: {
+      expectedReturn: number | null
+      timeExpectedReturn: number | null
+      positionsCount: number
+    } | null
     lastActivity: string
   }>
   lastUpdated?: string
@@ -61,9 +82,11 @@ export default function AdminDashboardPage() {
   const [timeframe, setTimeframe] = useState('week')
   const [sortBy, setSortBy] = useState('leadScore')
   const [isDetailOpen, setIsDetailOpen] = useState(false)
-  const [detail, setDetail] = useState<Record<string, unknown> | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [detail, setDetail] = useState<Record<string, any> | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState('')
+  const [activeDetailTab, setActiveDetailTab] = useState<'overview' | 'analysis' | 'risk' | 'allocation' | 'holdings' | 'messages'>('overview')
   const router = useRouter()
 
   useEffect(() => {
@@ -118,6 +141,7 @@ export default function AdminDashboardPage() {
   const closeConversation = () => {
     setIsDetailOpen(false)
     setDetail(null)
+    setActiveDetailTab('overview')
   }
 
   interface ConversationItem {
@@ -246,17 +270,17 @@ export default function AdminDashboardPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
         {/* Dashboard Header */}
         <div className="mb-8">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-              <p className="text-gray-600 mt-1">Business Intelligence & Lead Management</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+              <p className="text-gray-600 mt-1 text-sm sm:text-base">Business Intelligence & Lead Management</p>
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center">
               <select
                 value={timeframe}
                 onChange={(e) => setTimeframe(e.target.value)}
-                className="border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-auto"
               >
                 <option value="day">Last 24 Hours</option>
                 <option value="week">Last Week</option>
@@ -266,68 +290,68 @@ export default function AdminDashboardPage() {
           </div>
         </div>
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Total Conversations</p>
-                <p className="text-3xl font-bold text-gray-900">{data?.stats.total.conversations}</p>
-                <p className="text-xs text-gray-500 mt-1">All time</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Conversations</p>
+                <p className="text-xl sm:text-3xl font-bold text-gray-900">{data?.stats.total.conversations}</p>
+                <p className="text-xs text-gray-500 mt-1 hidden sm:block">All time</p>
               </div>
-              <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg">
-                <HiChatBubbleLeftRight className="w-6 h-6 text-white" />
+              <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg sm:rounded-xl shadow-lg">
+                <HiChatBubbleLeftRight className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Unique Emails</p>
-                <p className="text-3xl font-bold text-gray-900">{data?.stats.total.emails}</p>
-                <p className="text-xs text-gray-500 mt-1">Qualified leads</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Emails</p>
+                <p className="text-xl sm:text-3xl font-bold text-gray-900">{data?.stats.total.emails}</p>
+                <p className="text-xs text-gray-500 mt-1 hidden sm:block">Qualified leads</p>
               </div>
-              <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl shadow-lg">
-                <HiEnvelope className="w-6 h-6 text-white" />
+              <div className="p-2 sm:p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg sm:rounded-xl shadow-lg">
+                <HiEnvelope className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Completed Analysis</p>
-                <p className="text-3xl font-bold text-gray-900">{data?.stats.total.completed}</p>
-                <p className="text-xs text-gray-500 mt-1">Full conversions</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Completed</p>
+                <p className="text-xl sm:text-3xl font-bold text-gray-900">{data?.stats.total.completed}</p>
+                <p className="text-xs text-gray-500 mt-1 hidden sm:block">Full conversions</p>
               </div>
-              <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg">
-                <HiChartBar className="w-6 h-6 text-white" />
+              <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg sm:rounded-xl shadow-lg">
+                <HiChartBar className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Avg Lead Score</p>
-                <p className="text-3xl font-bold text-gray-900">{Math.round(data?.stats.conversion.averageLeadScore || 0)}</p>
-                <p className="text-xs text-gray-500 mt-1">Quality metric</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Avg Score</p>
+                <p className="text-xl sm:text-3xl font-bold text-gray-900">{Math.round(data?.stats.conversion.averageLeadScore || 0)}</p>
+                <p className="text-xs text-gray-500 mt-1 hidden sm:block">Quality metric</p>
               </div>
-              <div className="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl shadow-lg">
-                <HiBolt className="w-6 h-6 text-white" />
+              <div className="p-2 sm:p-3 bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-lg sm:rounded-xl shadow-lg">
+                <HiBolt className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Insights */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+            <div className="flex items-center mb-4 sm:mb-6">
               <div className="p-2 bg-blue-100 rounded-lg mr-3">
                 <HiChartBar className="w-5 h-5 text-blue-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">Investment Goals Distribution</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Investment Goals</h3>
             </div>
             <div className="space-y-4">
               {Object.entries(data?.insights.goalTypes || {}).map(([goal, count]) => (
@@ -342,14 +366,14 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center mb-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+            <div className="flex items-center mb-4 sm:mb-6">
               <div className="p-2 bg-emerald-100 rounded-lg mr-3">
                 <HiCurrencyDollar className="w-5 h-5 text-emerald-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">Portfolio Size Distribution</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Portfolio Sizes</h3>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {Object.entries(data?.insights.portfolioSizes || {}).map(([size, count]) => (
                 <div key={size} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center">
@@ -365,27 +389,27 @@ export default function AdminDashboardPage() {
 
         {/* Conversations Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-6 py-5 border-b border-gray-200 bg-gray-50">
-            <div className="flex justify-between items-center">
+          <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200 bg-gray-50">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
               <div className="flex items-center">
                 <div className="p-2 bg-slate-100 rounded-lg mr-3">
                   <HiUsers className="w-5 h-5 text-slate-600" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900">Recent Conversations</h3>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900">Recent Conversations</h3>
               </div>
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="border border-gray-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="border border-gray-300 rounded-lg px-2 sm:px-4 py-2 text-xs sm:text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent flex-1 sm:flex-none"
                 >
-                  <option value="leadScore">Sort by Lead Score</option>
-                  <option value="created_at">Sort by Date</option>
-                  <option value="portfolioValue">Sort by Portfolio Value</option>
+                  <option value="leadScore">Lead Score</option>
+                  <option value="created_at">Date</option>
+                  <option value="portfolioValue">Portfolio</option>
                 </select>
-                <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors flex items-center space-x-2">
+                <button className="bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-700 text-xs sm:text-sm font-medium transition-colors flex items-center space-x-1 sm:space-x-2 whitespace-nowrap">
                   <HiArrowDownTray className="w-4 h-4" />
-                  <span>Export</span>
+                  <span className="hidden sm:inline">Export</span>
                 </button>
               </div>
             </div>
@@ -395,37 +419,37 @@ export default function AdminDashboardPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     <div className="flex items-center space-x-1">
                       <HiUser className="w-4 h-4" />
                       <span>Contact</span>
                     </div>
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     <div className="flex items-center space-x-1">
                       <HiBolt className="w-4 h-4" />
                       <span>Score</span>
                     </div>
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider hidden sm:table-cell">
                     <div className="flex items-center space-x-1">
                       <HiCheckCircle className="w-4 h-4" />
                       <span>Status</span>
                     </div>
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider hidden md:table-cell">
                     <div className="flex items-center space-x-1">
                       <HiChartBar className="w-4 h-4" />
                       <span>Goals</span>
                     </div>
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider hidden lg:table-cell">
                     <div className="flex items-center space-x-1">
                       <HiCurrencyDollar className="w-4 h-4" />
                       <span>Portfolio</span>
                     </div>
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider hidden md:table-cell">
                     <div className="flex items-center space-x-1">
                       <HiCalendarDays className="w-4 h-4" />
                       <span>Created</span>
@@ -440,41 +464,53 @@ export default function AdminDashboardPage() {
                     className="hover:bg-blue-50 transition-colors cursor-pointer"
                     onClick={() => openConversation(conversation.id)}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
-                          <span className="text-white font-medium text-sm">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mr-2 sm:mr-3 flex-shrink-0">
+                          <span className="text-white font-medium text-xs sm:text-sm">
                             {conversation.user_email?.charAt(0).toUpperCase() || '?'}
                           </span>
                         </div>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{conversation.user_email}</div>
-                          <div className="text-xs text-gray-500">{conversation.id.slice(0, 8)}...</div>
+                        <div className="min-w-0">
+                          <div className="text-xs sm:text-sm font-medium text-gray-900 truncate max-w-[120px] sm:max-w-none">{conversation.user_email}</div>
+                          <div className="text-xs text-gray-500 hidden sm:block">{conversation.id.slice(0, 8)}...</div>
+                          {/* Show status on mobile below email */}
+                          <div className="sm:hidden mt-1">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                              conversation.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                              conversation.status === 'Portfolio Collected' ? 'bg-blue-100 text-blue-800' :
+                              conversation.status === 'Goals Collected' ? 'bg-blue-100 text-blue-800' :
+                              conversation.status === 'Email Captured' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {conversation.status}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className={`inline-flex items-center px-3 py-1 text-xs font-bold rounded-full ${
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                      <div className={`inline-flex items-center px-2 sm:px-3 py-1 text-xs font-bold rounded-full ${
                         conversation.leadScore >= 80 ? 'bg-emerald-100 text-emerald-800' :
                         conversation.leadScore >= 60 ? 'bg-amber-100 text-amber-800' :
                         'bg-red-100 text-red-800'
                       }`}>
-                        {conversation.leadScore >= 80 && <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>}
+                        {conversation.leadScore >= 80 && <svg className="w-3 h-3 mr-1 hidden sm:inline" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>}
                         {conversation.leadScore}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap hidden sm:table-cell">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         conversation.status === 'Completed' ? 'bg-green-100 text-green-800' :
                         conversation.status === 'Portfolio Collected' ? 'bg-blue-100 text-blue-800' :
-                        conversation.status === 'Goals Collected' ? 'bg-purple-100 text-purple-800' :
+                        conversation.status === 'Goals Collected' ? 'bg-blue-100 text-blue-800' :
                         conversation.status === 'Email Captured' ? 'bg-yellow-100 text-yellow-800' :
                         'bg-gray-100 text-gray-800'
                       }`}>
                         {conversation.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900 hidden md:table-cell">
                       {conversation.goals.type ? (
                         <div>
                           <div className="font-medium capitalize">{conversation.goals.type}</div>
@@ -486,7 +522,7 @@ export default function AdminDashboardPage() {
                         <span className="text-gray-400 text-xs">No data</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">
                       {conversation.portfolio.newInvestor ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                           New Investor
@@ -500,7 +536,7 @@ export default function AdminDashboardPage() {
                         <span className="text-gray-400 text-xs">No data</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
                       <div className="text-sm">{new Date(conversation.created_at).toLocaleDateString()}</div>
                       <div className="text-xs text-gray-400">{new Date(conversation.created_at).toLocaleTimeString()}</div>
                     </td>
@@ -514,28 +550,30 @@ export default function AdminDashboardPage() {
         {/* Conversation Detail Modal */}
         {isDetailOpen && (
           <div
-            className="fixed inset-0 z-[10000] bg-black/50 backdrop-blur-sm flex items-start justify-center p-4 md:p-8"
+            className="fixed inset-0 z-[10000] bg-black/50 backdrop-blur-sm flex items-start justify-center p-2 sm:p-4 md:p-8 overflow-y-auto"
             onClick={closeConversation}
           >
             <div
-              className="w-full max-w-5xl bg-white rounded-2xl shadow-xl overflow-hidden"
+              className="w-full max-w-6xl bg-white rounded-xl sm:rounded-2xl shadow-xl overflow-hidden my-2 sm:my-4"
               onClick={(e) => e.stopPropagation()}
               role="dialog"
               aria-modal="true"
               aria-labelledby="conv-title"
             >
-              <div className="flex items-center justify-between px-6 py-4 border-b">
-                <div>
-                  <h2 id="conv-title" className="text-xl font-semibold text-gray-900">
-                    {(detail?.user_email as string || 'Conversation')} • {(detail?.id as string)?.slice(0, 8) || ''}
+              {/* Modal Header */}
+              <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b bg-gradient-to-r from-slate-50 to-white">
+                <div className="min-w-0 flex-1 mr-4">
+                  <h2 id="conv-title" className="text-base sm:text-xl font-semibold text-gray-900 truncate">
+                    {(detail?.user_email as string || 'Conversation')}
                   </h2>
-                  <p className="text-sm text-gray-500">
-                    {detail?.created_at ? `Started ${new Date(detail.created_at as string).toLocaleString()}` : ''}
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    <span className="hidden sm:inline">{(detail?.id as string)?.slice(0, 8) || ''} • </span>
+                    {detail?.created_at ? new Date(detail.created_at as string).toLocaleDateString() : ''}
                   </p>
                 </div>
                 <button
                   onClick={closeConversation}
-                  className="p-2 rounded-lg hover:bg-gray-100"
+                  className="p-2 rounded-lg hover:bg-gray-100 flex-shrink-0"
                   aria-label="Close"
                 >
                   <svg className="w-5 h-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -551,80 +589,610 @@ export default function AdminDashboardPage() {
               ) : detailError ? (
                 <div className="p-6 text-red-600">{detailError}</div>
               ) : detail ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
-                  <div className="md:col-span-1 border-r p-6 space-y-6">
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-700 mb-2">Lead Score</h3>
-                      <div
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${
-                          ((typeof detail.leadScore === 'number' ? detail.leadScore : ((detail.leadScore as Record<string, unknown>)?.total ?? 0)) as number) >= 80
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : ((typeof detail.leadScore === 'number' ? detail.leadScore : ((detail.leadScore as Record<string, unknown>)?.total ?? 0)) as number) >= 60
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {String((typeof detail.leadScore === 'number' ? detail.leadScore : ((detail.leadScore as Record<string, unknown>)?.total ?? 0)) ?? 0)}
-                      </div>
-                      {(() => {
-                        if (typeof detail.leadScore === 'object' && detail.leadScore !== null) {
-                          const leadScoreObj = detail.leadScore as Record<string, unknown>;
-                          const breakdown = leadScoreObj.breakdown;
-                          if (breakdown && typeof breakdown === 'object') {
-                            return (
-                              <ul className="mt-3 space-y-1 text-sm text-gray-700">
-                                {Object.entries(breakdown as Record<string, number>).map(([k, v]) => (
-                                  <li key={k} className="flex justify-between">
-                                    <span>{k}</span>
-                                    <span className="font-medium">{v}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            );
-                          }
-                        }
-                        return null;
-                      })()}
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-700 mb-2">Timeline</h3>
-                      <ol className="space-y-3">
-                        {((detail.timeline as TimelineItem[]) || []).map((t: TimelineItem, idx: number) => (
-                          <li key={idx} className="text-sm">
-                            <div className="text-gray-900">{t.event}</div>
-                            <div className="text-gray-500">{new Date(t.timestamp).toLocaleString()}</div>
-                            {t.description && <div className="text-gray-600">{t.description}</div>}
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
+                <>
+                  {/* Tabs Navigation */}
+                  <div className="border-b bg-gray-50 px-2 sm:px-6">
+                    <nav className="flex space-x-0.5 sm:space-x-1 overflow-x-auto scrollbar-hide -mb-px" aria-label="Tabs">
+                      {[
+                        { id: 'overview', label: 'Overview', shortLabel: 'Overview', icon: HiUser },
+                        { id: 'analysis', label: 'Portfolio Analysis', shortLabel: 'Analysis', icon: HiChartBar },
+                        { id: 'risk', label: 'Risk Metrics', shortLabel: 'Risk', icon: HiShieldCheck },
+                        { id: 'allocation', label: 'Asset Allocation', shortLabel: 'Alloc.', icon: HiSquares2X2 },
+                        { id: 'holdings', label: 'Holdings', shortLabel: 'Hold.', icon: HiCurrencyDollar },
+                        { id: 'messages', label: 'Messages', shortLabel: 'Msgs', icon: HiChatBubbleLeftRight },
+                      ].map((tab) => (
+                        <button
+                          key={tab.id}
+                          onClick={() => setActiveDetailTab(tab.id as typeof activeDetailTab)}
+                          className={`flex items-center px-2 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                            activeDetailTab === tab.id
+                              ? 'border-blue-500 text-blue-600'
+                              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                          }`}
+                        >
+                          <tab.icon className="w-4 h-4 sm:mr-2" />
+                          <span className="hidden sm:inline">{tab.label}</span>
+                          <span className="sm:hidden ml-1">{tab.shortLabel}</span>
+                        </button>
+                      ))}
+                    </nav>
                   </div>
-                  <div className="md:col-span-2 p-6 max-h-[70vh] overflow-y-auto">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-4">Messages</h3>
-                    <div className="space-y-4">
-                      {((detail?.messages as MessageItem[]) || []).map((m: MessageItem) => (
-                      <div
-                        key={m.id}
-                        className={`p-3 rounded-lg border ${
-                          m.role === 'user' ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-200'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span
-                            className={`text-xs font-medium ${
-                              m.role === 'user' ? 'text-blue-700' : 'text-gray-700'
-                            }`}
-                          >
-                            {m.role === 'user' ? 'User' : 'Assistant'}
-                          </span>
-                          <span className="text-xs text-gray-500">{new Date(m.created_at).toLocaleString()}</span>
+
+                  {/* Tab Content */}
+                  <div className="max-h-[60vh] sm:max-h-[65vh] overflow-y-auto">
+                    {/* Overview Tab */}
+                    {activeDetailTab === 'overview' && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
+                        <div className="md:col-span-1 md:border-r border-b md:border-b-0 p-4 sm:p-6 space-y-4 sm:space-y-6">
+                          <div>
+                            <h3 className="text-sm font-semibold text-gray-700 mb-2">Lead Score</h3>
+                            <div
+                              className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${
+                                ((typeof detail.leadScore === 'number' ? detail.leadScore : (detail.leadScore?.total ?? 0)) as number) >= 80
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : ((typeof detail.leadScore === 'number' ? detail.leadScore : (detail.leadScore?.total ?? 0)) as number) >= 60
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-red-100 text-red-800'
+                              }`}
+                            >
+                              {String((typeof detail.leadScore === 'number' ? detail.leadScore : (detail.leadScore?.total ?? 0)) ?? 0)}
+                            </div>
+                            {(() => {
+                              if (typeof detail.leadScore === 'object' && detail.leadScore !== null) {
+                                const breakdown = detail.leadScore.breakdown;
+                                if (breakdown && typeof breakdown === 'object') {
+                                  return (
+                                    <ul className="mt-3 space-y-1 text-sm text-gray-700">
+                                      {Object.entries(breakdown).map(([k, v]) => (
+                                        <li key={k} className="flex justify-between">
+                                          <span>{k}</span>
+                                          <span className="font-medium">{String(v)}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  );
+                                }
+                              }
+                              return null;
+                            })()}
+                          </div>
+                          
+                          {/* Intake Form Summary */}
+                          {Boolean(detail.intakeFormData) && (
+                            <div>
+                              <h3 className="text-sm font-semibold text-gray-700 mb-2">Client Profile</h3>
+                              <div className="space-y-2 text-sm">
+                                {Boolean(detail.intakeFormData.firstName) && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Name</span>
+                                    <span className="font-medium text-gray-900">
+                                      {String(detail.intakeFormData.firstName)} {String(detail.intakeFormData.lastName || '')}
+                                    </span>
+                                  </div>
+                                )}
+                                {Boolean(detail.intakeFormData.age) && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Age</span>
+                                    <span className="font-medium text-gray-900">{String(detail.intakeFormData.age)}</span>
+                                  </div>
+                                )}
+                                {Boolean(detail.intakeFormData.experienceLevel) && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Experience</span>
+                                    <span className="font-medium text-gray-900">{String(detail.intakeFormData.experienceLevel)}</span>
+                                  </div>
+                                )}
+                                {Boolean(detail.intakeFormData.riskTolerance) && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Risk Tolerance</span>
+                                    <span className={`font-medium capitalize ${
+                                      detail.intakeFormData.riskTolerance === 'high' ? 'text-red-600' :
+                                      detail.intakeFormData.riskTolerance === 'medium' ? 'text-amber-600' : 'text-green-600'
+                                    }`}>
+                                      {String(detail.intakeFormData.riskTolerance)}
+                                    </span>
+                                  </div>
+                                )}
+                                {Boolean(detail.intakeFormData.timeHorizon) && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Time Horizon</span>
+                                    <span className="font-medium text-gray-900">{String(detail.intakeFormData.timeHorizon)} years</span>
+                                  </div>
+                                )}
+                                {Boolean(detail.intakeFormData.userRating) && (
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Rating</span>
+                                    <span className="font-medium text-amber-600">{String(detail.intakeFormData.userRating)}/5 stars</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        {renderMessageBody(m)}
+                        <div className="md:col-span-2 p-4 sm:p-6">
+                          <h3 className="text-sm font-semibold text-gray-700 mb-2">Timeline</h3>
+                          <ol className="space-y-3">
+                            {((detail.timeline as TimelineItem[]) || []).map((t: TimelineItem, idx: number) => (
+                              <li key={idx} className="text-sm flex">
+                                <div className={`w-2 h-2 rounded-full mt-1.5 mr-3 ${
+                                  t.event.includes('Completed') ? 'bg-green-500' :
+                                  t.event.includes('Portfolio') ? 'bg-blue-500' :
+                                  t.event.includes('Goals') ? 'bg-blue-500' : 'bg-gray-400'
+                                }`} />
+                                <div>
+                                  <div className="text-gray-900 font-medium">{t.event}</div>
+                                  <div className="text-gray-500 text-xs">{new Date(t.timestamp).toLocaleString()}</div>
+                                  {t.description && <div className="text-gray-600 mt-0.5">{t.description}</div>}
+                                </div>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
                       </div>
-                    ))}
-                    </div>
+                    )}
+
+                    {/* Portfolio Analysis Tab */}
+                    {activeDetailTab === 'analysis' && (
+                      <div className="p-4 sm:p-6">
+                        {detail.portfolioAnalysis !== null && detail.portfolioAnalysis !== undefined ? (
+                          <div className="space-y-4 sm:space-y-6">
+                            {/* Return Comparison Cards */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 sm:p-5 text-white">
+                                <p className="text-xs sm:text-sm opacity-90 mb-1">User Portfolio Return</p>
+                                <p className="text-2xl sm:text-3xl font-bold">
+                                  {detail.portfolioAnalysis?.userPortfolio?.expectedReturn !== undefined
+                                    ? `${(detail.portfolioAnalysis.userPortfolio.expectedReturn * 100).toFixed(1)}%`
+                                    : 'N/A'}
+                                </p>
+                                <p className="text-xs opacity-80 mt-1">Expected annual return</p>
+                              </div>
+                              <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-4 sm:p-5 text-white">
+                                <p className="text-xs sm:text-sm opacity-90 mb-1">TIME Portfolio Return</p>
+                                <p className="text-2xl sm:text-3xl font-bold">
+                                  {detail.portfolioAnalysis?.timePortfolio?.expectedReturn !== undefined
+                                    ? `${(detail.portfolioAnalysis.timePortfolio.expectedReturn * 100).toFixed(1)}%`
+                                    : 'N/A'}
+                                </p>
+                                <p className="text-xs opacity-80 mt-1">Benchmark return</p>
+                              </div>
+                              <div className={`rounded-xl p-4 sm:p-5 text-white ${
+                                detail.portfolioAnalysis?.returnDifference >= 0 
+                                  ? 'bg-gradient-to-br from-green-500 to-green-600' 
+                                  : 'bg-gradient-to-br from-red-500 to-red-600'
+                              }`}>
+                                <p className="text-xs sm:text-sm opacity-90 mb-1">Difference</p>
+                                <p className="text-2xl sm:text-3xl font-bold">
+                                  {detail.portfolioAnalysis?.returnDifference !== undefined
+                                    ? `${detail.portfolioAnalysis.returnDifference >= 0 ? '+' : ''}${(detail.portfolioAnalysis.returnDifference * 100).toFixed(1)}%`
+                                    : 'N/A'}
+                                </p>
+                                <p className="text-xs opacity-80 mt-1">vs TIME Portfolio</p>
+                              </div>
+                            </div>
+
+                            {/* Portfolio Details */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                              <div className="bg-gray-50 rounded-xl p-4 sm:p-5">
+                                <h4 className="font-semibold text-gray-900 mb-3">User Portfolio</h4>
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Total Value</span>
+                                    <span className="font-medium">
+                                      {detail.portfolioAnalysis?.userPortfolio?.totalValue
+                                        ? `$${detail.portfolioAnalysis.userPortfolio.totalValue.toLocaleString()}`
+                                        : 'N/A'}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Positions</span>
+                                    <span className="font-medium">
+                                      {detail.portfolioAnalysis?.userPortfolio?.positions?.length || 0}
+                                    </span>
+                                  </div>
+                                  {detail.portfolioAnalysis?.userPortfolio?.isUsingProxy && (
+                                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-blue-700 text-xs">
+                                      Using proxy ETFs for analysis
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="bg-gray-50 rounded-xl p-4 sm:p-5">
+                                <h4 className="font-semibold text-gray-900 mb-3">TIME Portfolio</h4>
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Total Value</span>
+                                    <span className="font-medium">
+                                      {detail.portfolioAnalysis?.timePortfolio?.totalValue
+                                        ? `$${detail.portfolioAnalysis.timePortfolio.totalValue.toLocaleString()}`
+                                        : 'N/A'}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Positions</span>
+                                    <span className="font-medium">
+                                      {detail.portfolioAnalysis?.timePortfolio?.positions?.length || 0}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Time Horizon */}
+                            {detail.portfolioAnalysis.timeHorizon && (
+                              <div className="bg-blue-50 rounded-xl p-4 flex items-center">
+                                <HiCalendarDays className="w-5 h-5 text-blue-600 mr-3" />
+                                <span className="text-sm text-blue-900">
+                                  Analysis based on <strong>{String(detail.portfolioAnalysis.timeHorizon)}-year</strong> time horizon
+                                </span>
+                              </div>
+                            )}
+
+                            {/* AI Analysis Fallback (for older records without Monte Carlo data) */}
+                            {Boolean(detail.portfolioAnalysis.aiAnalysis) && (
+                              <div className="mt-6 border-t border-gray-200 pt-6">
+                                <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+                                  <HiBolt className="w-5 h-5 mr-2 text-blue-500" />
+                                  AI Risk Assessment
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                  {Boolean(detail.portfolioAnalysis?.aiAnalysis?.riskLevel) && (
+                                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+                                      <p className="text-xs text-blue-600 mb-1">Risk Level</p>
+                                      <p className="font-semibold text-gray-900">{String(detail.portfolioAnalysis?.aiAnalysis.riskLevel)}</p>
+                                    </div>
+                                  )}
+                                  {Boolean(detail.portfolioAnalysis?.aiAnalysis?.beta) && (
+                                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+                                      <p className="text-xs text-blue-600 mb-1">Beta</p>
+                                      <p className="font-semibold text-gray-900">{String(detail.portfolioAnalysis?.aiAnalysis.beta)}</p>
+                                    </div>
+                                  )}
+                                  {Boolean(detail.portfolioAnalysis?.aiAnalysis?.volatility) && (
+                                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+                                      <p className="text-xs text-blue-600 mb-1">Volatility</p>
+                                      <p className="font-semibold text-gray-900">{String(detail.portfolioAnalysis?.aiAnalysis.volatility)}</p>
+                                    </div>
+                                  )}
+                                </div>
+                                {Boolean(detail.portfolioAnalysis?.aiAnalysis?.portfolioImpact) && (
+                                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                                    <p className="text-xs font-semibold text-slate-700 mb-2">Portfolio Impact Analysis</p>
+                                    <div className="text-sm text-slate-600 whitespace-pre-line">
+                                      {String(detail.portfolioAnalysis?.aiAnalysis.portfolioImpact)}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-center py-12 text-gray-500">
+                            <HiChartBar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                            <p>No portfolio analysis data available</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Risk Metrics Tab */}
+                    {activeDetailTab === 'risk' && (
+                      <div className="p-4 sm:p-6">
+                        {detail.riskMetrics ? (
+                          <div className="space-y-4 sm:space-y-6">
+                            {/* Risk Level Banner */}
+                            <div className={`rounded-xl p-4 sm:p-6 ${
+                              detail.riskMetrics.riskLevel === 'low' ? 'bg-green-50 border border-green-200' :
+                              detail.riskMetrics.riskLevel === 'medium' ? 'bg-amber-50 border border-amber-200' :
+                              'bg-red-50 border border-red-200'
+                            }`}>
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h4 className={`text-lg font-semibold capitalize ${
+                                    detail.riskMetrics.riskLevel === 'low' ? 'text-green-800' :
+                                    detail.riskMetrics.riskLevel === 'medium' ? 'text-amber-800' :
+                                    'text-red-800'
+                                  }`}>
+                                    {String(detail.riskMetrics.riskLevel)} Risk Portfolio
+                                  </h4>
+                                  <p className={`text-sm ${
+                                    detail.riskMetrics.riskLevel === 'low' ? 'text-green-600' :
+                                    detail.riskMetrics.riskLevel === 'medium' ? 'text-amber-600' :
+                                    'text-red-600'
+                                  }`}>
+                                    Based on Monte Carlo volatility analysis
+                                  </p>
+                                </div>
+                                <HiShieldCheck className={`w-10 h-10 ${
+                                  detail.riskMetrics.riskLevel === 'low' ? 'text-green-500' :
+                                  detail.riskMetrics.riskLevel === 'medium' ? 'text-amber-500' :
+                                  'text-red-500'
+                                }`} />
+                              </div>
+                            </div>
+
+                            {/* Risk Metrics Cards */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                              <div className="bg-white border rounded-xl p-3 sm:p-4">
+                                <p className="text-xs text-gray-500 mb-1">Volatility</p>
+                                <p className="text-lg sm:text-2xl font-bold text-gray-900">
+                                  {detail.riskMetrics.portfolioVolatility !== null
+                                    ? `${((detail.riskMetrics.portfolioVolatility as number) * 100).toFixed(1)}%`
+                                    : 'N/A'}
+                                </p>
+                              </div>
+                              <div className="bg-white border rounded-xl p-3 sm:p-4">
+                                <p className="text-xs text-gray-500 mb-1">Median Return</p>
+                                <p className="text-lg sm:text-2xl font-bold text-blue-600">
+                                  {detail.riskMetrics.medianReturn !== null
+                                    ? `${((detail.riskMetrics.medianReturn as number) * 100).toFixed(1)}%`
+                                    : 'N/A'}
+                                </p>
+                              </div>
+                              <div className="bg-white border rounded-xl p-3 sm:p-4">
+                                <p className="text-xs text-gray-500 mb-1">Upside (95th)</p>
+                                <p className="text-lg sm:text-2xl font-bold text-green-600">
+                                  {detail.riskMetrics.maxUpside !== null
+                                    ? `+${((detail.riskMetrics.maxUpside as number) * 100).toFixed(1)}%`
+                                    : 'N/A'}
+                                </p>
+                              </div>
+                              <div className="bg-white border rounded-xl p-3 sm:p-4">
+                                <p className="text-xs text-gray-500 mb-1">Downside (5th)</p>
+                                <p className="text-lg sm:text-2xl font-bold text-red-600">
+                                  {detail.riskMetrics.maxDownside !== null
+                                    ? `${((detail.riskMetrics.maxDownside as number) * 100).toFixed(1)}%`
+                                    : 'N/A'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : detail.portfolioAnalysis && detail.portfolioAnalysis.aiAnalysis ? (
+                          <div className="space-y-4 sm:space-y-6">
+                            {/* AI Risk Analysis Fallback */}
+                            <div className="bg-gradient-to-br from-blue-50 to-emerald-50 border border-blue-200 rounded-xl p-4 sm:p-6">
+                              <div className="flex items-center mb-4">
+                                <HiBolt className="w-6 h-6 text-blue-600 mr-2" />
+                                <h4 className="text-lg font-semibold text-blue-900">AI Risk Assessment</h4>
+                              </div>
+                              <p className="text-sm text-blue-700 mb-4">
+                                Monte Carlo simulation data not available. Showing AI-generated risk analysis.
+                              </p>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {Boolean(detail.portfolioAnalysis?.aiAnalysis?.riskLevel) && (
+                                  <div className="bg-white rounded-lg p-4 border border-blue-100">
+                                    <p className="text-xs text-blue-600 mb-1">Risk Level</p>
+                                    <p className="text-xl font-bold text-gray-900">
+                                      {String(detail.portfolioAnalysis?.aiAnalysis.riskLevel)}
+                                    </p>
+                                  </div>
+                                )}
+                                {Boolean(detail.portfolioAnalysis?.aiAnalysis?.beta) && (
+                                  <div className="bg-white rounded-lg p-4 border border-blue-100">
+                                    <p className="text-xs text-blue-600 mb-1">Portfolio Beta</p>
+                                    <p className="text-xl font-bold text-gray-900">
+                                      {String(detail.portfolioAnalysis?.aiAnalysis.beta)}
+                                    </p>
+                                  </div>
+                                )}
+                                {Boolean(detail.portfolioAnalysis?.aiAnalysis?.volatility) && (
+                                  <div className="bg-white rounded-lg p-4 border border-blue-100">
+                                    <p className="text-xs text-blue-600 mb-1">Est. Volatility</p>
+                                    <p className="text-xl font-bold text-gray-900">
+                                      {String(detail.portfolioAnalysis?.aiAnalysis.volatility)}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                              {Boolean(detail.portfolioAnalysis?.aiAnalysis?.marketImpact) && (
+                                <div className="mt-4 bg-white rounded-lg p-4 border border-slate-200">
+                                  <p className="text-xs font-semibold text-slate-700 mb-2">Market Impact Analysis</p>
+                                  <div className="text-sm text-slate-600 whitespace-pre-line">
+                                    {String(detail.portfolioAnalysis?.aiAnalysis.marketImpact)}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center py-12 text-gray-500">
+                            <HiShieldCheck className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                            <p>No risk metrics data available</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Asset Allocation Tab */}
+                    {activeDetailTab === 'allocation' && (
+                      <div className="p-4 sm:p-6">
+                        {detail.assetAllocation ? (
+                          <div className="space-y-4 sm:space-y-6">
+                            <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
+                              {[
+                                { key: 'stocks', label: 'Stocks', color: 'bg-blue-500' },
+                                { key: 'bonds', label: 'Bonds', color: 'bg-emerald-500' },
+                                { key: 'cash', label: 'Cash', color: 'bg-gray-400' },
+                                { key: 'realEstate', label: 'Real Estate', color: 'bg-blue-400' },
+                                { key: 'commodities', label: 'Commodities', color: 'bg-emerald-400' },
+                                { key: 'alternatives', label: 'Alts', color: 'bg-blue-600' },
+                              ].map(({ key, label, color }) => {
+                                const value = (detail.assetAllocation as Record<string, number>)[key] || 0;
+                                return (
+                                  <div key={key} className="bg-white border rounded-xl p-2 sm:p-4 text-center">
+                                    <div className={`w-10 h-10 sm:w-12 sm:h-12 ${color} rounded-full mx-auto mb-1 sm:mb-2 flex items-center justify-center`}>
+                                      <span className="text-white font-bold text-xs sm:text-sm">{value}%</span>
+                                    </div>
+                                    <p className="text-xs sm:text-sm font-medium text-gray-900">{label}</p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {/* Visual Bar */}
+                            <div className="bg-gray-100 rounded-full h-8 overflow-hidden flex">
+                              {[
+                                { key: 'stocks', color: 'bg-blue-500' },
+                                { key: 'bonds', color: 'bg-emerald-500' },
+                                { key: 'cash', color: 'bg-gray-400' },
+                                { key: 'realEstate', color: 'bg-blue-400' },
+                                { key: 'commodities', color: 'bg-emerald-400' },
+                                { key: 'alternatives', color: 'bg-blue-600' },
+                              ].map(({ key, color }) => {
+                                const value = (detail.assetAllocation as Record<string, number>)[key] || 0;
+                                if (value === 0) return null;
+                                return (
+                                  <div
+                                    key={key}
+                                    className={`${color} h-full`}
+                                    style={{ width: `${value}%` }}
+                                    title={`${key}: ${value}%`}
+                                  />
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center py-12 text-gray-500">
+                            <HiSquares2X2 className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                            <p>No asset allocation data available</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Holdings Tab */}
+                    {activeDetailTab === 'holdings' && (
+                      <div className="p-4 sm:p-6">
+                        {detail.portfolioAnalysis?.userPortfolio?.positions?.length > 0 ? (
+                          <div className="overflow-x-auto -mx-4 sm:mx-0">
+                            <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-gray-50">
+                                <tr>
+                                  <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ticker</th>
+                                  <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase hidden sm:table-cell">Name</th>
+                                  <th className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs font-semibold text-gray-600 uppercase">Weight</th>
+                                  <th className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs font-semibold text-gray-600 uppercase hidden md:table-cell">Price</th>
+                                  <th className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs font-semibold text-gray-600 uppercase hidden lg:table-cell">Target</th>
+                                  <th className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs font-semibold text-gray-600 uppercase">Return</th>
+                                  <th className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs font-semibold text-gray-600 uppercase hidden md:table-cell">Vol</th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-100">
+                                {(detail.portfolioAnalysis.userPortfolio.positions || []).map((pos: {
+                                  ticker: string;
+                                  name: string;
+                                  weight: number;
+                                  currentPrice?: number;
+                                  targetPrice?: number | null;
+                                  expectedReturn?: number | null;
+                                  monteCarlo?: { volatility: number } | null;
+                                  isProxy?: boolean;
+                                }, idx: number) => (
+                                  <tr key={idx} className="hover:bg-gray-50">
+                                    <td className="px-3 sm:px-4 py-2 sm:py-3 whitespace-nowrap">
+                                      <span className="font-mono font-medium text-gray-900 text-xs sm:text-sm">{pos.ticker}</span>
+                                      {pos.isProxy && (
+                                        <span className="ml-1 sm:ml-2 text-xs bg-blue-100 text-blue-700 px-1 sm:px-1.5 py-0.5 rounded">P</span>
+                                      )}
+                                    </td>
+                                    <td className="px-3 sm:px-4 py-2 sm:py-3 text-sm text-gray-600 max-w-[200px] truncate hidden sm:table-cell">{pos.name}</td>
+                                    <td className="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-medium text-gray-900">{pos.weight.toFixed(1)}%</td>
+                                    <td className="px-3 sm:px-4 py-2 sm:py-3 text-right text-sm text-gray-600 hidden md:table-cell">
+                                      {pos.currentPrice ? `$${pos.currentPrice.toFixed(2)}` : '-'}
+                                    </td>
+                                    <td className="px-3 sm:px-4 py-2 sm:py-3 text-right text-sm text-gray-600 hidden lg:table-cell">
+                                      {pos.targetPrice ? `$${pos.targetPrice.toFixed(2)}` : '-'}
+                                    </td>
+                                    <td className={`px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-medium ${
+                                      pos.expectedReturn !== null && pos.expectedReturn !== undefined
+                                        ? pos.expectedReturn >= 0 ? 'text-green-600' : 'text-red-600'
+                                        : 'text-gray-400'
+                                    }`}>
+                                      {pos.expectedReturn !== null && pos.expectedReturn !== undefined
+                                        ? `${pos.expectedReturn >= 0 ? '+' : ''}${(pos.expectedReturn * 100).toFixed(1)}%`
+                                        : '-'}
+                                    </td>
+                                    <td className="px-3 sm:px-4 py-2 sm:py-3 text-right text-sm text-gray-600 hidden md:table-cell">
+                                      {pos.monteCarlo?.volatility
+                                        ? `${(pos.monteCarlo.volatility * 100).toFixed(1)}%`
+                                        : '-'}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : detail.intakeFormData && detail.intakeFormData.specificHoldings ? (
+                          <div className="overflow-x-auto">
+                            <p className="text-sm text-gray-500 mb-4">Holdings from intake form (no analysis performed yet)</p>
+                            <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-gray-50">
+                                <tr>
+                                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ticker</th>
+                                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Name</th>
+                                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Weight</th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-100">
+                                {((detail.intakeFormData.specificHoldings as Array<{
+                                  ticker?: string;
+                                  name: string;
+                                  percentage: number;
+                                }>) || []).map((h, idx) => (
+                                  <tr key={idx} className="hover:bg-gray-50">
+                                    <td className="px-4 py-3 whitespace-nowrap font-mono font-medium text-gray-900">{h.ticker || '-'}</td>
+                                    <td className="px-4 py-3 text-sm text-gray-600">{h.name}</td>
+                                    <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">{h.percentage}%</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="text-center py-12 text-gray-500">
+                            <HiCurrencyDollar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                            <p>No holdings data available</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Messages Tab */}
+                    {activeDetailTab === 'messages' && (
+                      <div className="p-4 sm:p-6">
+                        <div className="space-y-3 sm:space-y-4">
+                          {((detail?.messages as MessageItem[]) || []).map((m: MessageItem) => (
+                            <div
+                              key={m.id}
+                              className={`p-3 rounded-lg border ${
+                                m.role === 'user' ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-200'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <span
+                                  className={`text-xs font-medium ${
+                                    m.role === 'user' ? 'text-blue-700' : 'text-gray-700'
+                                  }`}
+                                >
+                                  {m.role === 'user' ? 'User' : 'Assistant'}
+                                </span>
+                                <span className="text-xs text-gray-500">{new Date(m.created_at).toLocaleTimeString()}</span>
+                              </div>
+                              {renderMessageBody(m)}
+                            </div>
+                          ))}
+                          {(!detail?.messages || (detail.messages as MessageItem[]).length === 0) && (
+                            <div className="text-center py-12 text-gray-500">
+                              <HiChatBubbleLeftRight className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                              <p>No messages in this conversation</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
+                </>
               ) : (
                 <div className="p-6 text-gray-500">Select a conversation to view details.</div>
               )}

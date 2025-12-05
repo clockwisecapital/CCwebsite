@@ -20,9 +20,9 @@ export interface HoldingWeight {
 
 export interface MonteCarloResult {
   ticker: string;
-  median: number;          // 50th percentile return
-  upside: number;          // 95th percentile return
-  downside: number;        // 5th percentile return
+  median: number;          // 50th percentile of final returns (annualized)
+  upside: number;          // Max Gain: 95th percentile of best 12-month returns
+  downside: number;        // Max Loss: 5th percentile of worst 12-month returns
   volatility: number;      // Annualized volatility
   simulations: number;     // Number of simulations run
 }

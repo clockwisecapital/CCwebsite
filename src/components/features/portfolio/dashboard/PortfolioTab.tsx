@@ -42,30 +42,31 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
     return `${(value * 100).toFixed(1)}%`;
   };
 
-  // Calculate weighted average upside/downside from positions
+  // Calculate weighted average max gain/loss from positions
+  // These represent the best/worst 12-month periods that could occur
   const calculatePortfolioMetrics = (positions: PositionAnalysis[]) => {
     let totalWeight = 0;
-    let weightedUpside = 0;
-    let weightedDownside = 0;
+    let weightedMaxGain = 0;
+    let weightedMaxLoss = 0;
 
     positions.forEach(position => {
       if (position.monteCarlo) {
         const weight = position.weight / 100; // Convert percentage to decimal
         totalWeight += weight;
-        weightedUpside += position.monteCarlo.upside * weight;
-        weightedDownside += position.monteCarlo.downside * weight;
+        weightedMaxGain += position.monteCarlo.upside * weight;  // upside = max gain
+        weightedMaxLoss += position.monteCarlo.downside * weight; // downside = max loss
       }
     });
 
     // Normalize if not all positions have Monte Carlo data
     if (totalWeight > 0 && totalWeight < 1) {
-      weightedUpside = weightedUpside / totalWeight;
-      weightedDownside = weightedDownside / totalWeight;
+      weightedMaxGain = weightedMaxGain / totalWeight;
+      weightedMaxLoss = weightedMaxLoss / totalWeight;
     }
 
     return {
-      upside: weightedUpside,
-      downside: weightedDownside,
+      maxGain: weightedMaxGain,
+      maxLoss: weightedMaxLoss,
       hasData: totalWeight > 0
     };
   };
@@ -123,15 +124,15 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
                       </div>
                     </div>
                     <div className="bg-gray-700/50 rounded-lg p-3">
-                      <div className="text-xs text-gray-400 mb-1">Upside ({timeLabel})</div>
+                      <div className="text-xs text-gray-400 mb-1">Annual Upside ({timeLabel})</div>
                       <div className="text-lg font-bold text-emerald-400">
-                        {metrics.hasData ? formatPercent(metrics.upside) : 'N/A'}
+                        {metrics.hasData ? formatPercent(metrics.maxGain) : 'N/A'}
                       </div>
                     </div>
                     <div className="bg-gray-700/50 rounded-lg p-3">
-                      <div className="text-xs text-gray-400 mb-1">Downside ({timeLabel})</div>
+                      <div className="text-xs text-gray-400 mb-1">Annual Downside ({timeLabel})</div>
                       <div className="text-lg font-bold text-rose-400">
-                        {metrics.hasData ? formatPercent(metrics.downside) : 'N/A'}
+                        {metrics.hasData ? formatPercent(metrics.maxLoss) : 'N/A'}
                       </div>
                     </div>
                   </div>
@@ -143,43 +144,53 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
             <div>
               <h4 className="text-sm font-semibold text-gray-300 mb-3">Top 5 Positions</h4>
               <div className="space-y-3">
-                {portfolioComparison.userPortfolio.topPositions.map((position) => (
-                  <div key={position.ticker} className="bg-gray-700/30 rounded-lg p-3 border border-gray-600">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-white">{position.ticker}</span>
+                {portfolioComparison.userPortfolio.topPositions.map((position) => {
+                  // For single proxy portfolios (100% SPY), use portfolio expected return
+                  // This ensures position and portfolio returns match
+                  const isSingleProxy = portfolioComparison.userPortfolio.isUsingProxy && 
+                                        portfolioComparison.userPortfolio.topPositions.length === 1;
+                  const displayExpectedReturn = isSingleProxy 
+                    ? portfolioComparison.userPortfolio.expectedReturn 
+                    : position.expectedReturn;
+                  
+                  return (
+                    <div key={position.ticker} className="bg-gray-700/30 rounded-lg p-3 border border-gray-600">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-white">{position.ticker}</span>
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {position.assetClass ? `${position.assetClass} • ` : ''}{position.name}
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-400">
-                          {position.assetClass ? `${position.assetClass} • ` : ''}{position.name}
+                        <div className="text-right">
+                          <div className="text-sm font-semibold text-gray-300">{position.weight.toFixed(1)}%</div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-sm font-semibold text-gray-300">{position.weight.toFixed(1)}%</div>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <div className="text-gray-400">Expected Return</div>
+                          <div className={`font-semibold ${displayExpectedReturn && displayExpectedReturn > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {displayExpectedReturn !== null && displayExpectedReturn !== undefined ? formatPercent(displayExpectedReturn) : 'N/A'}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400">Upside</div>
+                          <div className="font-semibold text-emerald-400">
+                            {position.monteCarlo ? formatPercent(position.monteCarlo.upside) : 'N/A'}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400">Downside</div>
+                          <div className="font-semibold text-rose-400">
+                            {position.monteCarlo ? formatPercent(position.monteCarlo.downside) : 'N/A'}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div>
-                        <div className="text-gray-400">Expected Return</div>
-                        <div className={`font-semibold ${position.expectedReturn && position.expectedReturn > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {position.expectedReturn ? formatPercent(position.expectedReturn) : 'N/A'}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-gray-400">Upside</div>
-                        <div className="font-semibold text-emerald-400">
-                          {position.monteCarlo ? formatPercent(position.monteCarlo.upside) : 'N/A'}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-gray-400">Downside</div>
-                        <div className="font-semibold text-rose-400">
-                          {position.monteCarlo ? formatPercent(position.monteCarlo.downside) : 'N/A'}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -208,15 +219,15 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
                       </div>
                     </div>
                     <div className="bg-teal-900/20 rounded-lg p-3 border border-teal-800">
-                      <div className="text-xs text-teal-400 mb-1">Upside ({timeLabel})</div>
+                      <div className="text-xs text-teal-400 mb-1">Annual Upside ({timeLabel})</div>
                       <div className="text-lg font-bold text-emerald-300">
-                        {metrics.hasData ? formatPercent(metrics.upside) : 'N/A'}
+                        {metrics.hasData ? formatPercent(metrics.maxGain) : 'N/A'}
                       </div>
                     </div>
                     <div className="bg-teal-900/20 rounded-lg p-3 border border-teal-800">
-                      <div className="text-xs text-teal-400 mb-1">Downside ({timeLabel})</div>
+                      <div className="text-xs text-teal-400 mb-1">Annual Downside ({timeLabel})</div>
                       <div className="text-lg font-bold text-rose-300">
-                        {metrics.hasData ? formatPercent(metrics.downside) : 'N/A'}
+                        {metrics.hasData ? formatPercent(metrics.maxLoss) : 'N/A'}
                       </div>
                     </div>
                   </div>

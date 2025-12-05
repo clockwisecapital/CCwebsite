@@ -1,8 +1,14 @@
 /**
  * Monte Carlo Simulation Service
  * 
- * Performs Monte Carlo simulations using historical price data from Yahoo Finance
- * to calculate expected returns, upside, and downside scenarios
+ * Performs Monte Carlo simulations using a BLENDED approach:
+ * - Year 1: Uses actual historical data from Yahoo Finance (ticker-specific)
+ * - Years 2+: Uses long-term asset class averages with typical volatilities
+ * 
+ * Key features:
+ * - Uses Geometric Brownian Motion with volatility drag correction
+ * - Tracks discrete annual periods to find best/worst year
+ * - Returns upside (best year) and downside (worst year) over the time horizon
  */
 
 import type { MonteCarloResult, HistoricalPrice } from '@/types/portfolio';
@@ -11,6 +17,39 @@ const YAHOO_FINANCE_API = 'https://query1.finance.yahoo.com/v8/finance/chart';
 const SIMULATIONS = 5000;  // Reduced from 10K - still statistically valid, 2x faster
 const TRADING_DAYS_PER_YEAR = 252;
 const CONCURRENCY_LIMIT = 5; // Max concurrent Yahoo Finance requests to avoid rate limiting
+
+// Long-term asset class averages (REAL returns - inflation-adjusted)
+// Based on 100+ years of historical data (Ibbotson/Morningstar)
+const ASSET_CLASS_RETURNS = {
+  stocks: 0.07,       // 7% real (vs 10% nominal)
+  bonds: 0.02,        // 2% real (vs 5% nominal)
+  realEstate: 0.05,   // 5% real
+  commodities: 0.01,  // 1% real
+  cash: 0.00,         // 0% real (matches inflation)
+  alternatives: 0.05  // 5% real (blend of alternatives)
+} as const;
+
+// Typical annual volatilities for each asset class
+const ASSET_CLASS_VOLATILITIES = {
+  stocks: 0.18,       // 18%
+  bonds: 0.06,        // 6%
+  realEstate: 0.15,   // 15%
+  commodities: 0.20,  // 20%
+  cash: 0.01,         // 1%
+  alternatives: 0.12  // 12%
+} as const;
+
+// Map proxy ETFs to their asset classes
+const TICKER_TO_ASSET_CLASS: Record<string, keyof typeof ASSET_CLASS_RETURNS> = {
+  'SPY': 'stocks',
+  'AGG': 'bonds',
+  'VNQ': 'realEstate',
+  'GLD': 'commodities',
+  'QQQ': 'stocks',      // Tech is still stocks
+  'CASH': 'cash'
+};
+
+export type AssetClass = keyof typeof ASSET_CLASS_RETURNS;
 
 /**
  * Fetch historical price data from Yahoo Finance
@@ -102,7 +141,24 @@ function randomNormal(mean: number, stdDev: number): number {
 }
 
 /**
+ * Determine asset class for a ticker
+ * Known proxy ETFs are mapped directly; others default to stocks
+ */
+function getAssetClass(ticker: string): AssetClass {
+  return TICKER_TO_ASSET_CLASS[ticker.toUpperCase()] || 'stocks';
+}
+
+/**
  * Run Monte Carlo simulation for a single ticker
+ * 
+ * BLENDED APPROACH:
+ * - Year 1: Uses ticker's actual historical volatility and returns
+ * - Years 2+: Uses long-term asset class averages
+ * 
+ * Returns:
+ * - median: Expected annualized return (50th percentile of final returns)
+ * - upside: Best annual return that could occur (95th percentile)
+ * - downside: Worst annual return that could occur (5th percentile)
  */
 export async function runMonteCarloSimulation(
   ticker: string,
@@ -110,7 +166,7 @@ export async function runMonteCarloSimulation(
   timeHorizon: number = 1 // years
 ): Promise<MonteCarloResult | null> {
   try {
-    // Fetch historical prices
+    // Fetch historical prices for Year 1 simulation
     const historicalPrices = await fetchHistoricalPrices(ticker, '2y');
     
     if (historicalPrices.length < 50) {
@@ -118,88 +174,128 @@ export async function runMonteCarloSimulation(
       return null;
     }
 
-    // Calculate daily returns
+    // Calculate Year 1 statistics from historical data
     const dailyReturns = calculateDailyReturns(historicalPrices);
+    const year1DailyReturn = mean(dailyReturns);
+    const year1DailyVol = standardDeviation(dailyReturns);
+    const year1AnnualVol = year1DailyVol * Math.sqrt(TRADING_DAYS_PER_YEAR);
     
-    // Calculate statistics
-    const avgDailyReturn = mean(dailyReturns);
-    const dailyVolatility = standardDeviation(dailyReturns);
-    const annualizedVolatility = dailyVolatility * Math.sqrt(TRADING_DAYS_PER_YEAR);
+    // Get asset class for this ticker
+    const assetClass = getAssetClass(ticker);
+    const longTermReturn = ASSET_CLASS_RETURNS[assetClass];
+    const longTermVol = ASSET_CLASS_VOLATILITIES[assetClass];
     
-    console.log(`📊 ${ticker} statistics:`, {
-      avgDailyReturn: (avgDailyReturn * 100).toFixed(3) + '%',
-      dailyVolatility: (dailyVolatility * 100).toFixed(3) + '%',
-      annualizedVolatility: (annualizedVolatility * 100).toFixed(1) + '%',
-      dataPoints: dailyReturns.length
+    // Year 1: Use ACTUAL historical volatility (no cap)
+    // This reflects the true risk profile of each individual stock
+    
+    // Year 1: Daily drift with volatility drag correction
+    const year1DailyDrift = year1DailyReturn - 0.5 * year1DailyVol * year1DailyVol;
+    
+    // Convert long-term annual stats to daily (Years 2+)
+    const longTermDailyReturn = longTermReturn / TRADING_DAYS_PER_YEAR;
+    const longTermDailyVol = longTermVol / Math.sqrt(TRADING_DAYS_PER_YEAR);
+    const longTermDailyDrift = longTermDailyReturn - 0.5 * longTermDailyVol * longTermDailyVol;
+    
+    console.log(`📊 ${ticker} blended statistics:`, {
+      assetClass,
+      year1AnnualReturn: (year1DailyReturn * TRADING_DAYS_PER_YEAR * 100).toFixed(1) + '%',
+      year1AnnualVol: (year1AnnualVol * 100).toFixed(1) + '%',
+      longTermReturn: (longTermReturn * 100).toFixed(1) + '%',
+      longTermVol: (longTermVol * 100).toFixed(1) + '%',
+      timeHorizon: timeHorizon + ' years'
     });
     
-    // Number of trading days to simulate
-    const tradingDays = Math.round(timeHorizon * TRADING_DAYS_PER_YEAR);
-    
-    // Run simulations
+    // Arrays to collect results across all simulations
     const finalReturns: number[] = [];
+    const singleYearReturns: number[] = [];  // All single-year returns for upside/downside
+    
+    const totalYears = Math.ceil(timeHorizon);
     
     for (let sim = 0; sim < SIMULATIONS; sim++) {
       let price = currentPrice;
       
-      // Geometric Brownian Motion
-      for (let day = 0; day < tradingDays; day++) {
-        const randomReturn = randomNormal(avgDailyReturn, dailyVolatility);
-        price = price * (1 + randomReturn);
+      // Simulate each year
+      for (let year = 0; year < totalYears; year++) {
+        const yearStartPrice = price;
+        
+        // Determine which parameters to use
+        // Year 1 (year === 0): Use historical data (capped volatility)
+        // Years 2+: Use asset class averages
+        const dailyDrift = year === 0 ? year1DailyDrift : longTermDailyDrift;
+        const dailyVol = year === 0 ? year1DailyVol : longTermDailyVol;
+        
+        // Determine days for this year (handle partial final year)
+        const isLastYear = year === totalYears - 1;
+        const fractionalPart = timeHorizon - Math.floor(timeHorizon);
+        const daysThisYear = isLastYear && fractionalPart > 0 
+          ? Math.round(fractionalPart * TRADING_DAYS_PER_YEAR)
+          : TRADING_DAYS_PER_YEAR;
+        
+        // Simulate this year
+        for (let day = 0; day < daysThisYear; day++) {
+          const z = randomNormal(0, 1);
+          const dailyReturn = Math.exp(dailyDrift + dailyVol * z);
+          price = price * dailyReturn;
+        }
+        
+        // Calculate annual return
+        let yearReturn = (price - yearStartPrice) / yearStartPrice;
+        
+        // If partial year, annualize it for fair comparison
+        if (isLastYear && fractionalPart > 0 && fractionalPart < 1) {
+          yearReturn = Math.pow(1 + yearReturn, 1 / fractionalPart) - 1;
+        }
+        
+        // Collect ALL single-year returns (not just best/worst)
+        // This gives us a distribution of what any single year could look like
+        singleYearReturns.push(yearReturn);
       }
       
-      const totalReturn = (price - currentPrice) / currentPrice;
-      finalReturns.push(totalReturn);
+      // Calculate final return for median calculation
+      const finalReturn = (price - currentPrice) / currentPrice;
+      finalReturns.push(finalReturn);
     }
     
-    // Sort returns to find percentiles
+    // Sort arrays to find percentiles
     finalReturns.sort((a, b) => a - b);
+    singleYearReturns.sort((a, b) => a - b);
     
-    const downsideIdx = Math.floor(SIMULATIONS * 0.05); // 5th percentile
-    const medianIdx = Math.floor(SIMULATIONS * 0.50);   // 50th percentile
-    const upsideIdx = Math.floor(SIMULATIONS * 0.95);   // 95th percentile
-    
-    // Get total returns at each percentile
-    const totalMedian = finalReturns[medianIdx];
-    const totalUpside = finalReturns[upsideIdx];
-    const totalDownside = finalReturns[downsideIdx];
-    
-    // ANNUALIZE the returns so they're comparable to expected returns
-    // Formula: (1 + totalReturn)^(1/years) - 1
-    // Handle negative returns carefully (can't take root of negative)
-    const annualizeReturn = (totalReturn: number, years: number): number => {
-      if (years <= 1) return totalReturn;
-      
-      const growthFactor = 1 + totalReturn;
-      if (growthFactor <= 0) {
-        // Total loss scenario - cap at -99% annualized
-        return -0.99;
-      }
-      return Math.pow(growthFactor, 1 / years) - 1;
+    // Percentile helper
+    const percentile = (arr: number[], p: number): number => {
+      const idx = Math.floor(arr.length * p);
+      return arr[Math.min(idx, arr.length - 1)];
     };
     
+    // Median of final returns (annualized)
+    const totalMedian = percentile(finalReturns, 0.50);
+    const annualizeReturn = (totalReturn: number, years: number): number => {
+      if (years <= 1) return totalReturn;
+      const growthFactor = 1 + totalReturn;
+      if (growthFactor <= 0) return -0.99;
+      return Math.pow(growthFactor, 1 / years) - 1;
+    };
     const median = annualizeReturn(totalMedian, timeHorizon);
-    const upside = annualizeReturn(totalUpside, timeHorizon);
-    const downside = annualizeReturn(totalDownside, timeHorizon);
     
-    console.log(`📊 ${ticker} Monte Carlo (${timeHorizon}yr):`, {
-      totalUpside: (totalUpside * 100).toFixed(1) + '%',
-      totalMedian: (totalMedian * 100).toFixed(1) + '%', 
-      totalDownside: (totalDownside * 100).toFixed(1) + '%',
-      annualizedUpside: (upside * 100).toFixed(1) + '%',
-      annualizedMedian: (median * 100).toFixed(1) + '%',
-      annualizedDownside: (downside * 100).toFixed(1) + '%'
+    // Upside: 95th percentile of ANY single year return
+    // This answers: "What does a good year look like?"
+    const upside = percentile(singleYearReturns, 0.95);
+    
+    // Downside: 5th percentile of ANY single year return
+    // This answers: "What does a bad year look like?"
+    const downside = percentile(singleYearReturns, 0.05);
+    
+    console.log(`📊 ${ticker} Monte Carlo (${timeHorizon}yr blended):`, {
+      medianAnnualized: (median * 100).toFixed(1) + '%',
+      upside: (upside * 100).toFixed(1) + '%',
+      downside: (downside * 100).toFixed(1) + '%'
     });
     
-    // Sanity check: if ANNUALIZED results are extreme, log warning
-    if (Math.abs(upside) > 0.5 || Math.abs(downside) > 0.5) {
-      console.warn(`⚠️ ${ticker} Monte Carlo annualized results seem extreme:`, {
+    // Sanity check - log extreme results for debugging
+    if (upside > 1.0 || downside < -0.70) {
+      console.warn(`⚠️ ${ticker} Monte Carlo results are extreme (high vol stock):`, {
         upside: (upside * 100).toFixed(1) + '%',
-        median: (median * 100).toFixed(1) + '%',
         downside: (downside * 100).toFixed(1) + '%',
-        avgDailyReturn: (avgDailyReturn * 100).toFixed(3) + '%',
-        dailyVolatility: (dailyVolatility * 100).toFixed(3) + '%',
-        timeHorizon: `${timeHorizon} year(s)`
+        year1Vol: (year1AnnualVol * 100).toFixed(1) + '%'
       });
     }
     
@@ -208,7 +304,7 @@ export async function runMonteCarloSimulation(
       median,
       upside,
       downside,
-      volatility: annualizedVolatility,
+      volatility: year1AnnualVol, // Report capped Year 1 volatility
       simulations: SIMULATIONS
     };
   } catch (error) {

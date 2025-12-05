@@ -108,8 +108,25 @@ export async function GET(request: NextRequest) {
       
       // Extract key metrics
       const goals = userInfo?.goals as Record<string, unknown>
-      const portfolio = userInfo?.portfolio_data as Record<string, unknown> & { portfolio_value?: number; holdings?: unknown[]; new_investor?: boolean }
-      const analysis = userInfo?.analysis_results as Record<string, unknown> | null
+      const portfolio = userInfo?.portfolio_data as Record<string, unknown> & { 
+        portfolio_value?: number; 
+        holdings?: unknown[]; 
+        new_investor?: boolean;
+        stocks?: number;
+        bonds?: number;
+        cash?: number;
+      }
+      const analysis = userInfo?.analysis_results as AnalysisResults | null
+      
+      // Extract analysis metrics
+      const analysisMetrics = analysis ? {
+        expectedReturn: analysis.userPortfolio?.expectedReturn ?? 
+                        analysis.comparison?.userPortfolio?.expectedReturn ?? null,
+        timeExpectedReturn: analysis.timePortfolio?.expectedReturn ?? 
+                           analysis.comparison?.timePortfolio?.expectedReturn ?? null,
+        positionsCount: analysis.userPortfolio?.positions?.length || 0
+      } : null
+      
       return {
         ...conversation,
         leadScore,
@@ -121,10 +138,16 @@ export async function GET(request: NextRequest) {
         },
         portfolio: {
           value: portfolio?.portfolio_value,
-          holding: portfolio?.holdings?.length || 0,
-          newInvestor: portfolio?.new_investor
+          holdings: portfolio?.holdings?.length || 0,
+          newInvestor: portfolio?.new_investor,
+          allocation: portfolio ? {
+            stocks: portfolio.stocks || 0,
+            bonds: portfolio.bonds || 0,
+            cash: portfolio.cash || 0
+          } : null
         },
         hasAnalysis: !!analysis,
+        analysisMetrics,
         lastActivity: conversation.updated_at
       }
     }) || []
@@ -161,11 +184,18 @@ export async function GET(request: NextRequest) {
       highValueLeads: enrichedConversations.filter(c => c.leadScore >= 80).length
     }
 
+    // ========================================================================
+    // PORTFOLIO ANALYSIS INSIGHTS
+    // ========================================================================
+    
+    const portfolioInsights = calculatePortfolioInsights(userData || [])
+
     return NextResponse.json({
       success: true,
       data: {
         stats,
         insights,
+        portfolioInsights,
         conversations: enrichedConversations,
         lastUpdated: new Date().toISOString()
       }
@@ -297,4 +327,209 @@ function getPortfolioSizeDistribution(conversations: Array<{ portfolio?: { value
   })
   
   return distribution
+}
+
+// ============================================================================
+// PORTFOLIO ANALYSIS INSIGHTS
+// ============================================================================
+
+interface AnalysisResults {
+  userPortfolio?: {
+    expectedReturn?: number
+    totalValue?: number
+    positions?: Array<{
+      ticker: string
+      name: string
+      weight: number
+      expectedReturn?: number | null
+      monteCarlo?: {
+        median: number
+        upside: number
+        downside: number
+        volatility: number
+      } | null
+    }>
+  }
+  timePortfolio?: {
+    expectedReturn?: number
+    totalValue?: number
+  }
+  comparison?: {
+    userPortfolio?: {
+      expectedReturn?: number
+      totalValue?: number
+    }
+    timePortfolio?: {
+      expectedReturn?: number
+    }
+  }
+}
+
+interface PortfolioData {
+  portfolio_value?: number
+  stocks?: number
+  bonds?: number
+  cash?: number
+  realEstate?: number
+  commodities?: number
+  alternatives?: number
+  holdings?: Array<unknown>
+}
+
+interface UserDataRecord {
+  analysis_results?: unknown
+  portfolio_data?: unknown
+}
+
+function calculatePortfolioInsights(userDataList: UserDataRecord[]): {
+  avgExpectedReturn: number | null
+  avgPortfolioValue: number | null
+  totalAUM: number
+  assetAllocationDistribution: Record<string, number>
+  riskDistribution: { low: number; medium: number; high: number }
+  completedAnalysisWithData: number
+  avgTimePortfolioReturn: number | null
+  returnComparison: {
+    userAvg: number | null
+    timeAvg: number | null
+    difference: number | null
+  }
+} {
+  const analysisData: AnalysisResults[] = []
+  const portfolioData: PortfolioData[] = []
+  
+  // Extract analysis and portfolio data
+  userDataList.forEach(ud => {
+    if (ud.analysis_results) {
+      analysisData.push(ud.analysis_results as AnalysisResults)
+    }
+    if (ud.portfolio_data) {
+      portfolioData.push(ud.portfolio_data as PortfolioData)
+    }
+  })
+  
+  // Calculate average expected return from analysis results
+  const expectedReturns: number[] = []
+  const timeReturns: number[] = []
+  
+  analysisData.forEach(analysis => {
+    // Try different paths where expected return might be stored
+    const userReturn = analysis.userPortfolio?.expectedReturn ?? 
+                       analysis.comparison?.userPortfolio?.expectedReturn
+    const timeReturn = analysis.timePortfolio?.expectedReturn ?? 
+                       analysis.comparison?.timePortfolio?.expectedReturn
+    
+    if (typeof userReturn === 'number' && !isNaN(userReturn)) {
+      expectedReturns.push(userReturn)
+    }
+    if (typeof timeReturn === 'number' && !isNaN(timeReturn)) {
+      timeReturns.push(timeReturn)
+    }
+  })
+  
+  const avgExpectedReturn = expectedReturns.length > 0
+    ? expectedReturns.reduce((sum, r) => sum + r, 0) / expectedReturns.length
+    : null
+    
+  const avgTimePortfolioReturn = timeReturns.length > 0
+    ? timeReturns.reduce((sum, r) => sum + r, 0) / timeReturns.length
+    : null
+  
+  // Calculate average portfolio value and total AUM
+  const portfolioValues: number[] = []
+  portfolioData.forEach(pd => {
+    if (typeof pd.portfolio_value === 'number' && pd.portfolio_value > 0) {
+      portfolioValues.push(pd.portfolio_value)
+    }
+  })
+  
+  const avgPortfolioValue = portfolioValues.length > 0
+    ? portfolioValues.reduce((sum, v) => sum + v, 0) / portfolioValues.length
+    : null
+    
+  const totalAUM = portfolioValues.reduce((sum, v) => sum + v, 0)
+  
+  // Calculate asset allocation distribution (aggregated percentages)
+  const assetAllocation = {
+    stocks: 0,
+    bonds: 0,
+    cash: 0,
+    realEstate: 0,
+    commodities: 0,
+    alternatives: 0
+  }
+  let allocationCount = 0
+  
+  portfolioData.forEach(pd => {
+    const hasAllocation = pd.stocks !== undefined || pd.bonds !== undefined || 
+                          pd.cash !== undefined || pd.realEstate !== undefined
+    if (hasAllocation) {
+      assetAllocation.stocks += pd.stocks || 0
+      assetAllocation.bonds += pd.bonds || 0
+      assetAllocation.cash += pd.cash || 0
+      assetAllocation.realEstate += pd.realEstate || 0
+      assetAllocation.commodities += pd.commodities || 0
+      assetAllocation.alternatives += pd.alternatives || 0
+      allocationCount++
+    }
+  })
+  
+  // Average the allocations
+  const assetAllocationDistribution: Record<string, number> = {}
+  if (allocationCount > 0) {
+    assetAllocationDistribution['Stocks'] = Math.round(assetAllocation.stocks / allocationCount)
+    assetAllocationDistribution['Bonds'] = Math.round(assetAllocation.bonds / allocationCount)
+    assetAllocationDistribution['Cash'] = Math.round(assetAllocation.cash / allocationCount)
+    assetAllocationDistribution['Real Estate'] = Math.round(assetAllocation.realEstate / allocationCount)
+    assetAllocationDistribution['Commodities'] = Math.round(assetAllocation.commodities / allocationCount)
+    assetAllocationDistribution['Alternatives'] = Math.round(assetAllocation.alternatives / allocationCount)
+  }
+  
+  // Calculate risk distribution based on Monte Carlo volatility
+  const riskDistribution = { low: 0, medium: 0, high: 0 }
+  
+  analysisData.forEach(analysis => {
+    const positions = analysis.userPortfolio?.positions || []
+    if (positions.length > 0) {
+      // Calculate weighted average volatility
+      let totalVolatility = 0
+      let totalWeight = 0
+      
+      positions.forEach(pos => {
+        if (pos.monteCarlo?.volatility && pos.weight) {
+          totalVolatility += pos.monteCarlo.volatility * pos.weight
+          totalWeight += pos.weight
+        }
+      })
+      
+      if (totalWeight > 0) {
+        const avgVolatility = totalVolatility / totalWeight
+        // Classify risk: low (<15%), medium (15-25%), high (>25%)
+        if (avgVolatility < 0.15) {
+          riskDistribution.low++
+        } else if (avgVolatility < 0.25) {
+          riskDistribution.medium++
+        } else {
+          riskDistribution.high++
+        }
+      }
+    }
+  })
+  
+  return {
+    avgExpectedReturn,
+    avgPortfolioValue,
+    totalAUM,
+    assetAllocationDistribution,
+    riskDistribution,
+    completedAnalysisWithData: analysisData.length,
+    avgTimePortfolioReturn,
+    returnComparison: {
+      userAvg: avgExpectedReturn,
+      timeAvg: avgTimePortfolioReturn,
+      difference: avgExpectedReturn !== null && avgTimePortfolioReturn !== null
+        ? avgExpectedReturn - avgTimePortfolioReturn
+        : null
+    }
+  }
 }

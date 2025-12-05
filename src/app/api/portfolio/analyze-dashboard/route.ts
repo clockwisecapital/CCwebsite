@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Save to Supabase (store raw intake data and analysis)
+    // Save to Supabase (store raw intake data and analysis INCLUDING portfolio comparison)
     try {
       await saveSessionState({
         sessionId,
@@ -213,13 +213,17 @@ export async function POST(request: NextRequest) {
           timeline_years: transformedData.goals.horizon_years,
         },
         portfolio: {
-          portfolio_value: 0, // Not tracked in dashboard format
+          portfolio_value: calculatedPortfolioValue || 0,
           holdings: Object.entries(transformedData.portfolio.allocations as Record<string, number>)
             .filter(([, value]) => value > 0)
             .map(([name, value]) => ({ name, value })),
         },
         analysis: {
           ...analysis,
+          // Include portfolio comparison data for admin dashboard
+          userPortfolio: portfolioComparison?.userPortfolio || null,
+          timePortfolio: portfolioComparison?.timePortfolio || null,
+          timeHorizon: intakeData.timeHorizon || 10,
           completed_at: new Date().toISOString(),
           market_context: marketData,
           user_data: {
@@ -230,7 +234,7 @@ export async function POST(request: NextRequest) {
           raw_intake: intakeData,
         } as Record<string, unknown>,
       });
-      console.log('✅ Analysis saved to Supabase');
+      console.log('✅ Analysis saved to Supabase (with portfolio comparison)');
       
       // Save intake form data to dedicated table
       const conversation = await getConversationBySessionId(sessionId);

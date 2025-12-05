@@ -9,14 +9,15 @@
 import type { MonteCarloResult } from '@/types/portfolio';
 import type { IntakeFormData } from '@/components/features/portfolio/dashboard/PortfolioDashboard';
 
-// Long-term historical average returns (nominal) provided by client
+// Long-term historical average returns (REAL - inflation-adjusted)
+// Based on 100+ years of historical data (Ibbotson/Morningstar)
 export const LONG_TERM_AVERAGES = {
-  stocks: 0.10,      // 10%
-  bonds: 0.05,       // 5%
-  realEstate: 0.10,  // 10%
-  commodities: 0.05, // 5%
-  cash: 0.03,        // 3%
-  alternatives: 0.08 // 8% (estimated blend)
+  stocks: 0.07,      // 7% real (vs 10% nominal)
+  bonds: 0.02,       // 2% real (vs 5% nominal)
+  realEstate: 0.05,  // 5% real
+  commodities: 0.01, // 1% real
+  cash: 0.00,        // 0% real (matches inflation)
+  alternatives: 0.05 // 5% real (blend of alternatives)
 } as const;
 
 interface GoalProbabilityInput {

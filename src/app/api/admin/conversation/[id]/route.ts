@@ -65,10 +65,33 @@ export async function GET(
       .single()
 
     // ========================================================================
+    // GET INTAKE FORM DATA
+    // ========================================================================
+    
+    const { data: intakeForm } = await supabase
+      .from('intake_forms')
+      .select('*')
+      .eq('conversation_id', conversationId)
+      .single()
+
+    // ========================================================================
     // ENRICH CONVERSATION DATA
     // ========================================================================
     
     const safeMessages = messages || []
+
+    // Parse analysis results for detailed display
+    const analysisResults = userData?.analysis_results as AnalysisResultsData | null
+    const portfolioData = userData?.portfolio_data as PortfolioDataRecord | null
+    
+    // Get portfolio value from multiple possible sources
+    const portfolioValue = portfolioData?.portfolio_value || 
+                          intakeForm?.portfolio_total_value || 
+                          0
+
+    // Check if we have portfolio comparison data (new format) or just AI analysis (old format)
+    const hasPortfolioComparison = !!(analysisResults?.userPortfolio?.expectedReturn || 
+                                      analysisResults?.comparison?.userPortfolio?.expectedReturn)
 
     const enrichedConversation = {
       ...conversation,
@@ -83,6 +106,74 @@ export async function GET(
         analysis: userData.analysis_results,
         created_at: userData.created_at,
         updated_at: userData.updated_at
+      } : null,
+      // Structured portfolio analysis data for UI display
+      portfolioAnalysis: analysisResults ? {
+        userPortfolio: {
+          expectedReturn: analysisResults.userPortfolio?.expectedReturn ?? 
+                         analysisResults.comparison?.userPortfolio?.expectedReturn ?? null,
+          totalValue: analysisResults.userPortfolio?.totalValue ?? 
+                     portfolioValue,
+          positions: analysisResults.userPortfolio?.positions || [],
+          topPositions: analysisResults.userPortfolio?.topPositions || 
+                       (analysisResults.userPortfolio?.positions || []).slice(0, 5),
+          isUsingProxy: analysisResults.userPortfolio?.isUsingProxy || false,
+          proxyMessage: analysisResults.userPortfolio?.proxyMessage
+        },
+        timePortfolio: {
+          expectedReturn: analysisResults.timePortfolio?.expectedReturn ?? 
+                         analysisResults.comparison?.timePortfolio?.expectedReturn ?? null,
+          totalValue: analysisResults.timePortfolio?.totalValue ?? portfolioValue,
+          positions: analysisResults.timePortfolio?.positions || [],
+          topPositions: analysisResults.timePortfolio?.topPositions || 
+                       (analysisResults.timePortfolio?.positions || []).slice(0, 5)
+        },
+        timeHorizon: analysisResults.timeHorizon || intakeForm?.time_horizon || null,
+        returnDifference: calculateReturnDifference(analysisResults),
+        // Include AI analysis metrics for older records without Monte Carlo data
+        aiAnalysis: !hasPortfolioComparison ? {
+          riskLevel: (analysisResults as Record<string, unknown>)?.riskLevel,
+          beta: (analysisResults as Record<string, unknown>)?.beta,
+          volatility: (analysisResults as Record<string, unknown>)?.volatility,
+          marketImpact: (analysisResults as Record<string, unknown>)?.marketImpact,
+          portfolioImpact: (analysisResults as Record<string, unknown>)?.portfolioImpact,
+          goalImpact: (analysisResults as Record<string, unknown>)?.goalImpact,
+          metrics: (analysisResults as Record<string, unknown>)?.metrics,
+        } : null
+      } : null,
+      // Asset allocation - prioritize intake form data (more reliable)
+      assetAllocation: intakeForm ? {
+        stocks: intakeForm.portfolio_stocks || portfolioData?.stocks || 0,
+        bonds: intakeForm.portfolio_bonds || portfolioData?.bonds || 0,
+        cash: intakeForm.portfolio_cash || portfolioData?.cash || 0,
+        realEstate: intakeForm.portfolio_real_estate || portfolioData?.realEstate || 0,
+        commodities: intakeForm.portfolio_commodities || portfolioData?.commodities || 0,
+        alternatives: intakeForm.portfolio_alternatives || portfolioData?.alternatives || 0
+      } : portfolioData ? {
+        stocks: portfolioData.stocks || 0,
+        bonds: portfolioData.bonds || 0,
+        cash: portfolioData.cash || 0,
+        realEstate: portfolioData.realEstate || 0,
+        commodities: portfolioData.commodities || 0,
+        alternatives: portfolioData.alternatives || 0
+      } : null,
+      // Risk metrics from Monte Carlo data
+      riskMetrics: analysisResults?.userPortfolio?.positions 
+        ? calculateRiskMetrics(analysisResults.userPortfolio.positions)
+        : null,
+      // Intake form context
+      intakeFormData: intakeForm ? {
+        age: intakeForm.age,
+        experienceLevel: intakeForm.experience_level,
+        riskTolerance: intakeForm.risk_tolerance,
+        firstName: intakeForm.first_name,
+        lastName: intakeForm.last_name,
+        goalAmount: intakeForm.goal_amount,
+        goalDescription: intakeForm.goal_description,
+        timeHorizon: intakeForm.time_horizon,
+        monthlyContribution: intakeForm.monthly_contribution,
+        portfolioTotalValue: intakeForm.portfolio_total_value,
+        specificHoldings: intakeForm.specific_holdings
       } : null,
       leadScore: calculateLeadScore(
         { 
@@ -145,6 +236,143 @@ type UserDataRecord = {
   goals?: Record<string, unknown>
   portfolio_data?: { portfolio_value?: number }
   analysis_results?: Record<string, unknown>
+}
+
+// Portfolio Analysis Types
+interface PositionData {
+  ticker: string
+  name: string
+  weight: number
+  currentPrice?: number
+  targetPrice?: number | null
+  expectedReturn?: number | null
+  monteCarlo?: {
+    median: number
+    upside: number
+    downside: number
+    volatility: number
+    simulations?: number
+  } | null
+  isProxy?: boolean
+  assetClass?: string
+}
+
+interface PortfolioDataRecord {
+  portfolio_value?: number
+  stocks?: number
+  bonds?: number
+  cash?: number
+  realEstate?: number
+  commodities?: number
+  alternatives?: number
+  holdings?: unknown[]
+  new_investor?: boolean
+}
+
+interface AnalysisResultsData {
+  userPortfolio?: {
+    expectedReturn?: number
+    totalValue?: number
+    positions?: PositionData[]
+    topPositions?: PositionData[]
+    isUsingProxy?: boolean
+    proxyMessage?: string
+  }
+  timePortfolio?: {
+    expectedReturn?: number
+    totalValue?: number
+    positions?: PositionData[]
+    topPositions?: PositionData[]
+  }
+  comparison?: {
+    userPortfolio?: {
+      expectedReturn?: number
+      totalValue?: number
+    }
+    timePortfolio?: {
+      expectedReturn?: number
+    }
+  }
+  timeHorizon?: number
+}
+
+function calculateReturnDifference(analysis: AnalysisResultsData): number | null {
+  const userReturn = analysis.userPortfolio?.expectedReturn ?? 
+                     analysis.comparison?.userPortfolio?.expectedReturn
+  const timeReturn = analysis.timePortfolio?.expectedReturn ?? 
+                     analysis.comparison?.timePortfolio?.expectedReturn
+  
+  if (typeof userReturn === 'number' && typeof timeReturn === 'number') {
+    return userReturn - timeReturn
+  }
+  return null
+}
+
+function calculateRiskMetrics(positions: PositionData[]): {
+  portfolioVolatility: number | null
+  maxUpside: number | null
+  maxDownside: number | null
+  medianReturn: number | null
+  riskLevel: 'low' | 'medium' | 'high' | null
+} {
+  if (!positions || positions.length === 0) {
+    return {
+      portfolioVolatility: null,
+      maxUpside: null,
+      maxDownside: null,
+      medianReturn: null,
+      riskLevel: null
+    }
+  }
+
+  let totalVolatility = 0
+  let totalUpside = 0
+  let totalDownside = 0
+  let totalMedian = 0
+  let totalWeight = 0
+
+  positions.forEach(pos => {
+    if (pos.monteCarlo && pos.weight) {
+      totalVolatility += pos.monteCarlo.volatility * pos.weight
+      totalUpside += pos.monteCarlo.upside * pos.weight
+      totalDownside += pos.monteCarlo.downside * pos.weight
+      totalMedian += pos.monteCarlo.median * pos.weight
+      totalWeight += pos.weight
+    }
+  })
+
+  if (totalWeight === 0) {
+    return {
+      portfolioVolatility: null,
+      maxUpside: null,
+      maxDownside: null,
+      medianReturn: null,
+      riskLevel: null
+    }
+  }
+
+  const portfolioVolatility = totalVolatility / totalWeight
+  const maxUpside = totalUpside / totalWeight
+  const maxDownside = totalDownside / totalWeight
+  const medianReturn = totalMedian / totalWeight
+
+  // Classify risk: low (<15%), medium (15-25%), high (>25%)
+  let riskLevel: 'low' | 'medium' | 'high'
+  if (portfolioVolatility < 0.15) {
+    riskLevel = 'low'
+  } else if (portfolioVolatility < 0.25) {
+    riskLevel = 'medium'
+  } else {
+    riskLevel = 'high'
+  }
+
+  return {
+    portfolioVolatility,
+    maxUpside,
+    maxDownside,
+    medianReturn,
+    riskLevel
+  }
 }
 
 type MessageRecord = {

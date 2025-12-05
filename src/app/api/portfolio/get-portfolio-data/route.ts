@@ -183,9 +183,9 @@ export async function POST(request: NextRequest) {
       // Log Monte Carlo results for debugging
       if (monteCarlo) {
         console.log(`📊 ${holding.ticker} Monte Carlo:`, {
-          upside: (monteCarlo.upside * 100).toFixed(1) + '%',
           median: (monteCarlo.median * 100).toFixed(1) + '%',
-          downside: (monteCarlo.downside * 100).toFixed(1) + '%',
+          maxGain: (monteCarlo.upside * 100).toFixed(1) + '%',
+          maxLoss: (monteCarlo.downside * 100).toFixed(1) + '%',
           volatility: (monteCarlo.volatility * 100).toFixed(1) + '%'
         });
       }
@@ -216,18 +216,14 @@ export async function POST(request: NextRequest) {
     // This is the Year 1 FactSet-based return
     const userYear1Return = calculateWeightedReturn(userPositions);
     
-    // For single proxy ETF (e.g., 100% SPY), use the ETF's own return without blending
-    // Otherwise, blend Year 1 FactSet with Years 2+ long-term asset class averages
-    const isSingleProxy = isUsingProxy && finalUserHoldings.length === 1;
-    
-    console.log(`🔍 Debug - isUsingProxy: ${isUsingProxy}, finalUserHoldings.length: ${finalUserHoldings.length}, isSingleProxy: ${isSingleProxy}`);
+    // ALWAYS blend Year 1 FactSet with Years 2+ long-term asset class averages for multi-year horizons
+    // This ensures consistent methodology across all portfolios
+    console.log(`🔍 Debug - isUsingProxy: ${isUsingProxy}, finalUserHoldings.length: ${finalUserHoldings.length}`);
     console.log(`🔍 Debug - userYear1Return: ${(userYear1Return * 100).toFixed(1)}%, longTermReturn: ${(longTermReturn * 100).toFixed(1)}%, timeHorizon: ${timeHorizon}`);
     
-    const userExpectedReturn = isSingleProxy 
-      ? userYear1Return  // Use ETF's own expected return for all years
-      : calculateBlendedReturn(userYear1Return, longTermReturn, timeHorizon);
+    const userExpectedReturn = calculateBlendedReturn(userYear1Return, longTermReturn, timeHorizon);
     
-    console.log(`📊 User Portfolio - Year 1: ${(userYear1Return * 100).toFixed(1)}%, ${isSingleProxy ? 'Single proxy' : `Blended (${timeHorizon}yr)`}: ${(userExpectedReturn * 100).toFixed(1)}%`);
+    console.log(`📊 User Portfolio - Year 1: ${(userYear1Return * 100).toFixed(1)}%, Blended (${timeHorizon}yr): ${(userExpectedReturn * 100).toFixed(1)}%`);
 
     // Get top 5 user positions by weight
     const userTopPositions = [...userPositions]
@@ -263,7 +259,7 @@ export async function POST(request: NextRequest) {
     // This is the Year 1 FactSet-based return
     const timeYear1Return = calculateWeightedReturn(timePositions);
     
-    // TIME portfolio is predominantly stocks, use stocks average for long-term
+    // TIME portfolio uses same long-term stocks average as other portfolios
     const timeLongTermReturn = LONG_TERM_AVERAGES.stocks;
     const timeExpectedReturn = calculateBlendedReturn(timeYear1Return, timeLongTermReturn, timeHorizon);
     
