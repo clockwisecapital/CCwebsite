@@ -149,13 +149,19 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
                         <div>
                           <div className="text-gray-400">Upside</div>
                           <div className="font-semibold text-emerald-400">
-                            {position.monteCarlo ? formatPercent(position.monteCarlo.upside) : 'N/A'}
+                            {/* For single proxy portfolio, use portfolio-level Monte Carlo to ensure consistency */}
+                            {isSingleProxy && portfolioComparison.userPortfolio.portfolioMonteCarlo
+                              ? formatPercent(portfolioComparison.userPortfolio.portfolioMonteCarlo.upside)
+                              : position.monteCarlo ? formatPercent(position.monteCarlo.upside) : 'N/A'}
                           </div>
                         </div>
                         <div>
                           <div className="text-gray-400">Downside</div>
                           <div className="font-semibold text-rose-400">
-                            {position.monteCarlo ? formatPercent(position.monteCarlo.downside) : 'N/A'}
+                            {/* For single proxy portfolio, use portfolio-level Monte Carlo to ensure consistency */}
+                            {isSingleProxy && portfolioComparison.userPortfolio.portfolioMonteCarlo
+                              ? formatPercent(portfolioComparison.userPortfolio.portfolioMonteCarlo.downside)
+                              : position.monteCarlo ? formatPercent(position.monteCarlo.downside) : 'N/A'}
                           </div>
                         </div>
                       </div>
