@@ -53,6 +53,16 @@ const TICKER_TO_ASSET_CLASS: Record<string, keyof typeof ASSET_CLASS_RETURNS> = 
 export type AssetClass = keyof typeof ASSET_CLASS_RETURNS;
 
 /**
+ * Portfolio-level Monte Carlo result
+ */
+export interface PortfolioMonteCarloResult {
+  upside: number;      // 95th percentile of annual returns (diversified)
+  downside: number;    // 5th percentile of annual returns (diversified)
+  median: number;      // 50th percentile annualized return
+  simulations: number;
+}
+
+/**
  * Fetch historical price data from Yahoo Finance
  */
 export async function fetchHistoricalPrices(
@@ -431,5 +441,130 @@ export async function fetchBatchCurrentPrices(tickers: string[]): Promise<Map<st
   console.log(`✅ Prices fetched: ${prices.size}/${totalTickers} in ${elapsed}s`);
   
   return prices;
+}
+
+/**
+ * Run Monte Carlo simulation at the PORTFOLIO level
+ * 
+ * Uses ASSET CLASS WEIGHTED AVERAGES for both return and volatility.
+ * This is simple, accurate, and captures diversification automatically:
+ * - Stocks: 18% volatility, 7% long-term return
+ * - Bonds: 6% volatility, 2% long-term return
+ * - A 60/40 portfolio: ~13% volatility, ~5% long-term return
+ * 
+ * Year 1: Uses Clockwise/FactSet targets for return, asset class volatility
+ * Years 2+: Uses asset class averages for both return and volatility
+ * 
+ * @param positions - Array of positions with weights and parameters
+ * @param timeHorizon - Investment horizon in years
+ * @returns Portfolio-level upside, downside, and median
+ */
+export function runPortfolioMonteCarloSimulation(
+  positions: Array<{
+    weight: number;           // As decimal (0.08 for 8%)
+    year1Return: number;      // Pre-calculated Year 1 expected return
+    year1Volatility: number;  // Not used - kept for interface compatibility
+    assetClass: AssetClass;   // Determines volatility and long-term return
+  }>,
+  timeHorizon: number = 1
+): PortfolioMonteCarloResult {
+  const allPortfolioAnnualReturns: number[] = [];
+  const finalPortfolioReturns: number[] = [];
+  
+  const totalYears = Math.ceil(timeHorizon);
+  
+  // ============================================
+  // SIMPLE APPROACH: Asset Class Weighted Averages
+  // ============================================
+  let year1PortfolioReturn = 0;
+  let portfolioVolatility = 0;
+  let longTermReturn = 0;
+  
+  for (const position of positions) {
+    // Year 1 return: weighted average of position-specific returns (Clockwise/FactSet targets)
+    year1PortfolioReturn += position.weight * position.year1Return;
+    
+    // Volatility: weighted average of ASSET CLASS volatilities
+    // This automatically captures diversification (stocks=18%, bonds=6%, etc.)
+    portfolioVolatility += position.weight * ASSET_CLASS_VOLATILITIES[position.assetClass];
+    
+    // Long-term return (Years 2+): weighted average of ASSET CLASS returns
+    longTermReturn += position.weight * ASSET_CLASS_RETURNS[position.assetClass];
+  }
+  
+  console.log(`📊 Running portfolio-level Monte Carlo:`, {
+    positions: positions.length,
+    year1Return: (year1PortfolioReturn * 100).toFixed(1) + '%',
+    longTermReturn: (longTermReturn * 100).toFixed(1) + '%',
+    portfolioVol: (portfolioVolatility * 100).toFixed(1) + '%',
+    timeHorizon: timeHorizon + ' years',
+    simulations: SIMULATIONS
+  });
+  
+  for (let sim = 0; sim < SIMULATIONS; sim++) {
+    let portfolioValue = 1.0;
+    
+    for (let year = 0; year < totalYears; year++) {
+      // Year 1: Use Clockwise/FactSet target returns
+      // Years 2+: Use long-term ASSET CLASS average returns
+      const expectedReturn = year === 0 ? year1PortfolioReturn : longTermReturn;
+      
+      // Volatility: Use asset class weighted volatility for ALL years
+      const volatility = portfolioVolatility;
+      
+      // Single random shock for the portfolio
+      const z = randomNormal(0, 1);
+      
+      // Calculate portfolio annual return using log-normal with volatility drag
+      const annualDrift = expectedReturn - 0.5 * volatility * volatility;
+      const portfolioYearReturn = Math.exp(annualDrift + volatility * z) - 1;
+      
+      // Collect this year's portfolio return
+      allPortfolioAnnualReturns.push(portfolioYearReturn);
+      
+      // Update portfolio value
+      portfolioValue *= (1 + portfolioYearReturn);
+    }
+    
+    // Collect final portfolio return
+    finalPortfolioReturns.push(portfolioValue - 1);
+  }
+  
+  // Sort to find percentiles
+  allPortfolioAnnualReturns.sort((a, b) => a - b);
+  finalPortfolioReturns.sort((a, b) => a - b);
+  
+  // Percentile helper
+  const percentile = (arr: number[], p: number): number => {
+    const idx = Math.floor(arr.length * p);
+    return arr[Math.min(idx, arr.length - 1)];
+  };
+  
+  // Annualize the median final return
+  const totalMedian = percentile(finalPortfolioReturns, 0.50);
+  const annualizeReturn = (totalReturn: number, years: number): number => {
+    if (years <= 1) return totalReturn;
+    const growthFactor = 1 + totalReturn;
+    if (growthFactor <= 0) return -0.99;
+    return Math.pow(growthFactor, 1 / years) - 1;
+  };
+  const median = annualizeReturn(totalMedian, timeHorizon);
+  
+  const upside = percentile(allPortfolioAnnualReturns, 0.95);
+  const downside = percentile(allPortfolioAnnualReturns, 0.05);
+  
+  console.log(`📊 Portfolio Monte Carlo results:`, {
+    upside: (upside * 100).toFixed(1) + '%',
+    downside: (downside * 100).toFixed(1) + '%',
+    median: (median * 100).toFixed(1) + '%',
+    totalAnnualReturns: allPortfolioAnnualReturns.length
+  });
+  
+  return {
+    upside,
+    downside,
+    median,
+    simulations: SIMULATIONS
+  };
 }
 

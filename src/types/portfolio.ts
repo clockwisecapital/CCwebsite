@@ -43,6 +43,8 @@ export interface PortfolioComparison {
   userPortfolio: {
     totalValue: number;
     expectedReturn: number;           // Blended weighted average (Year 1 FactSet + Years 2+ long-term)
+    upside: number;                   // Portfolio-level 95th percentile annual return (diversified)
+    downside: number;                 // Portfolio-level 5th percentile annual return (diversified)
     positions: PositionAnalysis[];
     topPositions: PositionAnalysis[];  // Top 5 by weight
     isUsingProxy: boolean;            // True if using representative ETFs
@@ -51,6 +53,8 @@ export interface PortfolioComparison {
   timePortfolio: {
     totalValue: number;
     expectedReturn: number;           // Blended weighted average (Year 1 FactSet + Years 2+ long-term)
+    upside: number;                   // Portfolio-level 95th percentile annual return (diversified)
+    downside: number;                 // Portfolio-level 5th percentile annual return (diversified)
     positions: PositionAnalysis[];
     topPositions: PositionAnalysis[];  // Top 5 by weight
   };

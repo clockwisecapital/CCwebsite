@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTgtPrices, getHoldingWeights, getIndexSectorTargets } from '@/lib/supabase/database';
-import { fetchBatchCurrentPrices, runBatchMonteCarloSimulations } from '@/lib/services/monte-carlo';
+import { fetchBatchCurrentPrices, runBatchMonteCarloSimulations, runPortfolioMonteCarloSimulation } from '@/lib/services/monte-carlo';
+import type { AssetClass } from '@/lib/services/monte-carlo';
 import { createProxyPortfolio, getProxyMessage, REPRESENTATIVE_ETFS } from '@/lib/services/proxy-portfolio';
 import { LONG_TERM_AVERAGES } from '@/lib/services/goal-probability';
 import { calculateYear1Return, getRequiredUnderlyingTickers } from '@/lib/services/year1-return';
@@ -267,6 +268,28 @@ export async function POST(request: NextRequest) {
       .sort((a, b) => b.weight - a.weight)
       .slice(0, 5);
 
+    // Run Portfolio-Level Monte Carlo for User Portfolio (captures diversification)
+    const userPortfolioMCPositions = userPositions
+      .filter(p => p.monteCarlo && p.ticker !== 'CASH')
+      .map(p => ({
+        weight: p.weight / 100, // Convert to decimal
+        year1Return: year1Returns.get(p.ticker) || 0,
+        year1Volatility: p.monteCarlo!.volatility,
+        assetClass: (p.assetClass?.toLowerCase().includes('bond') ? 'bonds' :
+                    p.assetClass?.toLowerCase().includes('real') ? 'realEstate' :
+                    p.assetClass?.toLowerCase().includes('cash') ? 'cash' :
+                    'stocks') as AssetClass
+      }));
+    
+    const userPortfolioMC = userPortfolioMCPositions.length > 0
+      ? runPortfolioMonteCarloSimulation(userPortfolioMCPositions, timeHorizon)
+      : { upside: 0, downside: 0, median: 0, simulations: 0 };
+    
+    console.log(`📊 User Portfolio-Level Monte Carlo:`, {
+      upside: (userPortfolioMC.upside * 100).toFixed(1) + '%',
+      downside: (userPortfolioMC.downside * 100).toFixed(1) + '%'
+    });
+
     // 8. Build TIME Portfolio Analysis
     const totalTimeWeight = timeHoldings.reduce((sum, h) => sum + h.weightings, 0);
     
@@ -328,6 +351,25 @@ export async function POST(request: NextRequest) {
       .sort((a, b) => b.weight - a.weight)
       .slice(0, 5);
 
+    // Run Portfolio-Level Monte Carlo for TIME Portfolio (captures diversification)
+    const timePortfolioMCPositions = timePositions
+      .filter(p => p.monteCarlo)
+      .map(p => ({
+        weight: p.weight / 100, // Convert to decimal
+        year1Return: year1Returns.get(p.ticker) || 0,
+        year1Volatility: p.monteCarlo!.volatility,
+        assetClass: 'stocks' as AssetClass // TIME portfolio is primarily stocks
+      }));
+    
+    const timePortfolioMC = timePortfolioMCPositions.length > 0
+      ? runPortfolioMonteCarloSimulation(timePortfolioMCPositions, timeHorizon)
+      : { upside: 0, downside: 0, median: 0, simulations: 0 };
+    
+    console.log(`📊 TIME Portfolio-Level Monte Carlo:`, {
+      upside: (timePortfolioMC.upside * 100).toFixed(1) + '%',
+      downside: (timePortfolioMC.downside * 100).toFixed(1) + '%'
+    });
+
     // Calculate TIME portfolio value (same as user's for comparison)
     const timePortfolioValue = portfolioValue;
 
@@ -336,6 +378,8 @@ export async function POST(request: NextRequest) {
       userPortfolio: {
         totalValue: portfolioValue,
         expectedReturn: userExpectedReturn,
+        upside: userPortfolioMC.upside,     // Portfolio-level (diversified)
+        downside: userPortfolioMC.downside, // Portfolio-level (diversified)
         positions: userPositions,
         topPositions: userTopPositions,
         isUsingProxy: isUsingProxy,
@@ -344,6 +388,8 @@ export async function POST(request: NextRequest) {
       timePortfolio: {
         totalValue: timePortfolioValue,
         expectedReturn: timeExpectedReturn,
+        upside: timePortfolioMC.upside,     // Portfolio-level (diversified)
+        downside: timePortfolioMC.downside, // Portfolio-level (diversified)
         positions: timePositions,
         topPositions: timeTopPositions
       },

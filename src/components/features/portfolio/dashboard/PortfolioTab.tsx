@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import type { PortfolioComparison, PositionAnalysis } from '@/types/portfolio';
+import type { PortfolioComparison } from '@/types/portfolio';
 
 interface PortfolioTabProps {
   portfolioComparison?: PortfolioComparison | null;
@@ -42,36 +42,8 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
     return `${(value * 100).toFixed(1)}%`;
   };
 
-  // Calculate weighted average max gain/loss from positions
-  // These represent the best/worst 12-month periods that could occur
-  const calculatePortfolioMetrics = (positions: PositionAnalysis[]) => {
-    let totalWeight = 0;
-    let weightedMaxGain = 0;
-    let weightedMaxLoss = 0;
-
-    positions.forEach(position => {
-      if (position.monteCarlo) {
-        const weight = position.weight / 100; // Convert percentage to decimal
-        totalWeight += weight;
-        weightedMaxGain += position.monteCarlo.upside * weight;  // upside = max gain
-        weightedMaxLoss += position.monteCarlo.downside * weight; // downside = max loss
-      }
-    });
-
-    // Normalize if not all positions have Monte Carlo data
-    if (totalWeight > 0 && totalWeight < 1) {
-      weightedMaxGain = weightedMaxGain / totalWeight;
-      weightedMaxLoss = weightedMaxLoss / totalWeight;
-    }
-
-    return {
-      maxGain: weightedMaxGain,
-      maxLoss: weightedMaxLoss,
-      hasData: totalWeight > 0
-    };
-  };
-
   // ALWAYS show comparison view (will use proxy ETFs if no specific holdings provided)
+  // Note: Portfolio-level upside/downside now comes directly from API (portfolio-level Monte Carlo)
   if (portfolioComparison) {
     const timeHorizon = portfolioComparison.timeHorizon || 1;
     const timeLabel = timeHorizon === 1 ? '1yr' : `${timeHorizon}yr`;
@@ -112,32 +84,31 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
                   {formatCurrency(portfolioComparison.userPortfolio.totalValue)}
                 </div>
               </div>
-              {/* Portfolio Performance Metrics */}
-              {(() => {
-                const metrics = calculatePortfolioMetrics(portfolioComparison.userPortfolio.positions);
-                return (
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="bg-gray-700/50 rounded-lg p-3">
-                      <div className="text-xs text-gray-400 mb-1">Expected Return ({timeLabel})</div>
-                      <div className={`text-lg font-bold ${portfolioComparison.userPortfolio.expectedReturn > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {formatPercent(portfolioComparison.userPortfolio.expectedReturn)}
-                      </div>
-                    </div>
-                    <div className="bg-gray-700/50 rounded-lg p-3">
-                      <div className="text-xs text-gray-400 mb-1">Annual Upside ({timeLabel})</div>
-                      <div className="text-lg font-bold text-emerald-400">
-                        {metrics.hasData ? formatPercent(metrics.maxGain) : 'N/A'}
-                      </div>
-                    </div>
-                    <div className="bg-gray-700/50 rounded-lg p-3">
-                      <div className="text-xs text-gray-400 mb-1">Annual Downside ({timeLabel})</div>
-                      <div className="text-lg font-bold text-rose-400">
-                        {metrics.hasData ? formatPercent(metrics.maxLoss) : 'N/A'}
-                      </div>
-                    </div>
+              {/* Portfolio Performance Metrics - Now using portfolio-level Monte Carlo */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-gray-700/50 rounded-lg p-3">
+                  <div className="text-xs text-gray-400 mb-1">Expected Return ({timeLabel})</div>
+                  <div className={`text-lg font-bold ${portfolioComparison.userPortfolio.expectedReturn > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {formatPercent(portfolioComparison.userPortfolio.expectedReturn)}
                   </div>
-                );
-              })()}
+                </div>
+                <div className="bg-gray-700/50 rounded-lg p-3">
+                  <div className="text-xs text-gray-400 mb-1">Annual Upside ({timeLabel})</div>
+                  <div className="text-lg font-bold text-emerald-400">
+                    {portfolioComparison.userPortfolio.upside !== undefined 
+                      ? formatPercent(portfolioComparison.userPortfolio.upside) 
+                      : 'N/A'}
+                  </div>
+                </div>
+                <div className="bg-gray-700/50 rounded-lg p-3">
+                  <div className="text-xs text-gray-400 mb-1">Annual Downside ({timeLabel})</div>
+                  <div className="text-lg font-bold text-rose-400">
+                    {portfolioComparison.userPortfolio.downside !== undefined 
+                      ? formatPercent(portfolioComparison.userPortfolio.downside) 
+                      : 'N/A'}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Top 5 Positions */}
@@ -207,32 +178,31 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
                   {formatCurrency(portfolioComparison.timePortfolio.totalValue)}
                 </div>
               </div>
-              {/* Portfolio Performance Metrics */}
-              {(() => {
-                const metrics = calculatePortfolioMetrics(portfolioComparison.timePortfolio.positions);
-                return (
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="bg-teal-900/20 rounded-lg p-3 border border-teal-800">
-                      <div className="text-xs text-teal-400 mb-1">Expected Return ({timeLabel})</div>
-                      <div className={`text-lg font-bold ${portfolioComparison.timePortfolio.expectedReturn > 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-                        {formatPercent(portfolioComparison.timePortfolio.expectedReturn)}
-                      </div>
-                    </div>
-                    <div className="bg-teal-900/20 rounded-lg p-3 border border-teal-800">
-                      <div className="text-xs text-teal-400 mb-1">Annual Upside ({timeLabel})</div>
-                      <div className="text-lg font-bold text-emerald-300">
-                        {metrics.hasData ? formatPercent(metrics.maxGain) : 'N/A'}
-                      </div>
-                    </div>
-                    <div className="bg-teal-900/20 rounded-lg p-3 border border-teal-800">
-                      <div className="text-xs text-teal-400 mb-1">Annual Downside ({timeLabel})</div>
-                      <div className="text-lg font-bold text-rose-300">
-                        {metrics.hasData ? formatPercent(metrics.maxLoss) : 'N/A'}
-                      </div>
-                    </div>
+              {/* Portfolio Performance Metrics - Now using portfolio-level Monte Carlo */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-teal-900/20 rounded-lg p-3 border border-teal-800">
+                  <div className="text-xs text-teal-400 mb-1">Expected Return ({timeLabel})</div>
+                  <div className={`text-lg font-bold ${portfolioComparison.timePortfolio.expectedReturn > 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                    {formatPercent(portfolioComparison.timePortfolio.expectedReturn)}
                   </div>
-                );
-              })()}
+                </div>
+                <div className="bg-teal-900/20 rounded-lg p-3 border border-teal-800">
+                  <div className="text-xs text-teal-400 mb-1">Annual Upside ({timeLabel})</div>
+                  <div className="text-lg font-bold text-emerald-300">
+                    {portfolioComparison.timePortfolio.upside !== undefined 
+                      ? formatPercent(portfolioComparison.timePortfolio.upside) 
+                      : 'N/A'}
+                  </div>
+                </div>
+                <div className="bg-teal-900/20 rounded-lg p-3 border border-teal-800">
+                  <div className="text-xs text-teal-400 mb-1">Annual Downside ({timeLabel})</div>
+                  <div className="text-lg font-bold text-rose-300">
+                    {portfolioComparison.timePortfolio.downside !== undefined 
+                      ? formatPercent(portfolioComparison.timePortfolio.downside) 
+                      : 'N/A'}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Top 5 Positions */}
