@@ -33,6 +33,7 @@ interface GoalProbabilityInput {
     commodities: number;
     alternatives: number;
   };
+  year1Return?: number;            // Optional: Year 1 return from user's holdings
   monteCarloResults?: Map<string, MonteCarloResult>; // Optional: for specific holdings
 }
 
@@ -110,6 +111,10 @@ export function calculateExpectedReturn(portfolio: GoalProbabilityInput['portfol
 
 /**
  * Run Monte Carlo simulation for goal probability
+ * 
+ * Year 1: Uses user's holdings-specific return (from FactSet/Clockwise targets)
+ * Years 2+: Uses asset class weighted long-term averages
+ * 
  * Returns projected values AND actual probability of reaching goal
  */
 function runGoalMonteCarloSimulation(
@@ -117,21 +122,21 @@ function runGoalMonteCarloSimulation(
   goalAmount: number,
   timeHorizon: number,
   monthlyContribution: number,
-  expectedReturn: number,
-  volatility: number = 0.15, // Default 15% annual volatility
+  year1Return: number,           // Year 1 return from user's holdings
+  longTermReturn: number,        // Years 2+ asset class average
+  volatility: number = 0.15,
   simulations: number = 10000
 ): { 
   median: number; 
   upside: number; 
   downside: number;
-  probabilityOfSuccess: number; // Actual probability (% of simulations reaching goal)
+  probabilityOfSuccess: number;
 } {
   const results: number[] = [];
-  const monthlyReturn = expectedReturn / 12;
   const monthlyVolatility = volatility / Math.sqrt(12);
   const months = timeHorizon * 12;
   
-  let successCount = 0; // Count simulations that reach the goal
+  let successCount = 0;
 
   for (let sim = 0; sim < simulations; sim++) {
     let portfolioValue = currentAmount;
@@ -140,6 +145,12 @@ function runGoalMonteCarloSimulation(
       // Add monthly contribution
       portfolioValue += monthlyContribution;
 
+      // Year 1 (months 0-11): Use user's holdings-specific return
+      // Years 2+ (months 12+): Use asset class long-term return
+      const year = Math.floor(month / 12);
+      const annualReturn = year === 0 ? year1Return : longTermReturn;
+      const monthlyReturn = annualReturn / 12;
+
       // Apply random return (normal distribution)
       const randomReturn = randomNormal(monthlyReturn, monthlyVolatility);
       portfolioValue *= (1 + randomReturn);
@@ -147,16 +158,12 @@ function runGoalMonteCarloSimulation(
 
     results.push(portfolioValue);
     
-    // Count if this simulation reached the goal
     if (portfolioValue >= goalAmount) {
       successCount++;
     }
   }
 
-  // Sort to find percentiles
   results.sort((a, b) => a - b);
-  
-  // Calculate actual probability: # of successes / total simulations
   const probabilityOfSuccess = successCount / simulations;
 
   return {
@@ -179,14 +186,18 @@ function randomNormal(mean: number, stdDev: number): number {
 
 /**
  * Calculate probability of reaching goal
- * Uses actual Monte Carlo simulation counting (not ratio)
+ * 
+ * Year 1: Uses user's holdings return (if provided), otherwise asset class average
+ * Years 2+: Uses asset class weighted long-term averages
  */
 export function calculateGoalProbability(input: GoalProbabilityInput): GoalProbabilityResult {
-  // Calculate expected return based on asset allocation
-  const expectedReturn = calculateExpectedReturn(input.portfolio);
+  // Long-term return from asset allocation (for Years 2+)
+  const longTermReturn = calculateExpectedReturn(input.portfolio);
 
-  // Estimate volatility based on portfolio composition
-  // Higher stock allocation = higher volatility
+  // Year 1 return: use provided value from user's holdings, or fall back to long-term
+  const year1Return = input.year1Return ?? longTermReturn;
+
+  // Volatility from asset class weights (same for all years)
   const stockWeight = input.portfolio.stocks / 100;
   const bondWeight = input.portfolio.bonds / 100;
   const cashWeight = input.portfolio.cash / 100;
@@ -196,13 +207,14 @@ export function calculateGoalProbability(input: GoalProbabilityInput): GoalProba
     cashWeight * 0.01 +       // Cash: 1% volatility
     (1 - stockWeight - bondWeight - cashWeight) * 0.12; // Other: 12% volatility
 
-  // Run Monte Carlo simulation - now returns actual probability
+  // Run Monte Carlo with Year 1 vs Years 2+ distinction
   const simulationResult = runGoalMonteCarloSimulation(
     input.currentAmount,
     input.goalAmount,
     input.timeHorizon,
     input.monthlyContribution,
-    expectedReturn,
+    year1Return,              // Year 1: user's holdings or asset class
+    longTermReturn,           // Years 2+: asset class average
     estimatedVolatility
   );
 
@@ -221,7 +233,8 @@ export function calculateGoalProbability(input: GoalProbabilityInput): GoalProba
     currentAmount: input.currentAmount,
     goalAmount: input.goalAmount,
     timeHorizon: input.timeHorizon,
-    expectedReturn: (expectedReturn * 100).toFixed(1) + '%',
+    year1Return: (year1Return * 100).toFixed(1) + '%',
+    longTermReturn: (longTermReturn * 100).toFixed(1) + '%',
     volatility: (estimatedVolatility * 100).toFixed(1) + '%',
     actualProbability: (simulationResult.probabilityOfSuccess * 100).toFixed(1) + '%',
     projectedMedian: simulationResult.median,
@@ -244,7 +257,7 @@ export function calculateGoalProbability(input: GoalProbabilityInput): GoalProba
       upside: simulationResult.upside
     },
     shortfall,
-    expectedReturn
+    expectedReturn: longTermReturn  // Long-term asset class average
   };
 }
 
