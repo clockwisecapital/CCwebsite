@@ -252,6 +252,21 @@ export interface Database {
         }
         Relationships: []
       }
+      index_sector_targets: {
+        Row: {
+          'Ticker Index': string
+          'Clockwise tgt': number | null
+        }
+        Insert: {
+          'Ticker Index': string
+          'Clockwise tgt'?: number | null
+        }
+        Update: {
+          'Ticker Index'?: string
+          'Clockwise tgt'?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -292,6 +307,10 @@ export type UserDataUpdate = Database['public']['Tables']['user_data']['Update']
 export type IntakeForm = Database['public']['Tables']['intake_forms']['Row']
 export type IntakeFormInsert = Database['public']['Tables']['intake_forms']['Insert']
 export type IntakeFormUpdate = Database['public']['Tables']['intake_forms']['Update']
+
+export type IndexSectorTarget = Database['public']['Tables']['index_sector_targets']['Row']
+export type IndexSectorTargetInsert = Database['public']['Tables']['index_sector_targets']['Insert']
+export type IndexSectorTargetUpdate = Database['public']['Tables']['index_sector_targets']['Update']
 
 // Application-specific types
 export interface SessionData {

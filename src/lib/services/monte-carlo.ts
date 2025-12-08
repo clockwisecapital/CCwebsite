@@ -2,7 +2,8 @@
  * Monte Carlo Simulation Service
  * 
  * Performs Monte Carlo simulations using a BLENDED approach:
- * - Year 1: Uses actual historical data from Yahoo Finance (ticker-specific)
+ * - Year 1: Uses PRE-CALCULATED return (from Clockwise/FactSet/short formula)
+ *           Volatility from Yahoo Finance historical data
  * - Years 2+: Uses long-term asset class averages with typical volatilities
  * 
  * Key features:
@@ -152,8 +153,14 @@ function getAssetClass(ticker: string): AssetClass {
  * Run Monte Carlo simulation for a single ticker
  * 
  * BLENDED APPROACH:
- * - Year 1: Uses ticker's actual historical volatility and returns
+ * - Year 1: Uses PRE-CALCULATED return (required parameter) + historical volatility
  * - Years 2+: Uses long-term asset class averages
+ * 
+ * @param ticker - Stock/ETF ticker symbol
+ * @param currentPrice - Current market price
+ * @param year1Return - REQUIRED: Pre-calculated Year 1 expected return 
+ *                      (from Clockwise targets, FactSet, or short formula)
+ * @param timeHorizon - Investment horizon in years (default: 1)
  * 
  * Returns:
  * - median: Expected annualized return (50th percentile of final returns)
@@ -163,10 +170,11 @@ function getAssetClass(ticker: string): AssetClass {
 export async function runMonteCarloSimulation(
   ticker: string,
   currentPrice: number,
+  year1Return: number, // REQUIRED - pre-calculated from Clockwise/FactSet/short formula
   timeHorizon: number = 1 // years
 ): Promise<MonteCarloResult | null> {
   try {
-    // Fetch historical prices for Year 1 simulation
+    // Fetch historical prices for VOLATILITY calculation only
     const historicalPrices = await fetchHistoricalPrices(ticker, '2y');
     
     if (historicalPrices.length < 50) {
@@ -174,21 +182,20 @@ export async function runMonteCarloSimulation(
       return null;
     }
 
-    // Calculate Year 1 statistics from historical data
+    // Calculate Year 1 VOLATILITY from historical data
+    // (Return is now passed in as parameter)
     const dailyReturns = calculateDailyReturns(historicalPrices);
-    const year1DailyReturn = mean(dailyReturns);
     const year1DailyVol = standardDeviation(dailyReturns);
     const year1AnnualVol = year1DailyVol * Math.sqrt(TRADING_DAYS_PER_YEAR);
     
-    // Get asset class for this ticker
+    // Get asset class for this ticker (for Years 2+ parameters)
     const assetClass = getAssetClass(ticker);
     const longTermReturn = ASSET_CLASS_RETURNS[assetClass];
     const longTermVol = ASSET_CLASS_VOLATILITIES[assetClass];
     
-    // Year 1: Use ACTUAL historical volatility (no cap)
-    // This reflects the true risk profile of each individual stock
-    
-    // Year 1: Daily drift with volatility drag correction
+    // Year 1: Use PRE-CALCULATED return with historical volatility
+    // Convert annual return to daily and apply volatility drag correction
+    const year1DailyReturn = year1Return / TRADING_DAYS_PER_YEAR;
     const year1DailyDrift = year1DailyReturn - 0.5 * year1DailyVol * year1DailyVol;
     
     // Convert long-term annual stats to daily (Years 2+)
@@ -198,8 +205,8 @@ export async function runMonteCarloSimulation(
     
     console.log(`📊 ${ticker} blended statistics:`, {
       assetClass,
-      year1AnnualReturn: (year1DailyReturn * TRADING_DAYS_PER_YEAR * 100).toFixed(1) + '%',
-      year1AnnualVol: (year1AnnualVol * 100).toFixed(1) + '%',
+      year1Return: (year1Return * 100).toFixed(1) + '% (pre-calculated)',
+      year1AnnualVol: (year1AnnualVol * 100).toFixed(1) + '% (from Yahoo)',
       longTermReturn: (longTermReturn * 100).toFixed(1) + '%',
       longTermVol: (longTermVol * 100).toFixed(1) + '%',
       timeHorizon: timeHorizon + ' years'
@@ -316,9 +323,12 @@ export async function runMonteCarloSimulation(
 /**
  * Run Monte Carlo simulations with controlled concurrency
  * Processes tickers in batches to avoid overwhelming Yahoo Finance API
+ * 
+ * @param tickers - Array of ticker info including pre-calculated Year 1 return
+ * @param timeHorizon - Investment horizon in years
  */
 export async function runBatchMonteCarloSimulations(
-  tickers: Array<{ ticker: string; currentPrice: number }>,
+  tickers: Array<{ ticker: string; currentPrice: number; year1Return: number }>,
   timeHorizon: number = 1
 ): Promise<Map<string, MonteCarloResult>> {
   const results = new Map<string, MonteCarloResult>();
@@ -335,9 +345,9 @@ export async function runBatchMonteCarloSimulations(
     
     console.log(`📊 Processing batch ${batchNum}/${totalBatches}: ${batch.map(t => t.ticker).join(', ')}`);
     
-    // Process this batch in parallel
-    const batchPromises = batch.map(({ ticker, currentPrice }) =>
-      runMonteCarloSimulation(ticker, currentPrice, timeHorizon)
+    // Process this batch in parallel - now passing year1Return
+    const batchPromises = batch.map(({ ticker, currentPrice, year1Return }) =>
+      runMonteCarloSimulation(ticker, currentPrice, year1Return, timeHorizon)
     );
     
     const batchResults = await Promise.all(batchPromises);

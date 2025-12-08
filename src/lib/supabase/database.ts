@@ -736,6 +736,47 @@ export async function getHoldingWeights(): Promise<Array<{
 }
 
 /**
+ * Get Clockwise index/sector target prices
+ * Used for calculating Year 1 returns for index ETFs (SPY, QQQ, etc.)
+ */
+export async function getIndexSectorTargets(): Promise<Map<string, number>> {
+  try {
+    const supabase = createAdminSupabaseClient()
+    
+    console.log('📊 Fetching index/sector targets from database...')
+    
+    const { data, error } = await supabase
+      .from('index_sector_targets')
+      .select('*')
+
+    if (error) {
+      console.error('❌ Error fetching index sector targets:', error)
+      return new Map()
+    }
+
+    const targets = new Map<string, number>()
+    
+    if (data) {
+      data.forEach((row) => {
+        const ticker = row['Ticker Index']
+        const target = row['Clockwise tgt']
+        
+        if (ticker && target !== null && target !== undefined) {
+          targets.set(ticker, Number(target))
+          console.log(`  ✓ ${ticker}: $${Number(target).toFixed(2)}`)
+        }
+      })
+    }
+
+    console.log(`✅ Loaded ${targets.size} index/sector targets`)
+    return targets
+  } catch (error) {
+    console.error('❌ Database error fetching index sector targets:', error)
+    return new Map()
+  }
+}
+
+/**
  * Update price in holding_weights table
  */
 export async function updateHoldingPrice(ticker: string, price: number): Promise<boolean> {

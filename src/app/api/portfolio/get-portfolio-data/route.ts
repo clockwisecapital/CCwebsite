@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTgtPrices, getHoldingWeights } from '@/lib/supabase/database';
+import { getTgtPrices, getHoldingWeights, getIndexSectorTargets } from '@/lib/supabase/database';
 import { fetchBatchCurrentPrices, runBatchMonteCarloSimulations } from '@/lib/services/monte-carlo';
 import { createProxyPortfolio, getProxyMessage, REPRESENTATIVE_ETFS } from '@/lib/services/proxy-portfolio';
 import { LONG_TERM_AVERAGES } from '@/lib/services/goal-probability';
+import { calculateYear1Return, getRequiredUnderlyingTickers } from '@/lib/services/year1-return';
 import type { PortfolioComparison, PositionAnalysis } from '@/types/portfolio';
 
 interface PortfolioAllocation {
@@ -132,31 +133,69 @@ export async function POST(request: NextRequest) {
       .map(h => h.stockTicker);
 
     const allTickers = [...new Set([...userTickers, ...timeTickers])];
-
-    // 2. Fetch current prices for all tickers
-    console.log('Fetching current prices...');
-    const currentPrices = await fetchBatchCurrentPrices(allTickers);
-
-    // 3. Fetch target prices
-    console.log('Fetching target prices...');
-    const targetPrices = await getTgtPrices(allTickers);
-    console.log(`📊 Target prices fetched: ${targetPrices.size} of ${allTickers.length} tickers`);
-    console.log('✓ Tickers with target prices:', Array.from(targetPrices.keys()).join(', '));
     
-    const missingTargets = allTickers.filter(t => !targetPrices.has(t));
+    // Get underlying indices needed for short ETF calculations
+    const underlyingIndices = getRequiredUnderlyingTickers(allTickers);
+    const tickersWithUnderlyings = [...new Set([...allTickers, ...underlyingIndices])];
+    
+    console.log(`📊 All tickers: ${allTickers.length}, Underlying indices for shorts: ${underlyingIndices.join(', ') || 'none'}`);
+
+    // 2. Fetch Clockwise index/sector targets (for index ETFs and short calculations)
+    console.log('Fetching Clockwise index targets...');
+    const indexTargets = await getIndexSectorTargets();
+    console.log(`✅ Loaded ${indexTargets.size} Clockwise index targets`);
+
+    // 3. Fetch current prices for all tickers (including underlying indices)
+    console.log('Fetching current prices...');
+    const currentPrices = await fetchBatchCurrentPrices(tickersWithUnderlyings);
+
+    // 4. Fetch FactSet target prices (for individual stocks)
+    console.log('Fetching FactSet target prices...');
+    const targetPrices = await getTgtPrices(allTickers);
+    console.log(`📊 FactSet target prices fetched: ${targetPrices.size} of ${allTickers.length} tickers`);
+    console.log('✓ Tickers with FactSet targets:', Array.from(targetPrices.keys()).join(', '));
+    
+    const missingTargets = allTickers.filter(t => !targetPrices.has(t) && !indexTargets.has(t));
     if (missingTargets.length > 0) {
       console.warn('⚠️ Missing target prices for:', missingTargets.join(', '));
     }
 
-    // 4. Run Monte Carlo simulations
+    // 5. Calculate Year 1 returns for all positions using new logic
+    console.log('Calculating Year 1 returns...');
+    const year1Returns = new Map<string, number>();
+    
+    for (const ticker of allTickers) {
+      if (ticker === 'CASH') continue;
+      
+      const currentPrice = currentPrices.get(ticker) || 0;
+      const factsetTarget = targetPrices.get(ticker) || null;
+      
+      const result = await calculateYear1Return(
+        ticker,
+        currentPrice,
+        factsetTarget,
+        indexTargets,
+        currentPrices,
+        'stocks' // Default asset class
+      );
+      
+      year1Returns.set(ticker, result.return);
+      console.log(`  ${ticker}: ${(result.return * 100).toFixed(1)}% (${result.source})`);
+    }
+
+    // 6. Run Monte Carlo simulations with pre-calculated Year 1 returns
     console.log('Running Monte Carlo simulations...');
     const tickersForMC = allTickers
-      .filter(ticker => currentPrices.has(ticker))
-      .map(ticker => ({ ticker, currentPrice: currentPrices.get(ticker)! }));
+      .filter(ticker => currentPrices.has(ticker) && year1Returns.has(ticker))
+      .map(ticker => ({ 
+        ticker, 
+        currentPrice: currentPrices.get(ticker)!,
+        year1Return: year1Returns.get(ticker)!
+      }));
     
     const monteCarloResults = await runBatchMonteCarloSimulations(tickersForMC, timeHorizon);
 
-    // 5. Build User Portfolio Analysis
+    // 7. Build User Portfolio Analysis
     const userPositions: PositionAnalysis[] = finalUserHoldings.map(holding => {
       // Handle cash separately (no price data needed)
       if (holding.ticker === 'CASH') {
@@ -166,7 +205,7 @@ export async function POST(request: NextRequest) {
           weight: holding.percentage,
           currentPrice: 1.0,
           targetPrice: null,
-          expectedReturn: 0.03, // 3% cash return
+          expectedReturn: 0.00, // 0% real cash return (matches inflation)
           monteCarlo: null,
           isProxy: isUsingProxy,
           assetClass: 'Cash'
@@ -174,10 +213,8 @@ export async function POST(request: NextRequest) {
       }
 
       const currentPrice = currentPrices.get(holding.ticker) || 0;
-      const targetPrice = targetPrices.get(holding.ticker) || null;
-      const expectedReturn = targetPrice && currentPrice > 0
-        ? (targetPrice - currentPrice) / currentPrice
-        : null;
+      const targetPrice = targetPrices.get(holding.ticker) || indexTargets.get(holding.ticker) || null;
+      const expectedReturn = year1Returns.get(holding.ticker) ?? null;
       const monteCarlo = monteCarloResults.get(holding.ticker) || null;
       
       // Log Monte Carlo results for debugging
@@ -230,17 +267,16 @@ export async function POST(request: NextRequest) {
       .sort((a, b) => b.weight - a.weight)
       .slice(0, 5);
 
-    // 6. Build TIME Portfolio Analysis
+    // 8. Build TIME Portfolio Analysis
     const totalTimeWeight = timeHoldings.reduce((sum, h) => sum + h.weightings, 0);
     
     const timePositions: PositionAnalysis[] = timeHoldings
       .filter(h => !h.stockTicker.toLowerCase().includes('cash') && !h.stockTicker.toLowerCase().includes('other'))
       .map(holding => {
         const currentPrice = currentPrices.get(holding.stockTicker) || holding.price || 0;
-        const targetPrice = targetPrices.get(holding.stockTicker) || null;
-        const expectedReturn = targetPrice && currentPrice > 0
-          ? (targetPrice - currentPrice) / currentPrice
-          : null;
+        const targetPrice = targetPrices.get(holding.stockTicker) || indexTargets.get(holding.stockTicker) || null;
+        // Use pre-calculated Year 1 return (handles shorts, indices, and stocks correctly)
+        const expectedReturn = year1Returns.get(holding.stockTicker) ?? null;
         const monteCarlo = monteCarloResults.get(holding.stockTicker) || null;
         const normalizedWeight = totalTimeWeight > 0 ? (holding.weightings / totalTimeWeight) * 100 : 0;
 
@@ -295,7 +331,7 @@ export async function POST(request: NextRequest) {
     // Calculate TIME portfolio value (same as user's for comparison)
     const timePortfolioValue = portfolioValue;
 
-    // 7. Build response
+    // 9. Build response
     const comparison: PortfolioComparison = {
       userPortfolio: {
         totalValue: portfolioValue,
