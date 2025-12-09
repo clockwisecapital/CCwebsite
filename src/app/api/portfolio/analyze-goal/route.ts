@@ -5,6 +5,66 @@ import {
   calculateExpectedReturn
 } from '@/lib/services/goal-probability';
 
+// ============================================================================
+// ASSET CLASS INFERENCE (same as get-portfolio-data)
+// ============================================================================
+
+type AssetClassKey = 'stocks' | 'bonds' | 'realEstate' | 'commodities' | 'cash' | 'alternatives';
+
+const KNOWN_ASSET_CLASS_TICKERS: Record<string, AssetClassKey> = {
+  // Index/Sector ETFs (Stocks)
+  'SPY': 'stocks', 'QQQ': 'stocks', 'VTI': 'stocks', 'VOO': 'stocks', 'IVV': 'stocks',
+  'DIA': 'stocks', 'IWM': 'stocks', 'VUG': 'stocks', 'VTV': 'stocks', 'SCHD': 'stocks',
+  'XLK': 'stocks', 'XLF': 'stocks', 'XLC': 'stocks', 'XLY': 'stocks', 'XLP': 'stocks',
+  'XLE': 'stocks', 'XLV': 'stocks', 'XLI': 'stocks', 'XLB': 'stocks', 'XLRE': 'stocks',
+  'XLU': 'stocks', 'ARKK': 'stocks', 'SOXX': 'stocks', 'SMH': 'stocks', 'IGV': 'stocks',
+  'ITA': 'stocks',
+  // TIME Portfolio Individual Stocks
+  'AAPL': 'stocks', 'GOOGL': 'stocks', 'NVDA': 'stocks', 'MSFT': 'stocks', 'AVGO': 'stocks',
+  'AMZN': 'stocks', 'TSLA': 'stocks', 'D': 'stocks', 'MOH': 'stocks', 'RDDT': 'stocks',
+  'META': 'stocks', 'HOOD': 'stocks', 'STZ': 'stocks', 'KO': 'stocks', 'DPZ': 'stocks',
+  'CSCO': 'stocks', 'BABA': 'stocks', 'MU': 'stocks', 'MCD': 'stocks', 'TOST': 'stocks',
+  'PLTR': 'stocks', 'GEV': 'stocks', 'COP': 'stocks', 'NFLX': 'stocks', 'VZ': 'stocks',
+  'COST': 'stocks',
+  // Short/Inverse ETFs
+  'SQQQ': 'stocks', 'QID': 'stocks', 'PSQ': 'stocks', 'SPXU': 'stocks', 'SDS': 'stocks',
+  'SH': 'stocks', 'SDOW': 'stocks', 'DXD': 'stocks', 'DOG': 'stocks', 'SOXS': 'stocks',
+  'SARK': 'stocks',
+  // Bond ETFs
+  'AGG': 'bonds', 'BND': 'bonds', 'TLT': 'bonds', 'IEF': 'bonds', 'LQD': 'bonds',
+  'HYG': 'bonds', 'VCIT': 'bonds', 'VGIT': 'bonds', 'VCSH': 'bonds', 'MUB': 'bonds',
+  'TIP': 'bonds',
+  // Real Estate ETFs
+  'VNQ': 'realEstate', 'SCHH': 'realEstate', 'IYR': 'realEstate',
+  // Commodities
+  'GLD': 'commodities', 'SLV': 'commodities', 'IAU': 'commodities', 'USO': 'commodities',
+  'DBC': 'commodities', 'DBA': 'commodities', 'NEM': 'commodities',
+  // Cash/Money Market
+  'SGOV': 'cash', 'BIL': 'cash', 'SHV': 'cash', 'FGXXX': 'cash',
+};
+
+function getAssetClassForTicker(ticker: string): AssetClassKey {
+  return KNOWN_ASSET_CLASS_TICKERS[ticker.toUpperCase()] || 'stocks';
+}
+
+interface HoldingWithPercentage {
+  ticker?: string;
+  percentage?: number;
+}
+
+function inferAllocationFromHoldings(
+  holdings: HoldingWithPercentage[]
+): { stocks: number; bonds: number; cash: number; realEstate: number; commodities: number; alternatives: number } {
+  const allocation = { stocks: 0, bonds: 0, cash: 0, realEstate: 0, commodities: 0, alternatives: 0 };
+  for (const holding of holdings) {
+    if (holding.ticker && holding.percentage) {
+      const assetClass = getAssetClassForTicker(holding.ticker);
+      allocation[assetClass] += holding.percentage;
+    }
+  }
+  return allocation;
+}
+
 /**
  * Fast Goal Analysis Endpoint
  * 
@@ -42,8 +102,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ✅ INFER ALLOCATION FROM HOLDINGS if needed
+    const hasSpecificHoldings = intakeData.specificHoldings && 
+                               intakeData.specificHoldings.length > 0 &&
+                               intakeData.specificHoldings.some((h: { ticker?: string }) => h.ticker && h.ticker.trim().length > 0);
+    
     // Calculate expected return from asset allocation
-    const portfolio = intakeData.portfolio || {
+    let portfolio = intakeData.portfolio || {
       stocks: 60,
       bonds: 30,
       cash: 5,
@@ -51,6 +116,22 @@ export async function POST(request: NextRequest) {
       commodities: 0,
       alternatives: 0
     };
+    
+    // Check if allocation is all zeros and we have specific holdings
+    if (hasSpecificHoldings) {
+      const allocationTotal = (portfolio.stocks || 0) + (portfolio.bonds || 0) + 
+                              (portfolio.cash || 0) + (portfolio.realEstate || 0) + 
+                              (portfolio.commodities || 0) + (portfolio.alternatives || 0);
+      
+      if (allocationTotal === 0) {
+        console.log('📊 Fast Goal: Inferring allocation from specific holdings...');
+        const inferredAllocation = inferAllocationFromHoldings(intakeData.specificHoldings);
+        portfolio = { ...portfolio, ...inferredAllocation };
+        // Also update intakeData.portfolio for createGoalProbabilityInput
+        intakeData.portfolio = { ...intakeData.portfolio, ...inferredAllocation };
+        console.log('📊 Fast Goal: Inferred allocation:', inferredAllocation);
+      }
+    }
     
     const expectedReturn = calculateExpectedReturn(portfolio);
     

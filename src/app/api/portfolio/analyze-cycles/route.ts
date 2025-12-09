@@ -15,6 +15,81 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
 });
 
+// ============================================================================
+// ASSET CLASS INFERENCE (same as get-portfolio-data)
+// ============================================================================
+
+type AssetClassKey = 'stocks' | 'bonds' | 'realEstate' | 'commodities' | 'cash' | 'alternatives';
+
+const KNOWN_ASSET_CLASS_TICKERS: Record<string, AssetClassKey> = {
+  // Index/Sector ETFs (Stocks)
+  'SPY': 'stocks', 'QQQ': 'stocks', 'VTI': 'stocks', 'VOO': 'stocks', 'IVV': 'stocks',
+  'DIA': 'stocks', 'IWM': 'stocks', 'VUG': 'stocks', 'VTV': 'stocks', 'SCHD': 'stocks',
+  'XLK': 'stocks', 'XLF': 'stocks', 'XLC': 'stocks', 'XLY': 'stocks', 'XLP': 'stocks',
+  'XLE': 'stocks', 'XLV': 'stocks', 'XLI': 'stocks', 'XLB': 'stocks', 'XLRE': 'stocks',
+  'XLU': 'stocks', 'ARKK': 'stocks', 'SOXX': 'stocks', 'SMH': 'stocks', 'IGV': 'stocks',
+  'ITA': 'stocks',
+  
+  // TIME Portfolio Individual Stocks
+  'AAPL': 'stocks', 'GOOGL': 'stocks', 'NVDA': 'stocks', 'MSFT': 'stocks', 'AVGO': 'stocks',
+  'AMZN': 'stocks', 'TSLA': 'stocks', 'D': 'stocks', 'MOH': 'stocks', 'RDDT': 'stocks',
+  'META': 'stocks', 'HOOD': 'stocks', 'STZ': 'stocks', 'KO': 'stocks', 'DPZ': 'stocks',
+  'CSCO': 'stocks', 'BABA': 'stocks', 'MU': 'stocks', 'MCD': 'stocks', 'TOST': 'stocks',
+  'PLTR': 'stocks', 'GEV': 'stocks', 'COP': 'stocks', 'NFLX': 'stocks', 'VZ': 'stocks',
+  'COST': 'stocks',
+  
+  // Short/Inverse ETFs (treat as stocks for allocation purposes)
+  'SQQQ': 'stocks', 'QID': 'stocks', 'PSQ': 'stocks', 'SPXU': 'stocks', 'SDS': 'stocks',
+  'SH': 'stocks', 'SDOW': 'stocks', 'DXD': 'stocks', 'DOG': 'stocks', 'SOXS': 'stocks',
+  'SARK': 'stocks',
+  
+  // Bond ETFs
+  'AGG': 'bonds', 'BND': 'bonds', 'TLT': 'bonds', 'IEF': 'bonds', 'LQD': 'bonds',
+  'HYG': 'bonds', 'VCIT': 'bonds', 'VGIT': 'bonds', 'VCSH': 'bonds', 'MUB': 'bonds',
+  'TIP': 'bonds',
+  
+  // Real Estate ETFs
+  'VNQ': 'realEstate', 'SCHH': 'realEstate', 'IYR': 'realEstate',
+  
+  // Commodities
+  'GLD': 'commodities', 'SLV': 'commodities', 'IAU': 'commodities', 'USO': 'commodities',
+  'DBC': 'commodities', 'DBA': 'commodities', 'NEM': 'commodities',
+  
+  // Cash/Money Market
+  'SGOV': 'cash', 'BIL': 'cash', 'SHV': 'cash', 'FGXXX': 'cash',
+};
+
+function getAssetClassForTicker(ticker: string): AssetClassKey {
+  return KNOWN_ASSET_CLASS_TICKERS[ticker.toUpperCase()] || 'stocks';
+}
+
+interface HoldingWithPercentage {
+  ticker?: string;
+  percentage?: number;
+}
+
+function inferAllocationFromHoldings(
+  holdings: HoldingWithPercentage[]
+): { stocks: number; bonds: number; cash: number; realEstate: number; commodities: number; alternatives: number } {
+  const allocation = {
+    stocks: 0,
+    bonds: 0,
+    cash: 0,
+    realEstate: 0,
+    commodities: 0,
+    alternatives: 0,
+  };
+  
+  for (const holding of holdings) {
+    if (holding.ticker && holding.percentage) {
+      const assetClass = getAssetClassForTicker(holding.ticker);
+      allocation[assetClass] += holding.percentage;
+    }
+  }
+  
+  return allocation;
+}
+
 // Helper function to clean and fix common JSON issues
 function cleanJSON(jsonString: string): string {
   // Remove any markdown code blocks
@@ -101,6 +176,27 @@ export async function POST(req: NextRequest) {
         // Update the intakeData with the calculated value
         intakeData.portfolio.totalValue = totalFromDollars;
         console.log(`💰 Calculated portfolio value from holdings: $${totalFromDollars.toLocaleString()}`);
+      }
+      
+      // ✅ INFER ALLOCATION FROM HOLDINGS (same as get-portfolio-data)
+      // Check if allocation is all zeros (frontend sends zeros when user has specific holdings)
+      const allocationTotal = (intakeData.portfolio.stocks || 0) + 
+                              (intakeData.portfolio.bonds || 0) + 
+                              (intakeData.portfolio.cash || 0) + 
+                              (intakeData.portfolio.realEstate || 0) + 
+                              (intakeData.portfolio.commodities || 0) + 
+                              (intakeData.portfolio.alternatives || 0);
+      
+      if (allocationTotal === 0) {
+        console.log('📊 Portfolio allocation is zero - inferring from specific holdings...');
+        const inferredAllocation = inferAllocationFromHoldings(intakeData.specificHoldings);
+        intakeData.portfolio.stocks = inferredAllocation.stocks;
+        intakeData.portfolio.bonds = inferredAllocation.bonds;
+        intakeData.portfolio.cash = inferredAllocation.cash;
+        intakeData.portfolio.realEstate = inferredAllocation.realEstate;
+        intakeData.portfolio.commodities = inferredAllocation.commodities;
+        intakeData.portfolio.alternatives = inferredAllocation.alternatives;
+        console.log('📊 Inferred allocation:', inferredAllocation);
       }
     }
 

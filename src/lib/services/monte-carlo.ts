@@ -3,16 +3,18 @@
  * 
  * Performs Monte Carlo simulations using a BLENDED approach:
  * - Year 1: Uses PRE-CALCULATED return (from Clockwise/FactSet/short formula)
- *           Volatility from Yahoo Finance historical data
+ *           Volatility from Yahoo Finance historical data (cached for 24h)
  * - Years 2+: Uses long-term asset class averages with typical volatilities
  * 
  * Key features:
  * - Uses Geometric Brownian Motion with volatility drag correction
  * - Tracks discrete annual periods to find best/worst year
  * - Returns upside (best year) and downside (worst year) over the time horizon
+ * - Caches volatility data to reduce Yahoo Finance API calls
  */
 
 import type { MonteCarloResult, HistoricalPrice } from '@/types/portfolio';
+import { getCachedVolatility, setCachedVolatility } from '@/lib/services/time-portfolio-cache';
 
 const YAHOO_FINANCE_API = 'https://query1.finance.yahoo.com/v8/finance/chart';
 const SIMULATIONS = 5000;  // Reduced from 10K - still statistically valid, 2x faster
@@ -184,19 +186,35 @@ export async function runMonteCarloSimulation(
   timeHorizon: number = 1 // years
 ): Promise<MonteCarloResult | null> {
   try {
-    // Fetch historical prices for VOLATILITY calculation only
-    const historicalPrices = await fetchHistoricalPrices(ticker, '2y');
+    let year1AnnualVol: number;
+    let year1DailyVol: number;
     
-    if (historicalPrices.length < 50) {
-      console.warn(`Insufficient historical data for ${ticker}`);
-      return null;
-    }
+    // Check volatility cache first (Supabase-backed, 24-hour TTL)
+    const cachedVol = await getCachedVolatility(ticker);
+    
+    if (cachedVol !== null) {
+      // Use cached volatility
+      year1AnnualVol = cachedVol;
+      year1DailyVol = year1AnnualVol / Math.sqrt(TRADING_DAYS_PER_YEAR);
+      console.log(`📦 Using cached volatility for ${ticker}: ${(year1AnnualVol * 100).toFixed(1)}%`);
+    } else {
+      // Fetch historical prices for VOLATILITY calculation only
+      const historicalPrices = await fetchHistoricalPrices(ticker, '2y');
+      
+      if (historicalPrices.length < 50) {
+        console.warn(`Insufficient historical data for ${ticker}`);
+        return null;
+      }
 
-    // Calculate Year 1 VOLATILITY from historical data
-    // (Return is now passed in as parameter)
-    const dailyReturns = calculateDailyReturns(historicalPrices);
-    const year1DailyVol = standardDeviation(dailyReturns);
-    const year1AnnualVol = year1DailyVol * Math.sqrt(TRADING_DAYS_PER_YEAR);
+      // Calculate Year 1 VOLATILITY from historical data
+      const dailyReturns = calculateDailyReturns(historicalPrices);
+      year1DailyVol = standardDeviation(dailyReturns);
+      year1AnnualVol = year1DailyVol * Math.sqrt(TRADING_DAYS_PER_YEAR);
+      
+      // Cache the volatility for future requests (Supabase)
+      await setCachedVolatility(ticker, year1AnnualVol);
+      console.log(`📊 Computed and cached volatility for ${ticker}: ${(year1AnnualVol * 100).toFixed(1)}%`);
+    }
     
     // Get asset class for this ticker (for Years 2+ parameters)
     const assetClass = getAssetClass(ticker);

@@ -347,6 +347,78 @@ export interface Database {
           }
         ]
       }
+      time_portfolio_cache: {
+        Row: {
+          id: string
+          cache_key: string
+          positions: Json
+          top_positions: Json
+          expected_return: number
+          year1_return: number
+          portfolio_upside: number
+          portfolio_downside: number
+          portfolio_median: number
+          time_horizon: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          cache_key?: string
+          positions: Json
+          top_positions: Json
+          expected_return: number
+          year1_return: number
+          portfolio_upside: number
+          portfolio_downside: number
+          portfolio_median: number
+          time_horizon?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          cache_key?: string
+          positions?: Json
+          top_positions?: Json
+          expected_return?: number
+          year1_return?: number
+          portfolio_upside?: number
+          portfolio_downside?: number
+          portfolio_median?: number
+          time_horizon?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      volatility_cache: {
+        Row: {
+          id: string
+          ticker: string
+          volatility: number
+          source: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          ticker: string
+          volatility: number
+          source?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          ticker?: string
+          volatility?: number
+          source?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
