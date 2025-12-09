@@ -267,6 +267,86 @@ export interface Database {
         }
         Relationships: []
       }
+      admin_users: {
+        Row: {
+          id: string
+          username: string
+          password_hash: string
+          role: 'master' | 'advisor'
+          firm_name: string | null
+          display_name: string | null
+          email: string | null
+          is_active: boolean
+          last_login: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          username: string
+          password_hash: string
+          role: 'master' | 'advisor'
+          firm_name?: string | null
+          display_name?: string | null
+          email?: string | null
+          is_active?: boolean
+          last_login?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          username?: string
+          password_hash?: string
+          role?: 'master' | 'advisor'
+          firm_name?: string | null
+          display_name?: string | null
+          email?: string | null
+          is_active?: boolean
+          last_login?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      client_assignments: {
+        Row: {
+          id: string
+          conversation_id: string
+          assigned_to_firm: string
+          assigned_by: string
+          notes: string | null
+          assigned_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          conversation_id: string
+          assigned_to_firm: string
+          assigned_by: string
+          notes?: string | null
+          assigned_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          conversation_id?: string
+          assigned_to_firm?: string
+          assigned_by?: string
+          notes?: string | null
+          assigned_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_assignments_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: true
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -311,6 +391,14 @@ export type IntakeFormUpdate = Database['public']['Tables']['intake_forms']['Upd
 export type IndexSectorTarget = Database['public']['Tables']['index_sector_targets']['Row']
 export type IndexSectorTargetInsert = Database['public']['Tables']['index_sector_targets']['Insert']
 export type IndexSectorTargetUpdate = Database['public']['Tables']['index_sector_targets']['Update']
+
+export type AdminUser = Database['public']['Tables']['admin_users']['Row']
+export type AdminUserInsert = Database['public']['Tables']['admin_users']['Insert']
+export type AdminUserUpdate = Database['public']['Tables']['admin_users']['Update']
+
+export type ClientAssignment = Database['public']['Tables']['client_assignments']['Row']
+export type ClientAssignmentInsert = Database['public']['Tables']['client_assignments']['Insert']
+export type ClientAssignmentUpdate = Database['public']['Tables']['client_assignments']['Update']
 
 // Application-specific types
 export interface SessionData {

@@ -1,7 +1,8 @@
 /**
  * Next.js Middleware for Admin Route Protection
  * 
- * Protects /admin routes and redirects unauthorized users
+ * Protects /admin routes and validates role-based access
+ * Supports master (Clockwise) and advisor (partner firms) roles
  */
 
 import { NextResponse } from 'next/server'
@@ -30,14 +31,42 @@ export async function middleware(request: NextRequest) {
       // Verify JWT token
       const { payload } = await jwtVerify(token, JWT_SECRET)
       
-      if (payload.username !== 'clockwiseadmin' || payload.role !== 'admin') {
-        console.log('Invalid token payload, redirecting to login')
+      // Validate required fields
+      if (!payload.username || !payload.role) {
+        console.log('Invalid token payload - missing required fields')
         return NextResponse.redirect(new URL('/admin/login', request.url))
       }
 
-      // Token is valid, allow access
+      // Validate role is valid
+      if (payload.role !== 'master' && payload.role !== 'advisor') {
+        console.log('Invalid role in token:', payload.role)
+        return NextResponse.redirect(new URL('/admin/login', request.url))
+      }
+
+      // Check access to users management page (master only)
+      if (request.nextUrl.pathname.startsWith('/admin/users')) {
+        if (payload.role !== 'master') {
+          console.log('Non-master user attempting to access users page')
+          return NextResponse.redirect(new URL('/admin/dashboard', request.url))
+        }
+      }
+
+      // Token is valid, allow access and pass role info via headers
       console.log('Valid admin token, allowing access to:', request.nextUrl.pathname)
-      return NextResponse.next()
+      
+      const response = NextResponse.next()
+      
+      // Add role info to headers for use in API routes
+      response.headers.set('x-admin-role', payload.role as string)
+      response.headers.set('x-admin-username', payload.username as string)
+      if (payload.firmName) {
+        response.headers.set('x-admin-firm', payload.firmName as string)
+      }
+      if (payload.displayName) {
+        response.headers.set('x-admin-display-name', payload.displayName as string)
+      }
+      
+      return response
     } catch (error) {
       // Invalid token, redirect to login
       console.error('Token verification failed:', error)

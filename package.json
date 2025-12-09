@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
+    "bcryptjs": "^2.4.3",
     "@openai/agents": "^0.0.17",
     "@perplexity-ai/perplexity_ai": "^0.15.0",
     "@supabase/supabase-js": "^2.57.4",
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/bcryptjs": "^2.4.6",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/postcss": "^4.1.10",
     "@tailwindcss/typography": "^0.5.16",

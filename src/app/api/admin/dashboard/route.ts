@@ -2,22 +2,30 @@
  * Admin Dashboard Data API
  * 
  * GET /api/admin/dashboard - Get dashboard analytics and conversation data
+ * 
+ * Supports role-based filtering:
+ * - Master role: See all conversations and assignments
+ * - Advisor role: See only conversations assigned to their firm + unassigned
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAdminToken } from '@/lib/auth/admin'
+import { getAdminTokenPayload, isMasterRole } from '@/lib/auth/admin'
 import { createAdminSupabaseClient } from '@/lib/supabase/index'
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify admin authentication
-    const isAuthenticated = await verifyAdminToken(request)
-    if (!isAuthenticated) {
+    // Verify admin authentication and get role info
+    const tokenResult = await getAdminTokenPayload(request)
+    if (!tokenResult.isAuthenticated || !tokenResult.payload) {
       return NextResponse.json(
         { success: false, message: 'Unauthorized' },
         { status: 401 }
       )
     }
+
+    const { payload } = tokenResult
+    const isMaster = isMasterRole(payload)
+    const userFirm = payload.firmName
 
     const supabase = createAdminSupabaseClient()
     
@@ -25,6 +33,49 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const timeframe = searchParams.get('timeframe') || 'week'
     const limit = parseInt(searchParams.get('limit') || '50')
+    const filterFirm = searchParams.get('firm') // For master to filter by firm
+    const filterAssignment = searchParams.get('assignment') // 'assigned', 'unassigned', 'all'
+
+    // ========================================================================
+    // GET CLIENT ASSIGNMENTS
+    // ========================================================================
+    
+    const { data: assignments, error: assignmentsError } = await supabase
+      .from('client_assignments')
+      .select('*')
+
+    if (assignmentsError) {
+      console.error('Error fetching assignments:', assignmentsError)
+    }
+
+    // Create a map of conversation_id -> assignment
+    const assignmentMap = new Map<string, {
+      assigned_to_firm: string
+      assigned_by: string
+      assigned_at: string
+      notes: string | null
+    }>()
+    
+    assignments?.forEach(a => {
+      assignmentMap.set(a.conversation_id, {
+        assigned_to_firm: a.assigned_to_firm,
+        assigned_by: a.assigned_by,
+        assigned_at: a.assigned_at,
+        notes: a.notes
+      })
+    })
+
+    // Get list of conversation IDs assigned to user's firm (for advisor filtering)
+    const firmAssignedIds = new Set<string>()
+    const otherFirmAssignedIds = new Set<string>()
+    
+    assignments?.forEach(a => {
+      if (a.assigned_to_firm === userFirm) {
+        firmAssignedIds.add(a.conversation_id)
+      } else {
+        otherFirmAssignedIds.add(a.conversation_id)
+      }
+    })
 
     // ========================================================================
     // ANALYTICS OVERVIEW
@@ -58,7 +109,7 @@ export async function GET(request: NextRequest) {
     // CONVERSATION DETAILS
     // ========================================================================
     
-    const { data: conversations, error: conversationsError } = await supabase
+    const { data: allConversations, error: conversationsError } = await supabase
       .from('conversations')
       .select(`
         id,
@@ -69,13 +120,44 @@ export async function GET(request: NextRequest) {
         metadata
       `)
       .order('created_at', { ascending: false })
-      .limit(limit)
+      .limit(limit * 2) // Fetch more to allow for filtering
 
     if (conversationsError) {
       console.error('Error fetching conversations:', conversationsError)
     }
 
-    console.log('Conversations data:', conversations?.length, 'conversations found')
+    console.log('Conversations data:', allConversations?.length, 'conversations found')
+
+    // ========================================================================
+    // FILTER CONVERSATIONS BASED ON ROLE
+    // ========================================================================
+    
+    let filteredConversations = allConversations || []
+
+    if (!isMaster) {
+      // Advisor role: Show ONLY conversations assigned to their firm
+      filteredConversations = filteredConversations.filter(c => {
+        // Only show if explicitly assigned to this advisor's firm
+        return firmAssignedIds.has(c.id)
+      })
+    } else {
+      // Master role: Apply optional filters
+      if (filterFirm) {
+        filteredConversations = filteredConversations.filter(c => {
+          const assignment = assignmentMap.get(c.id)
+          return assignment?.assigned_to_firm === filterFirm
+        })
+      }
+      
+      if (filterAssignment === 'assigned') {
+        filteredConversations = filteredConversations.filter(c => assignmentMap.has(c.id))
+      } else if (filterAssignment === 'unassigned') {
+        filteredConversations = filteredConversations.filter(c => !assignmentMap.has(c.id))
+      }
+    }
+
+    // Apply limit after filtering
+    const conversations = filteredConversations.slice(0, limit)
 
     // ========================================================================
     // USER DATA WITH ANALYSIS
@@ -97,6 +179,7 @@ export async function GET(request: NextRequest) {
     
     const enrichedConversations = conversations?.map(conversation => {
       const userInfo = userData?.find(u => u.conversation_id === conversation.id)
+      const assignment = assignmentMap.get(conversation.id)
       
       // Calculate lead score - transform userInfo to expected format
       const transformedUserInfo = userInfo ? {
@@ -148,28 +231,42 @@ export async function GET(request: NextRequest) {
         },
         hasAnalysis: !!analysis,
         analysisMetrics,
-        lastActivity: conversation.updated_at
+        lastActivity: conversation.updated_at,
+        // Add assignment info
+        assignment: assignment ? {
+          assignedToFirm: assignment.assigned_to_firm,
+          assignedBy: assignment.assigned_by,
+          assignedAt: assignment.assigned_at,
+          notes: assignment.notes
+        } : null
       }
     }) || []
 
     // ========================================================================
-    // SUMMARY STATISTICS
+    // SUMMARY STATISTICS (adjusted for role)
     // ========================================================================
+    
+    // For advisors, calculate stats based on visible conversations only
+    const visibleConversationIds = new Set(filteredConversations.map(c => c.id))
     
     const stats = {
       total: {
-        conversations: totalConversationsCount || 0,
+        conversations: isMaster ? (totalConversationsCount || 0) : filteredConversations.length,
         emails: new Set(conversations?.map(c => c.user_email)).size,
-        completed: completedConversationsCount || 0
+        completed: isMaster ? (completedConversationsCount || 0) : 
+          enrichedConversations.filter(c => c.hasAnalysis).length
       },
       recent: {
-        conversations: recentConversationsCount || 0,
+        conversations: isMaster ? (recentConversationsCount || 0) : 
+          filteredConversations.filter(c => new Date(c.created_at) >= timeframeDate).length,
         timeframe
       },
       conversion: {
         emailCapture: conversations?.filter(c => c.user_email).length || 0,
         analysisCompletion: enrichedConversations.filter(c => c.hasAnalysis).length,
-        averageLeadScore: enrichedConversations.reduce((sum, c) => sum + c.leadScore, 0) / enrichedConversations.length || 0
+        averageLeadScore: enrichedConversations.length > 0 
+          ? enrichedConversations.reduce((sum, c) => sum + c.leadScore, 0) / enrichedConversations.length 
+          : 0
       }
     }
 
@@ -188,7 +285,29 @@ export async function GET(request: NextRequest) {
     // PORTFOLIO ANALYSIS INSIGHTS
     // ========================================================================
     
-    const portfolioInsights = calculatePortfolioInsights(userData || [])
+    // Filter user data for visible conversations
+    const visibleUserData = (userData || []).filter(ud => 
+      visibleConversationIds.has(ud.conversation_id)
+    )
+    const portfolioInsights = calculatePortfolioInsights(visibleUserData)
+
+    // ========================================================================
+    // ASSIGNMENT STATISTICS (master only)
+    // ========================================================================
+    
+    let assignmentStats = null
+    if (isMaster) {
+      const firmCounts: Record<string, number> = {}
+      assignments?.forEach(a => {
+        firmCounts[a.assigned_to_firm] = (firmCounts[a.assigned_to_firm] || 0) + 1
+      })
+      
+      assignmentStats = {
+        totalAssigned: assignments?.length || 0,
+        totalUnassigned: (totalConversationsCount || 0) - (assignments?.length || 0),
+        byFirm: firmCounts
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -197,6 +316,9 @@ export async function GET(request: NextRequest) {
         insights,
         portfolioInsights,
         conversations: enrichedConversations,
+        assignmentStats, // Only included for master role
+        userRole: payload.role,
+        userFirm: payload.firmName,
         lastUpdated: new Date().toISOString()
       }
     })
@@ -263,33 +385,6 @@ function getConversationStatus(conversation: { user_email?: string | null }, use
   return 'In Progress'
 }
 
-// Unused helper function - commented out for now
-// function getGoalTypeLabel(type: string | undefined | null): string {
-//   switch (type) {
-//     case 'Retirement':
-//       return 'Retirement'
-//     case 'Wealth Creation':
-//       return 'Wealth Creation'
-//     case 'Education':
-//       return 'Education'
-//     case 'Major Purchase':
-//       return 'Major Purchase'
-//     case 'Business':
-//       return 'Business'
-//     default:
-//       return 'Unknown'
-//   }
-// }
-
-// Unused helper function - commented out for now
-// function getPortfolioSizeRange(value: number | undefined | null): string {
-//   if (value === undefined || value === null) return 'Unknown'
-//   if (value < 50000) return '$1-$50k'
-//   if (value < 250000) return '$50k-$250k'
-//   if (value < 1000000) return '$250k-$1M'
-//   return '$1M+'
-// }
-
 function getGoalTypeDistribution(conversations: Array<{ goals?: { type?: string | null } }>): Record<string, number> {
   const distribution: Record<string, number> = {}
   conversations.forEach(c => {
@@ -301,7 +396,7 @@ function getGoalTypeDistribution(conversations: Array<{ goals?: { type?: string 
 
 function getPortfolioSizeDistribution(conversations: Array<{ portfolio?: { value?: number; newInvestor?: boolean } }>): Record<string, number> {
   const distribution: Record<string, number> = {
-    'Newinvestor': 0,
+    'New Investor': 0,
     '$1-$50k': 0,
     '$50k-$250k': 0,
     '$250k-$1M': 0,
@@ -377,6 +472,7 @@ interface PortfolioData {
 }
 
 interface UserDataRecord {
+  conversation_id: string
   analysis_results?: unknown
   portfolio_data?: unknown
 }

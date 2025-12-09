@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   HiChatBubbleLeftRight, 
@@ -14,9 +14,28 @@ import {
   HiCheckCircle,
   HiArrowDownTray,
   HiShieldCheck,
-  HiSquares2X2
+  HiSquares2X2,
+  HiBuildingOffice2,
+  HiArrowPath,
+  HiXMark,
+  HiFunnel,
+  HiUserGroup
 } from 'react-icons/hi2'
 import type { DisplaySpec, DisplayBlock } from '@/lib/supabase/types'
+
+// Advisory firms list
+const ADVISORY_FIRMS = [
+  'LFP Advisors',
+  'Legado Wealth Management',
+  'The Financial Gym'
+] as const
+
+interface AssignmentInfo {
+  assignedToFirm: string
+  assignedBy: string
+  assignedAt: string
+  notes: string | null
+}
 
 interface DashboardData {
   stats: {
@@ -59,21 +78,20 @@ interface DashboardData {
       positionsCount: number
     } | null
     lastActivity: string
+    assignment: AssignmentInfo | null
   }>
+  assignmentStats?: {
+    totalAssigned: number
+    totalUnassigned: number
+    byFirm: Record<string, number>
+  }
+  userRole: 'master' | 'advisor'
+  userFirm: string | null
   lastUpdated?: string
 }
 
 type TimelineItem = { timestamp: string; event: string; description?: string }
 type MessageItem = { id: string; role: 'user' | 'assistant'; created_at: string; content: string | null; display_spec?: unknown }
-// type LeadScore = number | { total: number; breakdown?: Record<string, number> } // Unused type
-// interface ConversationDetail {
-//   id: string
-//   user_email: string | null
-//   created_at: string
-//   leadScore: LeadScore
-//   timeline: TimelineItem[]
-//   messages: MessageItem[]
-// }
 
 export default function AdminDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
@@ -87,17 +105,39 @@ export default function AdminDashboardPage() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState('')
   const [activeDetailTab, setActiveDetailTab] = useState<'overview' | 'analysis' | 'risk' | 'allocation' | 'holdings' | 'messages'>('overview')
+  
+  // Assignment states
+  const [selectedConversations, setSelectedConversations] = useState<Set<string>>(new Set())
+  const [assignmentFilter, setAssignmentFilter] = useState<'all' | 'assigned' | 'unassigned'>('all')
+  const [firmFilter, setFirmFilter] = useState<string>('')
+  const [showBulkAssign, setShowBulkAssign] = useState(false)
+  const [assigningTo, setAssigningTo] = useState<string>('')
+  const [assignmentNote, setAssignmentNote] = useState('')
+  const [isAssigning, setIsAssigning] = useState(false)
+  
+  // User info
+  const [currentUser, setCurrentUser] = useState<{
+    username: string
+    role: 'master' | 'advisor'
+    firmName: string | null
+    displayName: string
+  } | null>(null)
+  
   const router = useRouter()
 
-  useEffect(() => {
-    fetchDashboardData()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeframe])
+  const isMaster = currentUser?.role === 'master'
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`/api/admin/dashboard?timeframe=${timeframe}&limit=100`)
+      
+      let url = `/api/admin/dashboard?timeframe=${timeframe}&limit=100`
+      if (isMaster) {
+        if (firmFilter) url += `&firm=${encodeURIComponent(firmFilter)}`
+        if (assignmentFilter !== 'all') url += `&assignment=${assignmentFilter}`
+      }
+      
+      const response = await fetch(url)
       
       if (response.status === 401) {
         router.push('/admin/login')
@@ -108,6 +148,12 @@ export default function AdminDashboardPage() {
       
       if (result.success) {
         setData(result.data)
+        setCurrentUser({
+          username: result.data.userRole === 'master' ? 'clockwise' : result.data.userFirm,
+          role: result.data.userRole,
+          firmName: result.data.userFirm,
+          displayName: result.data.userRole === 'master' ? 'Clockwise Capital' : result.data.userFirm || 'Advisor'
+        })
       } else {
         setError(result.message || 'Failed to fetch data')
       }
@@ -116,7 +162,29 @@ export default function AdminDashboardPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [timeframe, firmFilter, assignmentFilter, isMaster, router])
+
+  useEffect(() => {
+    fetchDashboardData()
+  }, [fetchDashboardData])
+
+  // Fetch current user info on mount
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await fetch('/api/admin/auth')
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success) {
+            setCurrentUser(result.user)
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch user:', e)
+      }
+    }
+    fetchUser()
+  }, [])
 
   const openConversation = async (id: string) => {
     setIsDetailOpen(true)
@@ -144,10 +212,93 @@ export default function AdminDashboardPage() {
     setActiveDetailTab('overview')
   }
 
+  // Assignment functions
+  const handleAssign = async (conversationIds: string[], firmName: string, notes?: string) => {
+    if (!isMaster) return
+    
+    setIsAssigning(true)
+    try {
+      const response = await fetch('/api/admin/assignments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationIds,
+          firmName,
+          notes
+        })
+      })
+      
+      const result = await response.json()
+      if (result.success) {
+        // Refresh dashboard data
+        await fetchDashboardData()
+        setSelectedConversations(new Set())
+        setShowBulkAssign(false)
+        setAssignmentNote('')
+      } else {
+        alert(result.message || 'Failed to assign')
+      }
+    } catch (e) {
+      console.error('Assignment error:', e)
+      alert('Failed to assign clients')
+    } finally {
+      setIsAssigning(false)
+    }
+  }
+
+  const handleUnassign = async (conversationIds: string[]) => {
+    if (!isMaster) return
+    
+    if (!confirm(`Are you sure you want to unassign ${conversationIds.length} client(s)?`)) return
+    
+    setIsAssigning(true)
+    try {
+      const response = await fetch('/api/admin/assignments', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationIds })
+      })
+      
+      const result = await response.json()
+      if (result.success) {
+        await fetchDashboardData()
+        setSelectedConversations(new Set())
+      } else {
+        alert(result.message || 'Failed to unassign')
+      }
+    } catch (e) {
+      console.error('Unassign error:', e)
+      alert('Failed to unassign clients')
+    } finally {
+      setIsAssigning(false)
+    }
+  }
+
+  const toggleSelectConversation = (id: string) => {
+    const newSelected = new Set(selectedConversations)
+    if (newSelected.has(id)) {
+      newSelected.delete(id)
+    } else {
+      newSelected.add(id)
+    }
+    setSelectedConversations(newSelected)
+  }
+
+  const selectAllVisible = () => {
+    const allIds = sortedConversations.map(c => c.id)
+    setSelectedConversations(new Set(allIds))
+  }
+
+  const clearSelection = () => {
+    setSelectedConversations(new Set())
+  }
+
   interface ConversationItem {
+    id: string
     leadScore: number
     created_at: string
     portfolio?: { value?: number }
+    assignment: AssignmentInfo | null
   }
 
   const sortedConversations = data?.conversations.sort((a: ConversationItem, b: ConversationItem) => {
@@ -162,6 +313,16 @@ export default function AdminDashboardPage() {
         return b.leadScore - a.leadScore
     }
   }) || []
+
+  // Logout function
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/auth', { method: 'DELETE' })
+      router.push('/admin/login')
+    } catch (e) {
+      console.error('Logout error:', e)
+    }
+  }
 
   // Helper: render a DisplaySpec block array into readable HTML
   const renderDisplaySpec = (spec: unknown) => {
@@ -266,29 +427,161 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Admin Dashboard Content - Add top padding to account for fixed header */}
+      {/* Top Navigation Bar */}
+      <div className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo and Role Badge */}
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">CC</span>
+                </div>
+                <span className="ml-2 font-semibold text-gray-900">Admin Dashboard</span>
+              </div>
+              <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                isMaster 
+                  ? 'bg-purple-100 text-purple-800' 
+                  : 'bg-blue-100 text-blue-800'
+              }`}>
+                {isMaster ? 'Master' : currentUser?.firmName || 'Advisor'}
+              </span>
+            </div>
+
+            {/* Right side actions */}
+            <div className="flex items-center space-x-4">
+              {isMaster && (
+                <button
+                  onClick={() => router.push('/admin/users')}
+                  className="text-gray-600 hover:text-gray-900 text-sm font-medium flex items-center"
+                >
+                  <HiUserGroup className="w-4 h-4 mr-1" />
+                  Manage Users
+                </button>
+              )}
+              <span className="text-sm text-gray-500">
+                {currentUser?.displayName}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="text-gray-600 hover:text-red-600 text-sm font-medium"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Admin Dashboard Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
         {/* Dashboard Header */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-              <p className="text-gray-600 mt-1 text-sm sm:text-base">Business Intelligence & Lead Management</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                {isMaster ? 'Admin Dashboard' : `${currentUser?.firmName} Dashboard`}
+              </h1>
+              <p className="text-gray-600 mt-1 text-sm sm:text-base">
+                {isMaster 
+                  ? 'Business Intelligence & Lead Management' 
+                  : 'Your Assigned Clients & Leads'}
+              </p>
             </div>
             
-            <div className="flex items-center">
+            <div className="flex items-center gap-3">
+              {/* Timeframe filter */}
               <select
                 value={timeframe}
                 onChange={(e) => setTimeframe(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-auto"
+                className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="day">Last 24 Hours</option>
                 <option value="week">Last Week</option>
                 <option value="month">Last Month</option>
               </select>
+              
+              {/* Refresh button */}
+              <button
+                onClick={fetchDashboardData}
+                className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100"
+                title="Refresh data"
+              >
+                <HiArrowPath className="w-5 h-5" />
+              </button>
             </div>
           </div>
         </div>
+
+        {/* Assignment Stats for Master (new section) */}
+        {isMaster && data?.assignmentStats && (
+          <div className="mb-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4 border border-purple-100">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center space-x-6">
+                <div>
+                  <p className="text-xs text-purple-600 font-medium">Total Assigned</p>
+                  <p className="text-2xl font-bold text-purple-900">{data.assignmentStats.totalAssigned}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-blue-600 font-medium">Unassigned</p>
+                  <p className="text-2xl font-bold text-blue-900">{data.assignmentStats.totalUnassigned}</p>
+                </div>
+                <div className="border-l border-purple-200 pl-6">
+                  <p className="text-xs text-gray-600 font-medium mb-1">By Firm</p>
+                  <div className="flex space-x-4">
+                    {Object.entries(data.assignmentStats.byFirm).map(([firm, count]) => (
+                      <div key={firm} className="text-sm">
+                        <span className="text-gray-600">{firm.split(' ')[0]}:</span>{' '}
+                        <span className="font-semibold text-gray-900">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Filter controls */}
+              <div className="flex items-center space-x-3">
+                <select
+                  value={assignmentFilter}
+                  onChange={(e) => setAssignmentFilter(e.target.value as 'all' | 'assigned' | 'unassigned')}
+                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white"
+                >
+                  <option value="all">All Clients</option>
+                  <option value="assigned">Assigned Only</option>
+                  <option value="unassigned">Unassigned Only</option>
+                </select>
+                <select
+                  value={firmFilter}
+                  onChange={(e) => setFirmFilter(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white"
+                >
+                  <option value="">All Firms</option>
+                  {ADVISORY_FIRMS.map(firm => (
+                    <option key={firm} value={firm}>{firm}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Advisor Info Banner */}
+        {!isMaster && (
+          <div className="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div className="flex items-center">
+              <HiBuildingOffice2 className="w-5 h-5 text-blue-600 mr-3 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-blue-900">
+                  Viewing clients assigned to {currentUser?.firmName}
+                </p>
+                <p className="text-xs text-blue-700 mt-0.5">
+                  Contact Clockwise Capital to have additional clients assigned to your firm.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Stats Overview */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md transition-shadow">
@@ -296,7 +589,9 @@ export default function AdminDashboardPage() {
               <div>
                 <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Conversations</p>
                 <p className="text-xl sm:text-3xl font-bold text-gray-900">{data?.stats.total.conversations}</p>
-                <p className="text-xs text-gray-500 mt-1 hidden sm:block">All time</p>
+                <p className="text-xs text-gray-500 mt-1 hidden sm:block">
+                  {isMaster ? 'All time' : 'Assigned to you'}
+                </p>
               </div>
               <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg sm:rounded-xl shadow-lg">
                 <HiChatBubbleLeftRight className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
@@ -387,6 +682,53 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
+        {/* Bulk Assignment Bar (Master only, when items selected) */}
+        {isMaster && selectedConversations.size > 0 && (
+          <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <span className="text-sm font-medium text-blue-900">
+                {selectedConversations.size} client(s) selected
+              </span>
+              <button
+                onClick={clearSelection}
+                className="text-blue-600 hover:text-blue-800 text-sm"
+              >
+                Clear selection
+              </button>
+            </div>
+            <div className="flex items-center space-x-3">
+              <select
+                value={assigningTo}
+                onChange={(e) => setAssigningTo(e.target.value)}
+                className="border border-blue-300 rounded-lg px-3 py-1.5 text-sm bg-white"
+              >
+                <option value="">Select firm...</option>
+                {ADVISORY_FIRMS.map(firm => (
+                  <option key={firm} value={firm}>{firm}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => {
+                  if (assigningTo) {
+                    handleAssign(Array.from(selectedConversations), assigningTo)
+                  }
+                }}
+                disabled={!assigningTo || isAssigning}
+                className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isAssigning ? 'Assigning...' : 'Assign Selected'}
+              </button>
+              <button
+                onClick={() => handleUnassign(Array.from(selectedConversations))}
+                disabled={isAssigning}
+                className="text-red-600 hover:text-red-800 text-sm font-medium"
+              >
+                Unassign
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Conversations Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200 bg-gray-50">
@@ -395,9 +737,19 @@ export default function AdminDashboardPage() {
                 <div className="p-2 bg-slate-100 rounded-lg mr-3">
                   <HiUsers className="w-5 h-5 text-slate-600" />
                 </div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900">Recent Conversations</h3>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+                  {isMaster ? 'All Conversations' : 'Your Clients'}
+                </h3>
               </div>
               <div className="flex items-center gap-2 sm:gap-3">
+                {isMaster && (
+                  <button
+                    onClick={selectAllVisible}
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    Select All
+                  </button>
+                )}
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
@@ -419,6 +771,22 @@ export default function AdminDashboardPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-slate-50">
                 <tr>
+                  {isMaster && (
+                    <th className="px-3 py-3 w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedConversations.size === sortedConversations.length && sortedConversations.length > 0}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            selectAllVisible()
+                          } else {
+                            clearSelection()
+                          }
+                        }}
+                        className="rounded border-gray-300"
+                      />
+                    </th>
+                  )}
                   <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     <div className="flex items-center space-x-1">
                       <HiUser className="w-4 h-4" />
@@ -437,10 +805,11 @@ export default function AdminDashboardPage() {
                       <span>Status</span>
                     </div>
                   </th>
+                  {/* Assignment Column */}
                   <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider hidden md:table-cell">
                     <div className="flex items-center space-x-1">
-                      <HiChartBar className="w-4 h-4" />
-                      <span>Goals</span>
+                      <HiBuildingOffice2 className="w-4 h-4" />
+                      <span>Assigned To</span>
                     </div>
                   </th>
                   <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider hidden lg:table-cell">
@@ -455,16 +824,36 @@ export default function AdminDashboardPage() {
                       <span>Created</span>
                     </div>
                   </th>
+                  {isMaster && (
+                    <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                      <span>Actions</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
                 {sortedConversations.slice(0, 50).map((conversation) => (
                   <tr
                     key={conversation.id}
-                    className="hover:bg-blue-50 transition-colors cursor-pointer"
-                    onClick={() => openConversation(conversation.id)}
+                    className={`hover:bg-blue-50 transition-colors ${
+                      selectedConversations.has(conversation.id) ? 'bg-blue-50' : ''
+                    }`}
                   >
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                    {isMaster && (
+                      <td className="px-3 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedConversations.has(conversation.id)}
+                          onChange={() => toggleSelectConversation(conversation.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="rounded border-gray-300"
+                        />
+                      </td>
+                    )}
+                    <td 
+                      className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap cursor-pointer"
+                      onClick={() => openConversation(conversation.id)}
+                    >
                       <div className="flex items-center">
                         <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mr-2 sm:mr-3 flex-shrink-0">
                           <span className="text-white font-medium text-xs sm:text-sm">
@@ -474,18 +863,6 @@ export default function AdminDashboardPage() {
                         <div className="min-w-0">
                           <div className="text-xs sm:text-sm font-medium text-gray-900 truncate max-w-[120px] sm:max-w-none">{conversation.user_email}</div>
                           <div className="text-xs text-gray-500 hidden sm:block">{conversation.id.slice(0, 8)}...</div>
-                          {/* Show status on mobile below email */}
-                          <div className="sm:hidden mt-1">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                              conversation.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                              conversation.status === 'Portfolio Collected' ? 'bg-blue-100 text-blue-800' :
-                              conversation.status === 'Goals Collected' ? 'bg-blue-100 text-blue-800' :
-                              conversation.status === 'Email Captured' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {conversation.status}
-                            </span>
-                          </div>
                         </div>
                       </div>
                     </td>
@@ -510,16 +887,17 @@ export default function AdminDashboardPage() {
                         {conversation.status}
                       </span>
                     </td>
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900 hidden md:table-cell">
-                      {conversation.goals.type ? (
-                        <div>
-                          <div className="font-medium capitalize">{conversation.goals.type}</div>
-                          {conversation.goals.amount && (
-                            <div className="text-xs text-gray-500">${conversation.goals.amount.toLocaleString()}</div>
-                          )}
+                    {/* Assignment Cell */}
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap hidden md:table-cell">
+                      {conversation.assignment ? (
+                        <div className="flex items-center">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                            <HiBuildingOffice2 className="w-3 h-3 mr-1" />
+                            {conversation.assignment.assignedToFirm.split(' ')[0]}
+                          </span>
                         </div>
                       ) : (
-                        <span className="text-gray-400 text-xs">No data</span>
+                        <span className="text-xs text-gray-400">Unassigned</span>
                       )}
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">
@@ -540,6 +918,29 @@ export default function AdminDashboardPage() {
                       <div className="text-sm">{new Date(conversation.created_at).toLocaleDateString()}</div>
                       <div className="text-xs text-gray-400">{new Date(conversation.created_at).toLocaleTimeString()}</div>
                     </td>
+                    {isMaster && (
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                        <div className="flex items-center space-x-2">
+                          <select
+                            value={conversation.assignment?.assignedToFirm || ''}
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                handleAssign([conversation.id], e.target.value)
+                              } else if (conversation.assignment) {
+                                handleUnassign([conversation.id])
+                              }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-xs border border-gray-300 rounded px-2 py-1 bg-white"
+                          >
+                            <option value="">Unassigned</option>
+                            {ADVISORY_FIRMS.map(firm => (
+                              <option key={firm} value={firm}>{firm.split(' ')[0]}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -576,9 +977,7 @@ export default function AdminDashboardPage() {
                   className="p-2 rounded-lg hover:bg-gray-100 flex-shrink-0"
                   aria-label="Close"
                 >
-                  <svg className="w-5 h-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M6 18L18 6" />
-                  </svg>
+                  <HiXMark className="w-5 h-5 text-gray-600" />
                 </button>
               </div>
 
@@ -827,44 +1226,6 @@ export default function AdminDashboardPage() {
                                 </span>
                               </div>
                             )}
-
-                            {/* AI Analysis Fallback (for older records without Monte Carlo data) */}
-                            {Boolean(detail.portfolioAnalysis.aiAnalysis) && (
-                              <div className="mt-6 border-t border-gray-200 pt-6">
-                                <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
-                                  <HiBolt className="w-5 h-5 mr-2 text-blue-500" />
-                                  AI Risk Assessment
-                                </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                  {Boolean(detail.portfolioAnalysis?.aiAnalysis?.riskLevel) && (
-                                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
-                                      <p className="text-xs text-blue-600 mb-1">Risk Level</p>
-                                      <p className="font-semibold text-gray-900">{String(detail.portfolioAnalysis?.aiAnalysis.riskLevel)}</p>
-                                    </div>
-                                  )}
-                                  {Boolean(detail.portfolioAnalysis?.aiAnalysis?.beta) && (
-                                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
-                                      <p className="text-xs text-blue-600 mb-1">Beta</p>
-                                      <p className="font-semibold text-gray-900">{String(detail.portfolioAnalysis?.aiAnalysis.beta)}</p>
-                                    </div>
-                                  )}
-                                  {Boolean(detail.portfolioAnalysis?.aiAnalysis?.volatility) && (
-                                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
-                                      <p className="text-xs text-blue-600 mb-1">Volatility</p>
-                                      <p className="font-semibold text-gray-900">{String(detail.portfolioAnalysis?.aiAnalysis.volatility)}</p>
-                                    </div>
-                                  )}
-                                </div>
-                                {Boolean(detail.portfolioAnalysis?.aiAnalysis?.portfolioImpact) && (
-                                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-                                    <p className="text-xs font-semibold text-slate-700 mb-2">Portfolio Impact Analysis</p>
-                                    <div className="text-sm text-slate-600 whitespace-pre-line">
-                                      {String(detail.portfolioAnalysis?.aiAnalysis.portfolioImpact)}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            )}
                           </div>
                         ) : (
                           <div className="text-center py-12 text-gray-500">
@@ -945,53 +1306,6 @@ export default function AdminDashboardPage() {
                                     : 'N/A'}
                                 </p>
                               </div>
-                            </div>
-                          </div>
-                        ) : detail.portfolioAnalysis && detail.portfolioAnalysis.aiAnalysis ? (
-                          <div className="space-y-4 sm:space-y-6">
-                            {/* AI Risk Analysis Fallback */}
-                            <div className="bg-gradient-to-br from-blue-50 to-emerald-50 border border-blue-200 rounded-xl p-4 sm:p-6">
-                              <div className="flex items-center mb-4">
-                                <HiBolt className="w-6 h-6 text-blue-600 mr-2" />
-                                <h4 className="text-lg font-semibold text-blue-900">AI Risk Assessment</h4>
-                              </div>
-                              <p className="text-sm text-blue-700 mb-4">
-                                Monte Carlo simulation data not available. Showing AI-generated risk analysis.
-                              </p>
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {Boolean(detail.portfolioAnalysis?.aiAnalysis?.riskLevel) && (
-                                  <div className="bg-white rounded-lg p-4 border border-blue-100">
-                                    <p className="text-xs text-blue-600 mb-1">Risk Level</p>
-                                    <p className="text-xl font-bold text-gray-900">
-                                      {String(detail.portfolioAnalysis?.aiAnalysis.riskLevel)}
-                                    </p>
-                                  </div>
-                                )}
-                                {Boolean(detail.portfolioAnalysis?.aiAnalysis?.beta) && (
-                                  <div className="bg-white rounded-lg p-4 border border-blue-100">
-                                    <p className="text-xs text-blue-600 mb-1">Portfolio Beta</p>
-                                    <p className="text-xl font-bold text-gray-900">
-                                      {String(detail.portfolioAnalysis?.aiAnalysis.beta)}
-                                    </p>
-                                  </div>
-                                )}
-                                {Boolean(detail.portfolioAnalysis?.aiAnalysis?.volatility) && (
-                                  <div className="bg-white rounded-lg p-4 border border-blue-100">
-                                    <p className="text-xs text-blue-600 mb-1">Est. Volatility</p>
-                                    <p className="text-xl font-bold text-gray-900">
-                                      {String(detail.portfolioAnalysis?.aiAnalysis.volatility)}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                              {Boolean(detail.portfolioAnalysis?.aiAnalysis?.marketImpact) && (
-                                <div className="mt-4 bg-white rounded-lg p-4 border border-slate-200">
-                                  <p className="text-xs font-semibold text-slate-700 mb-2">Market Impact Analysis</p>
-                                  <div className="text-sm text-slate-600 whitespace-pre-line">
-                                    {String(detail.portfolioAnalysis?.aiAnalysis.marketImpact)}
-                                  </div>
-                                </div>
-                              )}
                             </div>
                           </div>
                         ) : (
@@ -1123,32 +1437,6 @@ export default function AdminDashboardPage() {
                               </tbody>
                             </table>
                           </div>
-                        ) : detail.intakeFormData && detail.intakeFormData.specificHoldings ? (
-                          <div className="overflow-x-auto">
-                            <p className="text-sm text-gray-500 mb-4">Holdings from intake form (no analysis performed yet)</p>
-                            <table className="min-w-full divide-y divide-gray-200">
-                              <thead className="bg-gray-50">
-                                <tr>
-                                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ticker</th>
-                                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Name</th>
-                                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Weight</th>
-                                </tr>
-                              </thead>
-                              <tbody className="bg-white divide-y divide-gray-100">
-                                {((detail.intakeFormData.specificHoldings as Array<{
-                                  ticker?: string;
-                                  name: string;
-                                  percentage: number;
-                                }>) || []).map((h, idx) => (
-                                  <tr key={idx} className="hover:bg-gray-50">
-                                    <td className="px-4 py-3 whitespace-nowrap font-mono font-medium text-gray-900">{h.ticker || '-'}</td>
-                                    <td className="px-4 py-3 text-sm text-gray-600">{h.name}</td>
-                                    <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">{h.percentage}%</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
                         ) : (
                           <div className="text-center py-12 text-gray-500">
                             <HiCurrencyDollar className="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -1196,6 +1484,59 @@ export default function AdminDashboardPage() {
               ) : (
                 <div className="p-6 text-gray-500">Select a conversation to view details.</div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Bulk Assignment Modal */}
+        {showBulkAssign && isMaster && (
+          <div className="fixed inset-0 z-[10001] bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Bulk Assignment</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Assign to Firm</label>
+                  <select
+                    value={assigningTo}
+                    onChange={(e) => setAssigningTo(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  >
+                    <option value="">Select firm...</option>
+                    {ADVISORY_FIRMS.map(firm => (
+                      <option key={firm} value={firm}>{firm}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Note (optional)</label>
+                  <textarea
+                    value={assignmentNote}
+                    onChange={(e) => setAssignmentNote(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    rows={3}
+                    placeholder="Add a note about this assignment..."
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => setShowBulkAssign(false)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (assigningTo) {
+                      handleAssign(Array.from(selectedConversations), assigningTo, assignmentNote)
+                    }
+                  }}
+                  disabled={!assigningTo || isAssigning}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isAssigning ? 'Assigning...' : `Assign ${selectedConversations.size} Client(s)`}
+                </button>
+              </div>
             </div>
           </div>
         )}
