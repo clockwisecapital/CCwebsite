@@ -116,11 +116,11 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
               <h4 className="text-sm font-semibold text-gray-300 mb-3">Top 5 Positions</h4>
               <div className="space-y-3">
                 {portfolioComparison.userPortfolio.topPositions.map((position) => {
-                  // For single proxy portfolios (100% SPY), use portfolio expected return
-                  // This ensures position and portfolio returns match
-                  const isSingleProxy = portfolioComparison.userPortfolio.isUsingProxy && 
-                                        portfolioComparison.userPortfolio.topPositions.length === 1;
-                  const displayExpectedReturn = isSingleProxy 
+                  // For single-holding portfolios (100% in one ticker), use portfolio metrics
+                  // This ensures position and portfolio returns match exactly
+                  const isSingleHolding = portfolioComparison.userPortfolio.topPositions.length === 1 && 
+                                          position.weight >= 99; // Allow for small rounding
+                  const displayExpectedReturn = isSingleHolding 
                     ? portfolioComparison.userPortfolio.expectedReturn 
                     : position.expectedReturn;
                   
@@ -149,8 +149,8 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
                         <div>
                           <div className="text-gray-400">Upside</div>
                           <div className="font-semibold text-emerald-400">
-                            {/* For single proxy portfolio, use portfolio-level upside to ensure consistency */}
-                            {isSingleProxy
+                            {/* For single-holding portfolio, use portfolio-level upside to ensure consistency */}
+                            {isSingleHolding
                               ? formatPercent(portfolioComparison.userPortfolio.upside)
                               : position.monteCarlo ? formatPercent(position.monteCarlo.upside) : 'N/A'}
                           </div>
@@ -158,8 +158,8 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
                         <div>
                           <div className="text-gray-400">Downside</div>
                           <div className="font-semibold text-rose-400">
-                            {/* For single proxy portfolio, use portfolio-level downside to ensure consistency */}
-                            {isSingleProxy
+                            {/* For single-holding portfolio, use portfolio-level downside to ensure consistency */}
+                            {isSingleHolding
                               ? formatPercent(portfolioComparison.userPortfolio.downside)
                               : position.monteCarlo ? formatPercent(position.monteCarlo.downside) : 'N/A'}
                           </div>

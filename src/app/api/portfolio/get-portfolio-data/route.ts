@@ -331,8 +331,15 @@ export async function POST(request: NextRequest) {
 
       const currentPrice = currentPrices.get(holding.ticker) || 0;
       const targetPrice = targetPrices.get(holding.ticker) || indexTargets.get(holding.ticker) || null;
-      const expectedReturn = year1Returns.get(holding.ticker) ?? null;
+      const year1Return = year1Returns.get(holding.ticker) ?? null;
       const monteCarlo = monteCarloResults.get(holding.ticker) || null;
+      
+      // Calculate blended expected return over timeframe (Year 1 + Years 2+ long-term)
+      const tickerAssetClass = getAssetClassForTicker(holding.ticker);
+      const tickerLongTermReturn = LONG_TERM_AVERAGES[tickerAssetClass] || LONG_TERM_AVERAGES.stocks;
+      const expectedReturn = year1Return !== null 
+        ? calculateBlendedReturn(year1Return, tickerLongTermReturn, timeHorizon)
+        : null;
       
       // Log Monte Carlo results for debugging
       if (monteCarlo) {
@@ -366,9 +373,18 @@ export async function POST(request: NextRequest) {
       };
     });
 
-    // Calculate weighted average expected return for user portfolio
-    // This is the Year 1 FactSet-based return
-    const userYear1Return = calculateWeightedReturn(userPositions);
+    // Calculate weighted average Year 1 return for user portfolio
+    // Use year1Returns map directly since position.expectedReturn is now blended
+    let userYear1Return = 0;
+    let totalYear1Weight = 0;
+    for (const holding of finalUserHoldings) {
+      const y1Return = year1Returns.get(holding.ticker);
+      if (y1Return !== undefined && !isNaN(y1Return)) {
+        userYear1Return += y1Return * holding.percentage;
+        totalYear1Weight += holding.percentage;
+      }
+    }
+    userYear1Return = totalYear1Weight > 0 ? userYear1Return / 100 : 0; // Normalize to decimal
     
     // ALWAYS blend Year 1 FactSet with Years 2+ long-term asset class averages for multi-year horizons
     // This ensures consistent methodology across all portfolios
@@ -473,9 +489,16 @@ export async function POST(request: NextRequest) {
         .map(holding => {
           const currentPrice = currentPrices.get(holding.stockTicker) || holding.price || 0;
           const targetPrice = targetPrices.get(holding.stockTicker) || indexTargets.get(holding.stockTicker) || null;
-          const expectedReturn = year1Returns.get(holding.stockTicker) ?? null;
+          const year1Return = year1Returns.get(holding.stockTicker) ?? null;
           const monteCarlo = monteCarloResults.get(holding.stockTicker) || null;
           const normalizedWeight = totalTimeWeight > 0 ? (holding.weightings / totalTimeWeight) * 100 : 0;
+          
+          // Calculate blended expected return over timeframe (Year 1 + Years 2+ long-term)
+          const tickerAssetClass = getAssetClassForTicker(holding.stockTicker);
+          const tickerLongTermReturn = LONG_TERM_AVERAGES[tickerAssetClass] || LONG_TERM_AVERAGES.stocks;
+          const expectedReturn = year1Return !== null 
+            ? calculateBlendedReturn(year1Return, tickerLongTermReturn, timeHorizon)
+            : null;
 
           return {
             ticker: holding.stockTicker,
@@ -488,7 +511,20 @@ export async function POST(request: NextRequest) {
           };
         });
 
-      timeYear1Return = calculateWeightedReturn(timePositions);
+      // Calculate weighted average Year 1 return for TIME portfolio
+      // Use year1Returns map directly since position.expectedReturn is now blended
+      timeYear1Return = 0;
+      let totalTimeYear1Weight = 0;
+      for (const holding of timeHoldings) {
+        if (holding.stockTicker.toLowerCase().includes('cash') || holding.stockTicker.toLowerCase().includes('other')) continue;
+        const y1Return = year1Returns.get(holding.stockTicker);
+        if (y1Return !== undefined && !isNaN(y1Return)) {
+          timeYear1Return += y1Return * holding.weightings;
+          totalTimeYear1Weight += holding.weightings;
+        }
+      }
+      timeYear1Return = totalTimeYear1Weight > 0 ? timeYear1Return / totalTimeYear1Weight : 0;
+      
       const timeLongTermReturn = LONG_TERM_AVERAGES.stocks;
       timeExpectedReturn = calculateBlendedReturn(timeYear1Return, timeLongTermReturn, timeHorizon);
       
