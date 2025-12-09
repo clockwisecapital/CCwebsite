@@ -4,6 +4,7 @@
  * Calculates probability of reaching financial goals using:
  * - Monte Carlo simulations with 12-month target prices (for specific holdings)
  * - Long-term historical averages (for asset class allocations)
+ * - Optional cycle-adjusted returns (based on current market cycle phases)
  */
 
 import type { MonteCarloResult } from '@/types/portfolio';
@@ -11,14 +12,25 @@ import type { IntakeFormData } from '@/components/features/portfolio/dashboard/P
 
 // Long-term historical average returns (REAL - inflation-adjusted)
 // Based on 100+ years of historical data (Ibbotson/Morningstar)
-export const LONG_TERM_AVERAGES = {
+// NOTE: These are the BASELINE returns - can be adjusted by cycle phases
+export const LONG_TERM_AVERAGES: CycleAdjustedAverages = {
   stocks: 0.07,      // 7% real (vs 10% nominal)
   bonds: 0.02,       // 2% real (vs 5% nominal)
   realEstate: 0.05,  // 5% real
   commodities: 0.01, // 1% real
   cash: 0.00,        // 0% real (matches inflation)
   alternatives: 0.05 // 5% real (blend of alternatives)
-} as const;
+};
+
+// Type for cycle-adjusted returns (allows any number value)
+export interface CycleAdjustedAverages {
+  stocks: number;
+  bonds: number;
+  realEstate: number;
+  commodities: number;
+  cash: number;
+  alternatives: number;
+}
 
 interface GoalProbabilityInput {
   currentAmount: number;           // Current portfolio value
@@ -35,6 +47,8 @@ interface GoalProbabilityInput {
   };
   year1Return?: number;            // Optional: Year 1 return from user's holdings
   monteCarloResults?: Map<string, MonteCarloResult>; // Optional: for specific holdings
+  cycleAdjustedReturns?: CycleAdjustedAverages;      // Optional: cycle-adjusted returns
+  volatilityMultiplier?: number;                      // Optional: cycle-based volatility adjustment
 }
 
 interface GoalProbabilityResult {
@@ -57,9 +71,15 @@ interface GoalProbabilityResult {
 }
 
 /**
- * Calculate expected portfolio return based on asset allocation and long-term averages
+ * Calculate expected portfolio return based on asset allocation
+ * 
+ * @param portfolio - Portfolio allocation percentages
+ * @param returnAverages - Returns to use (defaults to LONG_TERM_AVERAGES, can be cycle-adjusted)
  */
-export function calculateExpectedReturn(portfolio: GoalProbabilityInput['portfolio']): number {
+export function calculateExpectedReturn(
+  portfolio: GoalProbabilityInput['portfolio'],
+  returnAverages: CycleAdjustedAverages = LONG_TERM_AVERAGES
+): number {
   const totalAllocation = 
     portfolio.stocks + 
     portfolio.bonds + 
@@ -76,12 +96,12 @@ export function calculateExpectedReturn(portfolio: GoalProbabilityInput['portfol
   const normalize = (value: number) => (value / totalAllocation) * 100;
 
   const weightedReturn = 
-    (normalize(portfolio.stocks) / 100) * LONG_TERM_AVERAGES.stocks +
-    (normalize(portfolio.bonds) / 100) * LONG_TERM_AVERAGES.bonds +
-    (normalize(portfolio.cash) / 100) * LONG_TERM_AVERAGES.cash +
-    (normalize(portfolio.realEstate) / 100) * LONG_TERM_AVERAGES.realEstate +
-    (normalize(portfolio.commodities) / 100) * LONG_TERM_AVERAGES.commodities +
-    (normalize(portfolio.alternatives) / 100) * LONG_TERM_AVERAGES.alternatives;
+    (normalize(portfolio.stocks) / 100) * returnAverages.stocks +
+    (normalize(portfolio.bonds) / 100) * returnAverages.bonds +
+    (normalize(portfolio.cash) / 100) * returnAverages.cash +
+    (normalize(portfolio.realEstate) / 100) * returnAverages.realEstate +
+    (normalize(portfolio.commodities) / 100) * returnAverages.commodities +
+    (normalize(portfolio.alternatives) / 100) * returnAverages.alternatives;
 
   return weightedReturn;
 }
@@ -188,11 +208,17 @@ function randomNormal(mean: number, stdDev: number): number {
  * Calculate probability of reaching goal
  * 
  * Year 1: Uses user's holdings return (if provided), otherwise asset class average
- * Years 2+: Uses asset class weighted long-term averages
+ * Years 2+: Uses cycle-adjusted returns (if provided) or long-term averages
+ * 
+ * @param input - Goal probability input including optional cycle adjustments
  */
 export function calculateGoalProbability(input: GoalProbabilityInput): GoalProbabilityResult {
+  // Use cycle-adjusted returns if provided, otherwise use baseline LONG_TERM_AVERAGES
+  const returnAverages = input.cycleAdjustedReturns || LONG_TERM_AVERAGES;
+  
   // Long-term return from asset allocation (for Years 2+)
-  const longTermReturn = calculateExpectedReturn(input.portfolio);
+  // Now uses cycle-adjusted returns if available
+  const longTermReturn = calculateExpectedReturn(input.portfolio, returnAverages);
 
   // Year 1 return: use provided value from user's holdings, or fall back to long-term
   const year1Return = input.year1Return ?? longTermReturn;
@@ -201,11 +227,16 @@ export function calculateGoalProbability(input: GoalProbabilityInput): GoalProba
   const stockWeight = input.portfolio.stocks / 100;
   const bondWeight = input.portfolio.bonds / 100;
   const cashWeight = input.portfolio.cash / 100;
-  const estimatedVolatility = 
+  let estimatedVolatility = 
     stockWeight * 0.18 +      // Stocks: 18% volatility
     bondWeight * 0.06 +       // Bonds: 6% volatility
     cashWeight * 0.01 +       // Cash: 1% volatility
     (1 - stockWeight - bondWeight - cashWeight) * 0.12; // Other: 12% volatility
+
+  // Apply cycle-based volatility adjustment if provided
+  if (input.volatilityMultiplier) {
+    estimatedVolatility *= input.volatilityMultiplier;
+  }
 
   // Run Monte Carlo with Year 1 vs Years 2+ distinction
   const simulationResult = runGoalMonteCarloSimulation(
@@ -214,7 +245,7 @@ export function calculateGoalProbability(input: GoalProbabilityInput): GoalProba
     input.timeHorizon,
     input.monthlyContribution,
     year1Return,              // Year 1: user's holdings or asset class
-    longTermReturn,           // Years 2+: asset class average
+    longTermReturn,           // Years 2+: cycle-adjusted or baseline average
     estimatedVolatility
   );
 
@@ -229,13 +260,14 @@ export function calculateGoalProbability(input: GoalProbabilityInput): GoalProba
     upside: Math.min(1.0, simulationResult.upside / input.goalAmount)
   };
   
-  console.log(`🎯 Goal Probability Calculation:`, {
+  const usingCycleAdjusted = !!input.cycleAdjustedReturns;
+  console.log(`🎯 Goal Probability Calculation${usingCycleAdjusted ? ' (CYCLE-ADJUSTED)' : ''}:`, {
     currentAmount: input.currentAmount,
     goalAmount: input.goalAmount,
     timeHorizon: input.timeHorizon,
     year1Return: (year1Return * 100).toFixed(1) + '%',
-    longTermReturn: (longTermReturn * 100).toFixed(1) + '%',
-    volatility: (estimatedVolatility * 100).toFixed(1) + '%',
+    longTermReturn: (longTermReturn * 100).toFixed(1) + '%' + (usingCycleAdjusted ? ' (cycle-adjusted)' : ''),
+    volatility: (estimatedVolatility * 100).toFixed(1) + '%' + (input.volatilityMultiplier ? ` (${input.volatilityMultiplier.toFixed(2)}x multiplier)` : ''),
     actualProbability: (simulationResult.probabilityOfSuccess * 100).toFixed(1) + '%',
     projectedMedian: simulationResult.median,
     projectedDownside: simulationResult.downside,
@@ -257,7 +289,7 @@ export function calculateGoalProbability(input: GoalProbabilityInput): GoalProba
       upside: simulationResult.upside
     },
     shortfall,
-    expectedReturn: longTermReturn  // Long-term asset class average
+    expectedReturn: longTermReturn  // Cycle-adjusted or baseline average
   };
 }
 

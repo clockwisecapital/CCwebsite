@@ -5,11 +5,13 @@
  * - Year 1: Uses PRE-CALCULATED return (from Clockwise/FactSet/short formula)
  *           Volatility from Yahoo Finance historical data
  * - Years 2+: Uses long-term asset class averages with typical volatilities
+ *           (Can be cycle-adjusted based on current market cycle phases)
  * 
  * Key features:
  * - Uses Geometric Brownian Motion with volatility drag correction
  * - Tracks discrete annual periods to find best/worst year
  * - Returns upside (best year) and downside (worst year) over the time horizon
+ * - Supports cycle-adjusted returns for Years 2+
  */
 
 import type { MonteCarloResult, HistoricalPrice } from '@/types/portfolio';
@@ -21,6 +23,7 @@ const CONCURRENCY_LIMIT = 5; // Max concurrent Yahoo Finance requests to avoid r
 
 // Long-term asset class averages (REAL returns - inflation-adjusted)
 // Based on 100+ years of historical data (Ibbotson/Morningstar)
+// NOTE: These are BASELINE returns - can be overridden with cycle-adjusted values
 const ASSET_CLASS_RETURNS = {
   stocks: 0.07,       // 7% real (vs 10% nominal)
   bonds: 0.02,        // 2% real (vs 5% nominal)
@@ -31,6 +34,7 @@ const ASSET_CLASS_RETURNS = {
 } as const;
 
 // Typical annual volatilities for each asset class
+// NOTE: Can be multiplied by volatilityMultiplier for cycle adjustments
 const ASSET_CLASS_VOLATILITIES = {
   stocks: 0.18,       // 18%
   bonds: 0.06,        // 6%
@@ -39,6 +43,9 @@ const ASSET_CLASS_VOLATILITIES = {
   cash: 0.01,         // 1%
   alternatives: 0.12  // 12%
 } as const;
+
+// Type for cycle-adjusted returns (matches ASSET_CLASS_RETURNS shape)
+export type CycleAdjustedReturns = typeof ASSET_CLASS_RETURNS;
 
 // Map proxy ETFs to their asset classes
 const TICKER_TO_ASSET_CLASS: Record<string, keyof typeof ASSET_CLASS_RETURNS> = {
@@ -453,10 +460,12 @@ export async function fetchBatchCurrentPrices(tickers: string[]): Promise<Map<st
  * - A 60/40 portfolio: ~13% volatility, ~5% long-term return
  * 
  * Year 1: Uses Clockwise/FactSet targets for return, asset class volatility
- * Years 2+: Uses asset class averages for both return and volatility
+ * Years 2+: Uses cycle-adjusted returns (if provided) or baseline asset class averages
  * 
  * @param positions - Array of positions with weights and parameters
  * @param timeHorizon - Investment horizon in years
+ * @param cycleAdjustedReturns - Optional cycle-adjusted returns for Years 2+
+ * @param volatilityMultiplier - Optional multiplier for volatility based on cycle phase
  * @returns Portfolio-level upside, downside, and median
  */
 export function runPortfolioMonteCarloSimulation(
@@ -466,12 +475,18 @@ export function runPortfolioMonteCarloSimulation(
     year1Volatility: number;  // Not used - kept for interface compatibility
     assetClass: AssetClass;   // Determines volatility and long-term return
   }>,
-  timeHorizon: number = 1
+  timeHorizon: number = 1,
+  cycleAdjustedReturns?: CycleAdjustedReturns,  // Optional: cycle-adjusted returns for Years 2+
+  volatilityMultiplier: number = 1.0            // Optional: cycle-based volatility adjustment
 ): PortfolioMonteCarloResult {
   const allPortfolioAnnualReturns: number[] = [];
   const finalPortfolioReturns: number[] = [];
   
   const totalYears = Math.ceil(timeHorizon);
+  
+  // Use cycle-adjusted returns if provided, otherwise use baseline
+  const returnsToUse = cycleAdjustedReturns || ASSET_CLASS_RETURNS;
+  const usingCycleAdjusted = !!cycleAdjustedReturns;
   
   // ============================================
   // SIMPLE APPROACH: Asset Class Weighted Averages
@@ -485,18 +500,19 @@ export function runPortfolioMonteCarloSimulation(
     year1PortfolioReturn += position.weight * position.year1Return;
     
     // Volatility: weighted average of ASSET CLASS volatilities
-    // This automatically captures diversification (stocks=18%, bonds=6%, etc.)
-    portfolioVolatility += position.weight * ASSET_CLASS_VOLATILITIES[position.assetClass];
+    // Apply cycle-based volatility multiplier
+    portfolioVolatility += position.weight * ASSET_CLASS_VOLATILITIES[position.assetClass] * volatilityMultiplier;
     
     // Long-term return (Years 2+): weighted average of ASSET CLASS returns
-    longTermReturn += position.weight * ASSET_CLASS_RETURNS[position.assetClass];
+    // Uses cycle-adjusted returns if provided
+    longTermReturn += position.weight * returnsToUse[position.assetClass];
   }
   
-  console.log(`📊 Running portfolio-level Monte Carlo:`, {
+  console.log(`📊 Running portfolio-level Monte Carlo${usingCycleAdjusted ? ' (CYCLE-ADJUSTED)' : ''}:`, {
     positions: positions.length,
     year1Return: (year1PortfolioReturn * 100).toFixed(1) + '%',
-    longTermReturn: (longTermReturn * 100).toFixed(1) + '%',
-    portfolioVol: (portfolioVolatility * 100).toFixed(1) + '%',
+    longTermReturn: (longTermReturn * 100).toFixed(1) + '%' + (usingCycleAdjusted ? ' (cycle-adjusted)' : ''),
+    portfolioVol: (portfolioVolatility * 100).toFixed(1) + '%' + (volatilityMultiplier !== 1.0 ? ` (${volatilityMultiplier.toFixed(2)}x)` : ''),
     timeHorizon: timeHorizon + ' years',
     simulations: SIMULATIONS
   });
@@ -506,10 +522,10 @@ export function runPortfolioMonteCarloSimulation(
     
     for (let year = 0; year < totalYears; year++) {
       // Year 1: Use Clockwise/FactSet target returns
-      // Years 2+: Use long-term ASSET CLASS average returns
+      // Years 2+: Use cycle-adjusted or baseline ASSET CLASS average returns
       const expectedReturn = year === 0 ? year1PortfolioReturn : longTermReturn;
       
-      // Volatility: Use asset class weighted volatility for ALL years
+      // Volatility: Use asset class weighted volatility for ALL years (with cycle adjustment)
       const volatility = portfolioVolatility;
       
       // Single random shock for the portfolio
@@ -553,7 +569,7 @@ export function runPortfolioMonteCarloSimulation(
   const upside = percentile(allPortfolioAnnualReturns, 0.95);
   const downside = percentile(allPortfolioAnnualReturns, 0.05);
   
-  console.log(`📊 Portfolio Monte Carlo results:`, {
+  console.log(`📊 Portfolio Monte Carlo results${usingCycleAdjusted ? ' (cycle-adjusted)' : ''}:`, {
     upside: (upside * 100).toFixed(1) + '%',
     downside: (downside * 100).toFixed(1) + '%',
     median: (median * 100).toFixed(1) + '%',

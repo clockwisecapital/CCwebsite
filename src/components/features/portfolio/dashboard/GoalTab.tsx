@@ -1,17 +1,31 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { GoalAnalysis } from '@/types/cycleAnalysis';
+import type { GoalAnalysis, CycleAdjustmentData } from '@/types/cycleAnalysis';
 import { CarouselContainer, CarouselSlide } from './CarouselSlide';
+import CycleInsightsBadge from './CycleInsightsBadge';
+
+interface PortfolioAllocation {
+  stocks: number;
+  bonds: number;
+  realEstate: number;
+  commodities: number;
+  cash: number;
+  alternatives: number;
+}
 
 interface GoalTabProps {
   goalAnalysis: GoalAnalysis;
   onNext?: () => void;
   onBack?: () => void;
   onSlideChange?: (slide: number) => void;
+  cycleAdjustments?: CycleAdjustmentData | null;
+  cyclesLoading?: boolean;
+  portfolioAllocation?: PortfolioAllocation;
+  timeHorizon?: number;
 }
 
-export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }: GoalTabProps) {
+export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange, cycleAdjustments, cyclesLoading, portfolioAllocation, timeHorizon }: GoalTabProps) {
   // NOTE: Goal probability calculations now use:
   // - Monte Carlo simulations (10,000 iterations)
   // - Long-term historical averages: Stocks 10%, Bonds 5%, Real Estate 10%, Commodities 5%, Cash 3%
@@ -100,6 +114,15 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }:
           </div>
         </div>
       </div>
+
+      {/* SECTION 1.5: Cycle-Adjusted Returns Insight */}
+      <CycleInsightsBadge 
+        cycleAdjustments={cycleAdjustments} 
+        loading={cyclesLoading} 
+        variant="expanded" 
+        portfolioAllocation={portfolioAllocation}
+        timeHorizon={timeHorizon || goalAnalysis.timeHorizon}
+      />
 
       {/* SECTION 2: Carousel - PowerPoint Style Slides */}
       <CarouselContainer

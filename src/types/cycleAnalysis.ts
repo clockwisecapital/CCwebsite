@@ -15,6 +15,44 @@ export interface CycleAnalysisResult {
   };
   
   goalAnalysis: GoalAnalysis;
+  
+  // NEW: Cycle-adjusted return data
+  cycleAdjustments?: CycleAdjustmentData;
+}
+
+/**
+ * Cycle-adjusted return data
+ * Contains the adjusted returns and volatility based on current market cycle phases
+ */
+export interface CycleAdjustmentData {
+  // Adjusted returns for each asset class (inflation-adjusted)
+  returns: {
+    stocks: number;       // e.g., 0.082 = 8.2%
+    bonds: number;        // e.g., 0.015 = 1.5%
+    realEstate: number;
+    commodities: number;
+    cash: number;
+    alternatives: number;
+  };
+  
+  // Volatility multiplier (1.0 = baseline, >1 = higher volatility phase)
+  volatilityMultiplier: number;
+  
+  // Which phases were used in calculation
+  phases: {
+    business?: string;
+    economic?: string;
+    technology?: string;
+    country?: string;
+    market?: string;
+  };
+  
+  // Summary of adjustment impact
+  summary: {
+    direction: 'bullish' | 'bearish' | 'neutral';
+    magnitude: 'strong' | 'moderate' | 'mild';
+    summary: string;
+  };
 }
 
 export interface CycleData {
@@ -99,4 +137,13 @@ export interface GoalAnalysis {
   };
   
   recommendation: string;          // AI-generated recommendation
+  
+  // NEW: Cycle adjustment metadata
+  usingCycleAdjustments?: boolean; // Whether cycle adjustments were applied
+  cycleAdjustments?: {
+    direction: 'bullish' | 'bearish' | 'neutral';
+    stocksReturn: number;          // Cycle-adjusted stocks return
+    bondsReturn: number;           // Cycle-adjusted bonds return
+    volatilityMultiplier: number;  // Cycle-adjusted volatility multiplier
+  };
 }

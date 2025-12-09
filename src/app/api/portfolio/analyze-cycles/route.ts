@@ -9,6 +9,11 @@ import {
   getCacheStats 
 } from '@/lib/cycle-cache';
 import { createGoalProbabilityInput, calculateGoalProbability, LONG_TERM_AVERAGES } from '@/lib/services/goal-probability';
+import { 
+  calculateCycleAdjustedReturns, 
+  getCycleAdjustmentSummary,
+  type CycleAdjustedReturns 
+} from '@/lib/services/cycle-return-adjustments';
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
@@ -135,6 +140,30 @@ export async function POST(req: NextRequest) {
     ]);
     console.log(`✅ All cycle analyses completed (${Date.now() - cycleStartTime}ms)`);
 
+    // ============================================
+    // CYCLE-ADJUSTED RETURNS CALCULATION
+    // ============================================
+    console.log('📊 Calculating cycle-adjusted returns...');
+    const cycleAdjustmentStartTime = Date.now();
+    
+    const cycleAdjustedResult = calculateCycleAdjustedReturns({
+      business: businessAnalysis,
+      economic: economicAnalysis,
+      technology: technologyAnalysis,
+      country: countryAnalysis,
+      market: marketAnalysis,
+    });
+    
+    const adjustmentSummary = getCycleAdjustmentSummary(cycleAdjustedResult);
+    console.log(`✅ Cycle adjustments calculated (${Date.now() - cycleAdjustmentStartTime}ms):`, {
+      direction: adjustmentSummary.direction,
+      magnitude: adjustmentSummary.magnitude,
+      stocksReturn: (cycleAdjustedResult.returns.stocks * 100).toFixed(1) + '%',
+      bondsReturn: (cycleAdjustedResult.returns.bonds * 100).toFixed(1) + '%',
+      volatilityMultiplier: cycleAdjustedResult.volatilityMultiplier.toFixed(2),
+      phases: cycleAdjustedResult.phases
+    });
+    
     // Run portfolio and goal analysis
     const portfolioStartTime = Date.now();
     const portfolioAnalysis = await analyzePortfolioImpact(intakeData, {
@@ -148,7 +177,11 @@ export async function POST(req: NextRequest) {
     console.log(`✅ Portfolio impact analysis completed (${Date.now() - portfolioStartTime}ms)`);
 
     const goalStartTime = Date.now();
-    const goalAnalysis = await analyzeGoalProbability(intakeData, portfolioAnalysis);
+    const goalAnalysis = await analyzeGoalProbabilityWithCycles(
+      intakeData, 
+      portfolioAnalysis,
+      cycleAdjustedResult
+    );
     console.log(`✅ Goal probability analysis completed (${Date.now() - goalStartTime}ms)`);
 
     const cycleAnalysisResult: CycleAnalysisResult = {
@@ -162,6 +195,13 @@ export async function POST(req: NextRequest) {
       },
       portfolioAnalysis,
       goalAnalysis,
+      // NEW: Include cycle-adjusted returns in response
+      cycleAdjustments: {
+        returns: cycleAdjustedResult.returns,
+        volatilityMultiplier: cycleAdjustedResult.volatilityMultiplier,
+        phases: cycleAdjustedResult.phases,
+        summary: adjustmentSummary,
+      },
     };
 
     return NextResponse.json({
@@ -1406,23 +1446,36 @@ Return ONLY this JSON structure:
 }
 
 // ======================
-// GOAL ANALYSIS
+// GOAL ANALYSIS (with Cycle Adjustments)
 // ======================
 
+/**
+ * Analyze goal probability using CYCLE-ADJUSTED returns
+ * 
+ * This function uses the cycle adjustment engine to modify long-term return
+ * assumptions based on current market cycle phases (business, economic, 
+ * technology, country, market cycles).
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function analyzeGoalProbability(intakeData: any, portfolioAnalysis: any): Promise<any> {
-  // Use correct field names from IntakeFormData
+async function analyzeGoalProbabilityWithCycles(
+  intakeData: any, 
+  portfolioAnalysis: any,
+  cycleAdjustment: CycleAdjustedReturns
+): Promise<any> {
   const goalAmount = intakeData.goalAmount || 1000000;
   const currentAmount = portfolioAnalysis.current.totalValue;
   const timeHorizon = intakeData.timeHorizon || 10;
   const monthlyContribution = intakeData.monthlyContribution || 0;
 
-  console.log('🎯 Analyzing goal probability with LONG-TERM AVERAGES:', {
+  console.log('🎯 Analyzing goal probability with CYCLE-ADJUSTED returns:', {
     goalAmount,
     currentAmount,
     timeHorizon,
     monthlyContribution,
-    longTermAverages: LONG_TERM_AVERAGES
+    baselineReturns: LONG_TERM_AVERAGES,
+    cycleAdjustedReturns: cycleAdjustment.returns,
+    volatilityMultiplier: cycleAdjustment.volatilityMultiplier,
+    phases: cycleAdjustment.phases
   });
 
   // Create input for goal probability calculation
@@ -1430,7 +1483,6 @@ async function analyzeGoalProbability(intakeData: any, portfolioAnalysis: any): 
   
   if (!probabilityInput) {
     console.warn('Could not create goal probability input, using fallback calculation');
-    // Fallback to simple calculation
     const avgReturn = portfolioAnalysis.current.overall.expectedReturn;
     const projectedValue = currentAmount * Math.pow(1 + avgReturn, timeHorizon);
     const successProbability = Math.min(1, Math.max(0, projectedValue / goalAmount));
@@ -1457,39 +1509,54 @@ async function analyzeGoalProbability(intakeData: any, portfolioAnalysis: any): 
         upside: (projectedValue * 1.4) - goalAmount,
       },
       recommendation: 'Unable to calculate detailed probability. Please ensure all required fields are provided.',
+      usingCycleAdjustments: false,
     };
   }
 
   // Override currentAmount with portfolio analysis value
   probabilityInput.currentAmount = currentAmount;
+  
+  // ============================================
+  // KEY CHANGE: Pass cycle-adjusted returns to goal calculation
+  // ============================================
+  probabilityInput.cycleAdjustedReturns = cycleAdjustment.returns;
+  probabilityInput.volatilityMultiplier = cycleAdjustment.volatilityMultiplier;
 
-  // Calculate goal probability using long-term averages + Monte Carlo
+  // Calculate goal probability using CYCLE-ADJUSTED returns + Monte Carlo
   const result = calculateGoalProbability(probabilityInput);
 
-  console.log('✅ Goal probability calculated:', {
+  console.log('✅ Goal probability calculated (CYCLE-ADJUSTED):', {
     expectedReturn: result.expectedReturn,
     medianProbability: result.probabilityOfSuccess.median,
-    medianProjectedValue: result.projectedValues.median
+    medianProjectedValue: result.projectedValues.median,
+    usingCycleAdjustments: true
   });
 
-  // Generate personalized recommendation
+  // Generate cycle-aware recommendation
   const successProbability = result.probabilityOfSuccess.median;
+  const cycleDirection = getCycleAdjustmentSummary(cycleAdjustment).direction;
+  const cycleNote = cycleDirection === 'bullish' 
+    ? 'Current cycle positioning is favorable.' 
+    : cycleDirection === 'bearish'
+    ? 'Current cycle positioning suggests caution.'
+    : 'Current cycle positioning is neutral.';
+  
   let recommendation = '';
   
   if (successProbability >= 0.9) {
-    recommendation = `Excellent! You have a ${Math.round(successProbability * 100)}% probability of reaching your $${goalAmount.toLocaleString()} goal in ${timeHorizon} years. Based on inflation-adjusted historical averages (Stocks: ${LONG_TERM_AVERAGES.stocks * 100}%, Bonds: ${LONG_TERM_AVERAGES.bonds * 100}%, etc.), your current strategy is well-positioned. Consider maintaining your current allocation and continuing your ${monthlyContribution > 0 ? `$${monthlyContribution.toLocaleString()} monthly contributions` : 'investment discipline'}.`;
+    recommendation = `Excellent! You have a ${Math.round(successProbability * 100)}% probability of reaching your $${goalAmount.toLocaleString()} goal in ${timeHorizon} years. Based on cycle-adjusted returns (Stocks: ${(cycleAdjustment.returns.stocks * 100).toFixed(1)}%, Bonds: ${(cycleAdjustment.returns.bonds * 100).toFixed(1)}%), your current strategy is well-positioned. ${cycleNote} Consider maintaining your current allocation and continuing your ${monthlyContribution > 0 ? `$${monthlyContribution.toLocaleString()} monthly contributions` : 'investment discipline'}.`;
   } else if (successProbability >= 0.7) {
-    recommendation = `Good progress! You have a ${Math.round(successProbability * 100)}% probability of reaching your goal. Based on inflation-adjusted historical returns and current cycle positioning, consider ${monthlyContribution > 0 ? 'increasing your monthly contributions' : 'making monthly contributions'} or adjusting your allocation to higher-return asset classes.`;
+    recommendation = `Good progress! You have a ${Math.round(successProbability * 100)}% probability of reaching your goal. ${cycleNote} Consider ${monthlyContribution > 0 ? 'increasing your monthly contributions' : 'making monthly contributions'} or adjusting your allocation based on cycle positioning.`;
   } else if (successProbability >= 0.5) {
     const shortfall = goalAmount - result.projectedValues.median;
     const additionalMonthly = Math.round(shortfall / (timeHorizon * 12));
-    recommendation = `Moderate success probability of ${Math.round(successProbability * 100)}%. Using inflation-adjusted long-term averages, consider: 1) Increasing contributions by $${additionalMonthly.toLocaleString()}/month, 2) Extending your time horizon, or 3) Increasing allocation to higher-return assets like stocks (${LONG_TERM_AVERAGES.stocks * 100}% real return).`;
+    recommendation = `Moderate success probability of ${Math.round(successProbability * 100)}%. ${cycleNote} Based on cycle-adjusted projections, consider: 1) Increasing contributions by $${additionalMonthly.toLocaleString()}/month, 2) Extending your time horizon, or 3) Rebalancing based on current cycle phases.`;
   } else {
     const avgReturn = result.expectedReturn;
     const requiredMonthly = avgReturn > 0 
       ? Math.round((goalAmount - currentAmount * Math.pow(1 + avgReturn, timeHorizon)) / ((Math.pow(1 + avgReturn/12, timeHorizon * 12) - 1) / (avgReturn/12)))
       : Math.round((goalAmount - currentAmount) / (timeHorizon * 12));
-    recommendation = `Your current path has a ${Math.round(successProbability * 100)}% success probability. Based on inflation-adjusted historical averages, to reach your goal you would need to contribute approximately $${requiredMonthly.toLocaleString()}/month, extend your timeline, or adjust your target goal to $${Math.round(result.projectedValues.median).toLocaleString()}.`;
+    recommendation = `Your current path has a ${Math.round(successProbability * 100)}% success probability. ${cycleNote} Based on cycle-adjusted projections, to reach your goal you would need to contribute approximately $${requiredMonthly.toLocaleString()}/month, extend your timeline, or adjust your target goal to $${Math.round(result.projectedValues.median).toLocaleString()}.`;
   }
 
   return {
@@ -1503,5 +1570,12 @@ async function analyzeGoalProbability(intakeData: any, portfolioAnalysis: any): 
     shortfall: result.shortfall,
     expectedReturn: result.expectedReturn,
     recommendation,
+    usingCycleAdjustments: true,
+    cycleAdjustments: {
+      direction: cycleDirection,
+      stocksReturn: cycleAdjustment.returns.stocks,
+      bondsReturn: cycleAdjustment.returns.bonds,
+      volatilityMultiplier: cycleAdjustment.volatilityMultiplier,
+    },
   };
 }

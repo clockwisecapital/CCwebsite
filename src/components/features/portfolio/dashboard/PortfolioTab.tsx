@@ -2,15 +2,30 @@
 
 import { useEffect } from 'react';
 import type { PortfolioComparison } from '@/types/portfolio';
+import type { CycleAdjustmentData } from '@/types/cycleAnalysis';
+import CycleInsightsBadge from './CycleInsightsBadge';
+
+interface PortfolioAllocation {
+  stocks: number;
+  bonds: number;
+  realEstate: number;
+  commodities: number;
+  cash: number;
+  alternatives: number;
+}
 
 interface PortfolioTabProps {
   portfolioComparison?: PortfolioComparison | null;
   onNext?: () => void;
   onBack?: () => void;
   onSlideChange?: (slide: number) => void;
+  cycleAdjustments?: CycleAdjustmentData | null;
+  cyclesLoading?: boolean;
+  portfolioAllocation?: PortfolioAllocation;
+  timeHorizon?: number;
 }
 
-export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSlideChange }: PortfolioTabProps) {
+export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSlideChange, cycleAdjustments, cyclesLoading, portfolioAllocation, timeHorizon }: PortfolioTabProps) {
   // Always on slide 0 for portfolio comparison view
   const currentSlide = 0;
   
@@ -67,6 +82,15 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
             </div>
           </div>
         </div>
+
+        {/* SECTION 1.5: Cycle-Adjusted Returns Insight */}
+        <CycleInsightsBadge 
+          cycleAdjustments={cycleAdjustments} 
+          loading={cyclesLoading} 
+          variant="expanded" 
+          portfolioAllocation={portfolioAllocation}
+          timeHorizon={timeHorizon || portfolioComparison.timeHorizon || 5}
+        />
 
         {/* SECTION 2: Side-by-Side Portfolio Comparison */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

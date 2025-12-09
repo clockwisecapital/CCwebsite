@@ -22,7 +22,7 @@ interface ReviewTabProps {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId: _conversationId, videoId: _videoId, onReset, onBack, onNavigateToAnalyze, cycleAnalysisTab, onCycleAnalysisTabChange, onGoalSlideChange, onPortfolioSlideChange, onMarketSlideChange, cyclesLoading = false }: ReviewTabProps) {
+export default function ReviewTab({ analysisResult, intakeData, conversationId: _conversationId, videoId: _videoId, onReset, onBack, onNavigateToAnalyze, cycleAnalysisTab, onCycleAnalysisTabChange, onGoalSlideChange, onPortfolioSlideChange, onMarketSlideChange, cyclesLoading = false }: ReviewTabProps) {
   const handleNext = () => {
     if (cycleAnalysisTab === 'goal') {
       onCycleAnalysisTabChange('portfolio');
@@ -91,6 +91,9 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
   
   const portfolioAnalysis = analysisResult.cycleAnalysis?.portfolioAnalysis;
   const goalAnalysis = analysisResult.cycleAnalysis.goalAnalysis;
+  
+  // Cycle-adjusted returns data (available once cycles load)
+  const cycleAdjustments = analysisResult.cycleAnalysis?.cycleAdjustments || null;
 
   return (
     <div className="space-y-8">
@@ -200,6 +203,10 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                   onNext={handleNext}
                   onBack={handleBack}
                   onSlideChange={onPortfolioSlideChange}
+                  cycleAdjustments={cycleAdjustments}
+                  cyclesLoading={cyclesLoading}
+                  portfolioAllocation={intakeData.portfolio}
+                  timeHorizon={intakeData.timeHorizon || 5}
                 />
               )}
               {cycleAnalysisTab === 'goal' && (
@@ -208,6 +215,10 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                   onNext={handleNext}
                   onBack={handleBack}
                   onSlideChange={onGoalSlideChange}
+                  cycleAdjustments={cycleAdjustments}
+                  cyclesLoading={cyclesLoading}
+                  portfolioAllocation={intakeData.portfolio}
+                  timeHorizon={intakeData.timeHorizon || 5}
                 />
               )}
             </div>
