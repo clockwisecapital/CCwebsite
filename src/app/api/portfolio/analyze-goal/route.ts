@@ -102,15 +102,15 @@ export async function POST(request: NextRequest) {
     let recommendation = '';
     
     if (successProbability >= 0.9) {
-      recommendation = 'Your goal is highly achievable with your current portfolio and timeline. Consider if you want to take on less risk or aim higher.';
+      recommendation = 'Your goal is highly achievable with your current portfolio and timeline (using inflation-adjusted returns). Consider if you want to take on less risk or aim higher.';
     } else if (successProbability >= 0.7) {
-      recommendation = 'You have a strong chance of reaching your goal. Staying consistent with contributions will improve your odds.';
+      recommendation = 'You have a strong chance of reaching your goal based on inflation-adjusted returns. Staying consistent with contributions will improve your odds.';
     } else if (successProbability >= 0.5) {
-      recommendation = 'Your goal is achievable but not certain. Consider increasing contributions or extending your timeline.';
+      recommendation = 'Your goal is achievable but not certain (using inflation-adjusted projections). Consider increasing contributions or extending your timeline.';
     } else if (successProbability >= 0.3) {
-      recommendation = 'Reaching your goal will be challenging. You may need to increase contributions, extend timeline, or adjust your target.';
+      recommendation = 'Reaching your goal will be challenging based on inflation-adjusted returns. You may need to increase contributions, extend timeline, or adjust your target.';
     } else {
-      recommendation = 'Your goal may be difficult to achieve with current parameters. Consider consulting with an advisor to explore options.';
+      recommendation = 'Your goal may be difficult to achieve with current parameters (using inflation-adjusted projections). Consider consulting with an advisor to explore options.';
     }
 
     // Build complete goal analysis result

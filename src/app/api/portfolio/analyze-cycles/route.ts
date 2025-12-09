@@ -1477,19 +1477,19 @@ async function analyzeGoalProbability(intakeData: any, portfolioAnalysis: any): 
   let recommendation = '';
   
   if (successProbability >= 0.9) {
-    recommendation = `Excellent! You have a ${Math.round(successProbability * 100)}% probability of reaching your $${goalAmount.toLocaleString()} goal in ${timeHorizon} years. Based on long-term historical averages (Stocks: ${LONG_TERM_AVERAGES.stocks * 100}%, Bonds: ${LONG_TERM_AVERAGES.bonds * 100}%, etc.), your current strategy is well-positioned. Consider maintaining your current allocation and continuing your ${monthlyContribution > 0 ? `$${monthlyContribution.toLocaleString()} monthly contributions` : 'investment discipline'}.`;
+    recommendation = `Excellent! You have a ${Math.round(successProbability * 100)}% probability of reaching your $${goalAmount.toLocaleString()} goal in ${timeHorizon} years. Based on inflation-adjusted historical averages (Stocks: ${LONG_TERM_AVERAGES.stocks * 100}%, Bonds: ${LONG_TERM_AVERAGES.bonds * 100}%, etc.), your current strategy is well-positioned. Consider maintaining your current allocation and continuing your ${monthlyContribution > 0 ? `$${monthlyContribution.toLocaleString()} monthly contributions` : 'investment discipline'}.`;
   } else if (successProbability >= 0.7) {
-    recommendation = `Good progress! You have a ${Math.round(successProbability * 100)}% probability of reaching your goal. Based on historical returns and current cycle positioning, consider ${monthlyContribution > 0 ? 'increasing your monthly contributions' : 'making monthly contributions'} or adjusting your allocation to higher-return asset classes.`;
+    recommendation = `Good progress! You have a ${Math.round(successProbability * 100)}% probability of reaching your goal. Based on inflation-adjusted historical returns and current cycle positioning, consider ${monthlyContribution > 0 ? 'increasing your monthly contributions' : 'making monthly contributions'} or adjusting your allocation to higher-return asset classes.`;
   } else if (successProbability >= 0.5) {
     const shortfall = goalAmount - result.projectedValues.median;
     const additionalMonthly = Math.round(shortfall / (timeHorizon * 12));
-    recommendation = `Moderate success probability of ${Math.round(successProbability * 100)}%. Given long-term averages and current cycles, consider: 1) Increasing contributions by $${additionalMonthly.toLocaleString()}/month, 2) Extending your time horizon, or 3) Increasing allocation to higher-return assets like stocks (${LONG_TERM_AVERAGES.stocks * 100}% historical return).`;
+    recommendation = `Moderate success probability of ${Math.round(successProbability * 100)}%. Using inflation-adjusted long-term averages, consider: 1) Increasing contributions by $${additionalMonthly.toLocaleString()}/month, 2) Extending your time horizon, or 3) Increasing allocation to higher-return assets like stocks (${LONG_TERM_AVERAGES.stocks * 100}% real return).`;
   } else {
     const avgReturn = result.expectedReturn;
     const requiredMonthly = avgReturn > 0 
       ? Math.round((goalAmount - currentAmount * Math.pow(1 + avgReturn, timeHorizon)) / ((Math.pow(1 + avgReturn/12, timeHorizon * 12) - 1) / (avgReturn/12)))
       : Math.round((goalAmount - currentAmount) / (timeHorizon * 12));
-    recommendation = `Your current path has a ${Math.round(successProbability * 100)}% success probability. Based on long-term historical averages, to reach your goal you would need to contribute approximately $${requiredMonthly.toLocaleString()}/month, extend your timeline, or adjust your target goal to $${Math.round(result.projectedValues.median).toLocaleString()}.`;
+    recommendation = `Your current path has a ${Math.round(successProbability * 100)}% success probability. Based on inflation-adjusted historical averages, to reach your goal you would need to contribute approximately $${requiredMonthly.toLocaleString()}/month, extend your timeline, or adjust your target goal to $${Math.round(result.projectedValues.median).toLocaleString()}.`;
   }
 
   return {

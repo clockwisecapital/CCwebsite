@@ -44,7 +44,7 @@ export default function ScenarioTestingLab() {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <button 
-              onClick={() => router.push('/portfolio')}
+              onClick={() => router.push('/kronos')}
               className="group relative px-10 py-5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-lg rounded-xl transition-all duration-300 shadow-2xl hover:shadow-teal-600/40 hover:scale-105 hover:-translate-y-0.5 min-w-[280px] sm:min-w-[320px]"
             >
               <span className="relative z-10">Scenario Test My Portfolio</span>
@@ -149,7 +149,7 @@ export default function ScenarioTestingLab() {
                 Your portfolio is slightly behind TIME ETF cycle alignment.
               </p>
               <button 
-                onClick={() => router.push('/portfolio')}
+                onClick={() => router.push('/kronos')}
                 className="group relative px-8 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm rounded-xl transition-all duration-300 shadow-2xl hover:scale-105 hover:-translate-y-1"
               >
                 <span className="relative z-10 flex items-center justify-center gap-3">
@@ -328,7 +328,7 @@ export default function ScenarioTestingLab() {
 
           {/* CTA Button */}
           <button 
-            onClick={() => router.push('/portfolio')}
+            onClick={() => router.push('/kronos')}
             className="group relative px-10 py-4 bg-teal-600 hover:bg-teal-700 text-white font-bold text-base md:text-lg rounded-xl transition-all duration-300 shadow-2xl hover:scale-110 hover:-translate-y-2"
           >
             <span className="relative z-10 flex items-center justify-center gap-4">

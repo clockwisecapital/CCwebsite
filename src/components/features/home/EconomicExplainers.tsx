@@ -105,7 +105,7 @@ const EconomicExplainers: React.FC = () => {
     {/* CTA outside cards */}
     <div className="relative z-10 mt-12 text-center">
       <button 
-        onClick={() => router.push('/portfolio')} 
+        onClick={() => router.push('/kronos')} 
         className="group relative overflow-hidden bg-[#1FAAA3] text-white font-sans font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 inline-block"
       >
         <span className="absolute top-0 left-0 w-full h-full bg-white/20 transform -translate-x-full skew-x-12 group-hover:translate-x-full transition-transform duration-700 ease-out"></span>

@@ -33,7 +33,7 @@ export default function TimedPopup() {
           className="inline-block px-4 py-2 bg-[#1FAAA3] hover:bg-[#159c8d] rounded-md text-sm font-medium transition-colors duration-200"
           onClick={() => {
             setShow(false);
-            router.push('/portfolio');
+            router.push('/kronos');
           }}
         >
           Talk now

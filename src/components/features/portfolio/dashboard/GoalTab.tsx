@@ -113,7 +113,7 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }:
         {/* SLIDE 1: Probability of Reaching Your Goal */}
         <CarouselSlide isActive={currentSlide === 0} direction={getSlideDirection(0)}>
           <h2 className="text-xl md:text-2xl font-bold text-gray-100 mb-4">Probability of Reaching Your Goal</h2>
-          <p className="text-sm text-gray-400 mb-6">Based on Monte Carlo simulations across all economic cycles</p>
+          <p className="text-sm text-gray-400 mb-6">Based on Monte Carlo simulations using inflation-adjusted returns</p>
           
           {/* Main Probability Display */}
         <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-6">
