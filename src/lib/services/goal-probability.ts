@@ -265,7 +265,8 @@ export function calculateGoalProbability(input: GoalProbabilityInput): GoalProba
  * Helper function to create input from IntakeFormData
  */
 export function createGoalProbabilityInput(
-  intakeData: IntakeFormData
+  intakeData: IntakeFormData,
+  year1Return?: number  // Optional: Pass calculated Year 1 return from holdings
 ): GoalProbabilityInput | null {
   // Validate required fields
   if (!intakeData.goalAmount || !intakeData.timeHorizon) {
@@ -284,7 +285,8 @@ export function createGoalProbabilityInput(
       realEstate: intakeData.portfolio.realEstate,
       commodities: intakeData.portfolio.commodities,
       alternatives: intakeData.portfolio.alternatives
-    }
+    },
+    year1Return  // Pass through to ensure Goal uses same Year 1 as Portfolio
   };
 }
 

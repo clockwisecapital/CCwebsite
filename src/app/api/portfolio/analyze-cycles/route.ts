@@ -1513,16 +1513,21 @@ async function analyzeGoalProbability(intakeData: any, portfolioAnalysis: any): 
   const timeHorizon = intakeData.timeHorizon || 10;
   const monthlyContribution = intakeData.monthlyContribution || 0;
 
+  // Get Year 1 return from portfolio analysis (same as what Portfolio tab uses)
+  // This ensures Goal and Portfolio calculations are consistent
+  const year1Return = portfolioAnalysis.current.userPortfolio?.year1Return;
+
   console.log('🎯 Analyzing goal probability with LONG-TERM AVERAGES:', {
     goalAmount,
     currentAmount,
     timeHorizon,
     monthlyContribution,
+    year1Return: year1Return !== undefined ? (year1Return * 100).toFixed(1) + '%' : 'using long-term',
     longTermAverages: LONG_TERM_AVERAGES
   });
 
-  // Create input for goal probability calculation
-  const probabilityInput = createGoalProbabilityInput(intakeData);
+  // Create input for goal probability calculation - now with Year 1 return from portfolio
+  const probabilityInput = createGoalProbabilityInput(intakeData, year1Return);
   
   if (!probabilityInput) {
     console.warn('Could not create goal probability input, using fallback calculation');

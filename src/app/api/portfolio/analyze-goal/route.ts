@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { 
   createGoalProbabilityInput, 
   calculateGoalProbability, 
-  calculateExpectedReturn
+  calculateExpectedReturn,
+  LONG_TERM_AVERAGES
 } from '@/lib/services/goal-probability';
+import { calculateYear1Return } from '@/lib/services/year1-return';
+import { getIndexSectorTargets, getTgtPrices } from '@/lib/supabase/database';
+import { fetchBatchCurrentPrices } from '@/lib/services/monte-carlo';
 
 // ============================================================================
 // ASSET CLASS INFERENCE (same as get-portfolio-data)
@@ -135,17 +139,81 @@ export async function POST(request: NextRequest) {
     
     const expectedReturn = calculateExpectedReturn(portfolio);
     
+    // ============================================================================
+    // CALCULATE YEAR 1 RETURN FROM USER'S HOLDINGS
+    // ============================================================================
+    let year1Return: number | undefined = undefined;
+    
+    if (hasSpecificHoldings && intakeData.specificHoldings && intakeData.specificHoldings.length > 0) {
+      try {
+        const tickers = intakeData.specificHoldings
+          .filter((h: { ticker?: string }) => h.ticker && h.ticker.trim().length > 0)
+          .map((h: { ticker: string }) => h.ticker.toUpperCase());
+        
+        if (tickers.length > 0) {
+          // Fetch required data in parallel
+          const [currentPrices, factsetTargets, clockwiseTargets] = await Promise.all([
+            fetchBatchCurrentPrices(tickers),
+            getTgtPrices(tickers),
+            getIndexSectorTargets()
+          ]);
+          
+          // Calculate Year 1 return for each holding
+          let totalWeight = 0;
+          let weightedYear1Return = 0;
+          
+          for (const holding of intakeData.specificHoldings) {
+            if (holding.ticker && holding.percentage) {
+              const ticker = holding.ticker.toUpperCase();
+              const weight = holding.percentage / 100;
+              const currentPrice = currentPrices.get(ticker);
+              const factsetTarget = factsetTargets.get(ticker);
+              
+              // Skip if no current price available
+              if (!currentPrice) {
+                console.warn(`⚠️ No current price for ${ticker}, skipping Year 1 calculation`);
+                continue;
+              }
+              
+              // Calculate Year 1 return using the same logic as portfolio
+              const holdingYear1Result = await calculateYear1Return(
+                ticker,
+                currentPrice,
+                factsetTarget || null,
+                clockwiseTargets,
+                currentPrices  // For underlying index prices (shorts)
+              );
+              
+              weightedYear1Return += holdingYear1Result.return * weight;
+              totalWeight += weight;
+              
+              console.log(`📊 Year 1 for ${ticker}: ${(holdingYear1Result.return * 100).toFixed(1)}% (weight: ${(weight * 100).toFixed(1)}%)`);
+            }
+          }
+          
+          if (totalWeight > 0) {
+            year1Return = weightedYear1Return / totalWeight;
+            console.log(`📊 Calculated Year 1 Return for holdings: ${(year1Return * 100).toFixed(1)}%`);
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not calculate Year 1 return from holdings, using asset class average:', error);
+        // Falls back to longTermReturn in calculateGoalProbability
+      }
+    }
+
     console.log('📊 Goal analysis inputs:', {
       totalValue,
       goalAmount,
       timeHorizon,
       monthlyContribution,
       expectedReturn: (expectedReturn * 100).toFixed(1) + '%',
+      year1Return: year1Return !== undefined ? (year1Return * 100).toFixed(1) + '%' : 'using long-term',
       allocation: portfolio
     });
 
-    // Create input for goal probability calculation
-    const probabilityInput = createGoalProbabilityInput(intakeData);
+    // Create input for goal probability calculation - now with Year 1 return from holdings
+    const probabilityInput = createGoalProbabilityInput(intakeData, year1Return);
     
     let goalAnalysis;
     
