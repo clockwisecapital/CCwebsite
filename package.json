@@ -22,6 +22,8 @@
     "inherits": "^2.0.4",
     "inngest": "^3.20.0",
     "jose": "^6.1.0",
+    "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.2",
     "next": "^16.0.8",
     "openai": "^5.12.2",
     "react": "^19.2.1",

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   HiChatBubbleLeftRight, 
@@ -19,9 +19,14 @@ import {
   HiArrowPath,
   HiXMark,
   HiFunnel,
-  HiUserGroup
+  HiUserGroup,
+  HiDocumentArrowUp,
+  HiPresentationChartLine
 } from 'react-icons/hi2'
 import type { DisplaySpec, DisplayBlock } from '@/lib/supabase/types'
+import type { MultiPortfolioResult } from '@/lib/portfolio-metrics'
+import PortfolioPerformanceTable, { PortfolioComparisonTable } from '@/components/features/PortfolioPerformanceTable'
+import { downloadPortfolioPDF, downloadComparisonPDF } from '@/lib/portfolio-pdf'
 
 // Advisory firms list
 const ADVISORY_FIRMS = [
@@ -122,6 +127,17 @@ export default function AdminDashboardPage() {
     firmName: string | null
     displayName: string
   } | null>(null)
+  
+  // Main tab for master users
+  const [mainTab, setMainTab] = useState<'dashboard' | 'portfolioPerformance'>('dashboard')
+  
+  // Portfolio Performance state (master only)
+  const [portfolioData, setPortfolioData] = useState<MultiPortfolioResult | null>(null)
+  const [portfolioLoading, setPortfolioLoading] = useState(false)
+  const [portfolioError, setPortfolioError] = useState('')
+  const [portfolioView, setPortfolioView] = useState<'individual' | 'comparison'>('individual')
+  const [selectedPortfolioForPDF, setSelectedPortfolioForPDF] = useState<string>('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
   
   const router = useRouter()
 
@@ -324,6 +340,63 @@ export default function AdminDashboardPage() {
     }
   }
 
+  // Portfolio CSV upload handler (master only)
+  const handlePortfolioUpload = async (file: File) => {
+    if (!isMaster) return
+    
+    setPortfolioLoading(true)
+    setPortfolioError('')
+    setPortfolioData(null)
+    
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      
+      const response = await fetch('/api/admin/portfolio-analyze', {
+        method: 'POST',
+        body: formData
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        setPortfolioData(result.data)
+      } else {
+        setPortfolioError(result.message || 'Failed to analyze portfolio')
+      }
+    } catch (e) {
+      console.error('Portfolio analysis error:', e)
+      setPortfolioError('Network error. Please try again.')
+    } finally {
+      setPortfolioLoading(false)
+    }
+  }
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handlePortfolioUpload(file)
+    }
+    // Reset input so same file can be uploaded again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    const file = e.dataTransfer.files?.[0]
+    if (file && file.name.endsWith('.csv')) {
+      handlePortfolioUpload(file)
+    } else {
+      setPortfolioError('Please upload a CSV file')
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+  }
+
   // Helper: render a DisplaySpec block array into readable HTML
   const renderDisplaySpec = (spec: unknown) => {
     const ds = spec as Partial<DisplaySpec> | null
@@ -470,11 +543,230 @@ export default function AdminDashboardPage() {
               </button>
             </div>
           </div>
+          
+          {/* Main Tab Navigation (Master only) */}
+          {isMaster && (
+            <div className="border-t border-gray-100">
+              <nav className="flex space-x-8" aria-label="Main tabs">
+                <button
+                  onClick={() => setMainTab('dashboard')}
+                  className={`py-3 px-1 border-b-2 text-sm font-medium transition-colors ${
+                    mainTab === 'dashboard'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <HiChartBar className="w-4 h-4 mr-2" />
+                    Dashboard
+                  </div>
+                </button>
+                <button
+                  onClick={() => setMainTab('portfolioPerformance')}
+                  className={`py-3 px-1 border-b-2 text-sm font-medium transition-colors ${
+                    mainTab === 'portfolioPerformance'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <HiPresentationChartLine className="w-4 h-4 mr-2" />
+                    Portfolio Performance
+                  </div>
+                </button>
+              </nav>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* Portfolio Performance Tab (Master Only) */}
+      {isMaster && mainTab === 'portfolioPerformance' && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-28">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                  Portfolio Performance
+                </h1>
+                <p className="text-gray-600 mt-1 text-sm sm:text-base">
+                  Clockwise Model Portfolio Risk Metrics & Analysis
+                </p>
+              </div>
+              
+              {portfolioData && (
+                <div className="flex items-center gap-3">
+                  {/* View toggle */}
+                  <div className="flex bg-gray-100 rounded-lg p-1">
+                    <button
+                      onClick={() => setPortfolioView('individual')}
+                      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                        portfolioView === 'individual'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Individual
+                    </button>
+                    <button
+                      onClick={() => setPortfolioView('comparison')}
+                      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                        portfolioView === 'comparison'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Comparison
+                    </button>
+                  </div>
+                  
+                  {/* Upload new file button */}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                  >
+                    <HiDocumentArrowUp className="w-4 h-4 mr-2" />
+                    Upload New CSV
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Hidden file input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileInputChange}
+            accept=".csv"
+            className="hidden"
+          />
+          
+          {/* Upload Section (when no data) */}
+          {!portfolioData && !portfolioLoading && (
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <HiDocumentArrowUp className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Upload Portfolio CSV
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Drag and drop your Clockwise portfolio CSV file here, or click to browse
+              </p>
+              <p className="text-sm text-gray-500">
+                Expected format: Date, Portfolio1, Portfolio2, ... (daily values)
+              </p>
+              {portfolioError && (
+                <p className="mt-4 text-red-600 text-sm">{portfolioError}</p>
+              )}
+            </div>
+          )}
+          
+          {/* Loading State */}
+          {portfolioLoading && (
+            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Analyzing portfolio data...</p>
+              <p className="text-sm text-gray-500 mt-2">Fetching market data and calculating metrics</p>
+            </div>
+          )}
+          
+          {/* Error State */}
+          {portfolioError && portfolioData === null && !portfolioLoading && (
+            <div className="bg-red-50 rounded-xl border border-red-200 p-6 text-center">
+              <p className="text-red-600 font-medium">{portfolioError}</p>
+              <button
+                onClick={() => {
+                  setPortfolioError('')
+                  fileInputRef.current?.click()
+                }}
+                className="mt-4 px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-300 rounded-lg hover:bg-red-50"
+              >
+                Try Again
+              </button>
+            </div>
+          )}
+          
+          {/* Results */}
+          {portfolioData && (
+            <div className="space-y-6">
+              {/* Tables */}
+              {portfolioView === 'individual' ? (
+                <PortfolioPerformanceTable data={portfolioData} />
+              ) : (
+                <PortfolioComparisonTable data={portfolioData} />
+              )}
+              
+              {/* PDF Download Section */}
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center">
+                  <HiArrowDownTray className="w-4 h-4 mr-2" />
+                  Download Report
+                </h3>
+                <div className="flex flex-wrap items-center gap-4">
+                  {/* Individual Portfolio PDF */}
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={selectedPortfolioForPDF || Object.keys(portfolioData.portfolios)[0]}
+                      onChange={(e) => setSelectedPortfolioForPDF(e.target.value)}
+                      className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                    >
+                      {Object.keys(portfolioData.portfolios).map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => {
+                        const portfolioName = selectedPortfolioForPDF || Object.keys(portfolioData.portfolios)[0]
+                        downloadPortfolioPDF(portfolioData, portfolioName)
+                      }}
+                      className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                    >
+                      <HiArrowDownTray className="w-4 h-4 mr-2" />
+                      Download PDF
+                    </button>
+                  </div>
+                  
+                  {/* Comparison PDF */}
+                  {Object.keys(portfolioData.portfolios).length > 1 && (
+                    <button
+                      onClick={() => downloadComparisonPDF(portfolioData)}
+                      className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                    >
+                      <HiArrowDownTray className="w-4 h-4 mr-2" />
+                      Download Comparison PDF
+                    </button>
+                  )}
+                </div>
+              </div>
+              
+              {/* Methodology */}
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Methodology</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-gray-600">
+                  {Object.entries(portfolioData.methodology).map(([key, value]) => (
+                    <div key={key} className="flex">
+                      <span className="font-medium text-gray-700 capitalize mr-2">
+                        {key.replace(/([A-Z])/g, ' $1').trim()}:
+                      </span>
+                      <span>{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Admin Dashboard Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
+      {(mainTab === 'dashboard' || !isMaster) && (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-28">
         {/* Dashboard Header */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
@@ -1546,6 +1838,7 @@ export default function AdminDashboardPage() {
           <p>Last updated: {data?.lastUpdated ? new Date(data.lastUpdated).toLocaleString() : 'Unknown'}</p>
         </div>
       </div>
+      )}
     </div>
   )
 }
