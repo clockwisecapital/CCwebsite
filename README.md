@@ -407,3 +407,187 @@ The analyzer includes sample size warnings:
 ## License
 
 Internal use - Clockwise Capital
+
+
+
+Updated context from client on how they imagine it being built: 
+
+README.md
+# Next.js API Routes for Portfolio Analyzer
+
+These API routes provide the same functionality as `api_example.py` but for Next.js applications.
+
+## Setup Instructions
+
+### 1. Install Dependencies
+
+In your Next.js project:
+
+```bash
+npm install yahoo-finance2 papaparse date-fns
+npm install -D @types/papaparse
+```
+
+### 2. Copy Files
+
+```
+your-nextjs-project/
+├── lib/
+│   └── portfolio_analyzer.ts    <- Copy from parent folder
+├── app/
+│   └── api/
+│       ├── analyze/
+│       │   └── route.ts         <- Copy from nextjs-api/analyze/
+│       ├── chart/
+│       │   └── route.ts         <- Copy from nextjs-api/chart/
+│       └── methodology/
+│           └── route.ts         <- Copy from nextjs-api/methodology/
+```
+
+### 3. Update Import Paths
+
+The routes use `@/lib/portfolio_analyzer` by default. If you place the analyzer elsewhere, update the import:
+
+```typescript
+// If using /lib folder (recommended):
+import { PortfolioAnalyzer } from '@/lib/portfolio_analyzer';
+
+// If using a different location:
+import { PortfolioAnalyzer } from '../../../utils/portfolio_analyzer';
+```
+
+### 4. Configure tsconfig.json (if needed)
+
+Ensure your `tsconfig.json` has the `@/` path alias:
+
+```json
+{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./*"]
+    }
+  }
+}
+```
+
+## API Endpoints
+
+### POST /api/analyze
+
+Main analysis endpoint for multi-portfolio CSV files.
+
+**Query Parameters:**
+- `view`: `'comparison'` | `'individual'` | `'both'` (default: `'both'`)
+- `portfolio`: Portfolio name (required for `individual` view)
+- `as_of_date`: Analysis date as YYYY-MM-DD (default: latest in data)
+
+**Request:**
+```javascript
+const formData = new FormData();
+formData.append('file', csvFile);
+
+const response = await fetch('/api/analyze?view=comparison', {
+  method: 'POST',
+  body: formData,
+});
+
+const data = await response.json();
+```
+
+**Response (comparison view):**
+```json
+{
+  "view": "comparison",
+  "as_of_date": "2025-12-05",
+  "portfolio_names": ["Max Growth", "Moderate", "Growth"],
+  "period_names": ["YTD", "2024", "2023", "2022"],
+  "metrics": {
+    "return": { "by_period": { "YTD": { "Max Growth": 0.1116 } } },
+    "std_dev": { ... },
+    "sharpe": { ... }
+  },
+  "chart": {
+    "dates": ["2022-12-09", ...],
+    "benchmark_returns": [0, 0.0143, ...],
+    "portfolios": {
+      "Max Growth": { "returns": [0, 0.0115, ...], "final_return": 1.1074 }
+    }
+  }
+}
+```
+
+### POST /api/chart
+
+Get cumulative return chart data only.
+
+**Query Parameters:**
+- `portfolio`: Specific portfolio name (optional)
+- `start_date`: Chart start date (default: 3 years back)
+- `end_date`: Chart end date (default: latest)
+
+**Response:**
+```json
+{
+  "dates": ["2022-12-09", "2022-12-12", ...],
+  "portfolio_returns": [0.0, 0.0115, ..., 1.1074],
+  "benchmark_returns": [0.0, 0.0143, ..., 0.8155],
+  "portfolio_name": "Max Growth",
+  "benchmark_name": "S&P 500 TR",
+  "portfolio_final_return": 1.1074,
+  "benchmark_final_return": 0.8155,
+  "chart_title": "3-Year Cumulative Returns vs S&P 500 TR"
+}
+```
+
+### GET /api/methodology
+
+Returns calculation methodology documentation.
+
+## Frontend Chart Example
+
+```typescript
+import { Line } from 'react-chartjs-2';
+
+// After fetching chart data from /api/analyze?view=comparison
+const chartData = response.chart;
+
+const config = {
+  labels: chartData.dates,
+  datasets: [
+    {
+      label: `S&P 500 TR (+${(chartData.benchmark_final_return * 100).toFixed(1)}%)`,
+      data: chartData.benchmark_returns.map(v => v * 100),
+      borderColor: '#888',
+      borderDash: [5, 5],
+    },
+    ...Object.entries(chartData.portfolios).map(([name, p]) => ({
+      label: `${name} (+${(p.final_return * 100).toFixed(1)}%)`,
+      data: p.returns.map(v => v * 100),
+    })),
+  ],
+};
+
+const options = {
+  plugins: {
+    title: { display: true, text: chartData.chart_title },
+  },
+  scales: {
+    y: { ticks: { callback: (v) => v + '%' } },
+  },
+};
+
+<Line data={config} options={options} />
+```
+
+## CSV Format
+
+```csv
+Date, Max Growth, Moderate, Growth
+12/09/20, 100000, 100000, 100000
+12/10/20, 101244, 100500, 100800
+...
+```
+
+- First column: Date (various formats supported)
+- Remaining columns: Portfolio values (dollar amounts)
+- All portfolios should start at same base value

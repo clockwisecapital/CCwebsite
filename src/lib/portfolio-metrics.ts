@@ -6,7 +6,9 @@
  * 
  * Benchmark: S&P 500 Total Return Index
  * Risk-Free Rate: 3-Month T-Bill historical rates
- * Volatility/Beta/Alpha/Capture: Monthly returns
+ * Volatility/Beta/Alpha/Capture: 
+ *   - YTD: Weekly returns (sqrt(52) annualization)
+ *   - Full Years: Monthly returns (sqrt(12) annualization)
  * Max Drawdown: Daily data
  */
 
@@ -67,6 +69,9 @@ export interface ChartData {
   benchmarkName: string;
   startDate: string;
   endDate: string;
+  portfolioFinalReturn: number; // Final cumulative return for legend
+  benchmarkFinalReturn: number; // Final cumulative return for legend
+  chartTitle: string;
 }
 
 export interface AnalysisResult {
@@ -105,19 +110,32 @@ export interface ComparisonData {
     byPeriod: Record<string, Record<string, number | null>>;
     benchmark: Record<string, number | null>;
   }>;
-  cumulative3Y?: Record<string, {
-    return: number;
-    stdDev: number | null;
-    alpha: number | null;
-    beta: number | null;
-    sharpe: number | null;
-    maxDrawdown: number | null;
-  }>;
+  cumulative3Y?: {
+    portfolios: Record<string, {
+      return: number;
+      stdDev: number | null;
+      alpha: number | null;
+      beta: number | null;
+      sharpe: number | null;
+      maxDrawdown: number | null;
+    }>;
+    benchmark: {
+      return: number;
+      stdDev: number | null;
+      sharpe: number | null;
+      maxDrawdown: number | null;
+    };
+  };
   chart?: {
     dates: string[];
     benchmarkName: string;
     benchmarkReturns: number[];
-    portfolios: Record<string, number[]>;
+    benchmarkFinalReturn: number;
+    portfolios: Record<string, {
+      returns: number[];
+      finalReturn: number;
+    }>;
+    chartTitle: string;
   };
 }
 
@@ -189,6 +207,21 @@ function getYearMonth(dateStr: string): string {
 }
 
 /**
+ * Get year-week key from date string (ISO week number)
+ */
+function getYearWeek(dateStr: string): string {
+  const date = parseDate(dateStr);
+  const year = date.getFullYear();
+  
+  // Get first day of year
+  const firstDayOfYear = new Date(year, 0, 1);
+  const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+  const weekNumber = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+  
+  return `${year}-W${weekNumber.toString().padStart(2, '0')}`;
+}
+
+/**
  * Round to specified decimal places
  */
 function round(value: number | null, decimals: number): number | null {
@@ -217,6 +250,18 @@ interface MonthlyDataPoint {
   portReturn: number;
   spxReturn: number;
   rfMonthly: number;
+  portExcess: number;
+  spxExcess: number;
+}
+
+interface WeeklyDataPoint {
+  yearWeek: string;
+  portfolioValue: number;
+  spxValue: number;
+  tbRate: number;
+  portReturn: number;
+  spxReturn: number;
+  rfWeekly: number;
   portExcess: number;
   spxExcess: number;
 }
@@ -339,6 +384,60 @@ function toMonthlyData(dailyData: MergedDataPoint[]): MonthlyDataPoint[] {
 }
 
 /**
+ * Resample to weekly data (for YTD calculations - Kwanti methodology)
+ */
+function toWeeklyData(dailyData: MergedDataPoint[]): WeeklyDataPoint[] {
+  // Group by year-week
+  const byWeek = new Map<string, MergedDataPoint[]>();
+  
+  for (const d of dailyData) {
+    const yw = getYearWeek(d.date);
+    if (!byWeek.has(yw)) {
+      byWeek.set(yw, []);
+    }
+    byWeek.get(yw)!.push(d);
+  }
+  
+  // Get last day of each week
+  const weekly: WeeklyDataPoint[] = [];
+  const sortedWeeks = Array.from(byWeek.keys()).sort();
+  
+  let prevPortValue: number | null = null;
+  let prevSpxValue: number | null = null;
+  
+  for (const yw of sortedWeeks) {
+    const weekData = byWeek.get(yw)!;
+    const lastDay = weekData[weekData.length - 1];
+    const avgTbRate = mean(weekData.map(d => d.tbRate));
+    
+    const portReturn = prevPortValue !== null 
+      ? (lastDay.portfolioValue / prevPortValue) - 1 
+      : 0;
+    const spxReturn = prevSpxValue !== null 
+      ? (lastDay.spxValue / prevSpxValue) - 1 
+      : 0;
+    const rfWeekly = avgTbRate / 52;
+    
+    weekly.push({
+      yearWeek: yw,
+      portfolioValue: lastDay.portfolioValue,
+      spxValue: lastDay.spxValue,
+      tbRate: avgTbRate,
+      portReturn: portReturn,
+      spxReturn: spxReturn,
+      rfWeekly: rfWeekly,
+      portExcess: portReturn - rfWeekly,
+      spxExcess: spxReturn - rfWeekly
+    });
+    
+    prevPortValue = lastDay.portfolioValue;
+    prevSpxValue = lastDay.spxValue;
+  }
+  
+  return weekly;
+}
+
+/**
  * Filter data for a specific period
  */
 function filterPeriod(
@@ -403,6 +502,7 @@ function calculateCaptureRatio(
 
 /**
  * Calculate all metrics for a single period
+ * Uses weekly data for YTD (Kwanti methodology), monthly for full years
  */
 function calculatePeriodMetrics(
   dailyData: MergedDataPoint[],
@@ -416,66 +516,108 @@ function calculatePeriodMetrics(
     throw new Error(`Insufficient data for period ${periodName}`);
   }
   
-  // Filter monthly data for this period
+  // Determine if this is YTD (use weekly) or full year (use monthly)
+  const isYTD = periodName === 'YTD' || periodName === '3Y Cumulative';
+  const annualizeFactor = isYTD ? 52 : 12;
+  
+  // Period returns (from daily data)
+  const portReturn = (periodDaily[periodDaily.length - 1].portfolioValue / 
+                      periodDaily[0].portfolioValue) - 1;
+  const spxReturn = (periodDaily[periodDaily.length - 1].spxValue / 
+                     periodDaily[0].spxValue) - 1;
+  
+  // Get periodic data based on period type
+  let periodicPortReturns: number[];
+  let periodicSpxReturns: number[];
+  let periodicPortExcess: number[];
+  let periodicSpxExcess: number[];
+  let rfAnnual: number;
+  let numPeriods: number;
+  
+  if (isYTD) {
+    // Use weekly data for YTD
+    const allWeekly = toWeeklyData(dailyData);
+    const startYW = getYearWeek(startDate);
+    const endYW = getYearWeek(endDate);
+    const periodWeekly = allWeekly.filter(w => 
+      w.yearWeek >= startYW && w.yearWeek <= endYW
+    );
+    
+    rfAnnual = mean(periodWeekly.map(w => w.tbRate));
+    periodicPortReturns = periodWeekly.slice(1).map(w => w.portReturn);
+    periodicSpxReturns = periodWeekly.slice(1).map(w => w.spxReturn);
+    periodicPortExcess = periodWeekly.slice(1).map(w => w.portExcess);
+    periodicSpxExcess = periodWeekly.slice(1).map(w => w.spxExcess);
+    numPeriods = periodicPortReturns.length;
+  } else {
+    // Use monthly data for full years
+    const allMonthly = toMonthlyData(dailyData);
+    const startYM = getYearMonth(startDate);
+    const endYM = getYearMonth(endDate);
+    const periodMonthly = allMonthly.filter(m => 
+      m.yearMonth >= startYM && m.yearMonth <= endYM
+    );
+    
+    rfAnnual = mean(periodMonthly.map(m => m.tbRate));
+    periodicPortReturns = periodMonthly.slice(1).map(m => m.portReturn);
+    periodicSpxReturns = periodMonthly.slice(1).map(m => m.spxReturn);
+    periodicPortExcess = periodMonthly.slice(1).map(m => m.portExcess);
+    periodicSpxExcess = periodMonthly.slice(1).map(m => m.spxExcess);
+    numPeriods = periodicPortReturns.length;
+  }
+  
+  // Standard deviation (annualized)
+  const portStd = periodicPortReturns.length >= 2 
+    ? stdDev(periodicPortReturns) * Math.sqrt(annualizeFactor) 
+    : null;
+  const spxStd = periodicSpxReturns.length >= 2 
+    ? stdDev(periodicSpxReturns) * Math.sqrt(annualizeFactor) 
+    : null;
+  
+  // Beta - Portfolio vs Benchmark
+  let portBeta: number | null = null;
+  if (periodicPortExcess.length >= 3) {
+    const cov = covariance(periodicPortExcess, periodicSpxExcess);
+    const benchVar = variance(periodicSpxExcess);
+    portBeta = benchVar !== 0 ? cov / benchVar : null;
+  }
+  
+  // Alpha (annualized) - Jensen's Alpha
+  let portAlpha: number | null = null;
+  if (periodicPortExcess.length >= 3 && portBeta !== null) {
+    const avgPortExcess = mean(periodicPortExcess);
+    const avgSpxExcess = mean(periodicSpxExcess);
+    portAlpha = (avgPortExcess - portBeta * avgSpxExcess) * annualizeFactor;
+  }
+  
+  // Sharpe ratios - Arithmetic method: (Avg Periodic Excess × annualize_factor) / Annualized Std Dev
+  let portSharpe: number | null = null;
+  let spxSharpe: number | null = null;
+  
+  if (portStd !== null && portStd > 0 && periodicPortExcess.length >= 2) {
+    const avgPortExcess = mean(periodicPortExcess);
+    portSharpe = (avgPortExcess * annualizeFactor) / portStd;
+  }
+  
+  if (spxStd !== null && spxStd > 0 && periodicSpxExcess.length >= 2) {
+    const avgSpxExcess = mean(periodicSpxExcess);
+    spxSharpe = (avgSpxExcess * annualizeFactor) / spxStd;
+  }
+  
+  // Max drawdown (daily)
+  const portMaxDD = calculateMaxDrawdown(periodDaily.map(d => d.portfolioValue));
+  const spxMaxDD = calculateMaxDrawdown(periodDaily.map(d => d.spxValue));
+  
+  // Capture ratios (use monthly for consistency)
   const allMonthly = toMonthlyData(dailyData);
   const startYM = getYearMonth(startDate);
   const endYM = getYearMonth(endDate);
   const periodMonthly = allMonthly.filter(m => 
     m.yearMonth >= startYM && m.yearMonth <= endYM
   );
-  
-  // Period returns
-  const portReturn = (periodDaily[periodDaily.length - 1].portfolioValue / 
-                      periodDaily[0].portfolioValue) - 1;
-  const spxReturn = (periodDaily[periodDaily.length - 1].spxValue / 
-                     periodDaily[0].spxValue) - 1;
-  
-  // Risk-free rate (average for period)
-  const rfAnnual = mean(periodMonthly.map(m => m.tbRate));
-  
-  // Get monthly returns (excluding first month which has no return)
   const monthlyPortReturns = periodMonthly.slice(1).map(m => m.portReturn);
   const monthlySpxReturns = periodMonthly.slice(1).map(m => m.spxReturn);
-  const monthlyPortExcess = periodMonthly.slice(1).map(m => m.portExcess);
-  const monthlySpxExcess = periodMonthly.slice(1).map(m => m.spxExcess);
   
-  // Standard deviation (annualized from monthly)
-  const portStd = monthlyPortReturns.length >= 2 
-    ? stdDev(monthlyPortReturns) * Math.sqrt(12) 
-    : null;
-  const spxStd = monthlySpxReturns.length >= 2 
-    ? stdDev(monthlySpxReturns) * Math.sqrt(12) 
-    : null;
-  
-  // Beta - Portfolio vs Benchmark
-  let portBeta: number | null = null;
-  if (monthlyPortExcess.length >= 3) {
-    const cov = covariance(monthlyPortExcess, monthlySpxExcess);
-    const benchVar = variance(monthlySpxExcess);
-    portBeta = benchVar !== 0 ? cov / benchVar : null;
-  }
-  
-  // Alpha (annualized)
-  let portAlpha: number | null = null;
-  if (monthlyPortExcess.length >= 3 && portBeta !== null) {
-    const avgPortExcess = mean(monthlyPortExcess);
-    const avgSpxExcess = mean(monthlySpxExcess);
-    portAlpha = (avgPortExcess - portBeta * avgSpxExcess) * 12;
-  }
-  
-  // Sharpe ratios
-  const portSharpe = portStd !== null && portStd > 0 
-    ? (portReturn - rfAnnual) / portStd 
-    : null;
-  const spxSharpe = spxStd !== null && spxStd > 0 
-    ? (spxReturn - rfAnnual) / spxStd 
-    : null;
-  
-  // Max drawdown (daily)
-  const portMaxDD = calculateMaxDrawdown(periodDaily.map(d => d.portfolioValue));
-  const spxMaxDD = calculateMaxDrawdown(periodDaily.map(d => d.spxValue));
-  
-  // Capture ratios
   const portUpCapture = calculateCaptureRatio(
     monthlyPortReturns, monthlySpxReturns, true
   );
@@ -508,12 +650,13 @@ function calculatePeriodMetrics(
     benchmarkDownCapture: 1, // 100% capture
     // Context
     riskFreeRate: round(rfAnnual, 4)!,
-    numMonths: monthlyPortReturns.length
+    numMonths: numPeriods
   };
 }
 
 /**
  * Auto-generate analysis periods based on available data
+ * Client spec: Only show YTD, 2024, 2023 (last 2 full years)
  */
 function autoGeneratePeriods(
   data: MergedDataPoint[],
@@ -534,8 +677,8 @@ function autoGeneratePeriods(
     }
   }
   
-  // Previous full years
-  for (let year = asOf.getFullYear() - 1; year >= asOf.getFullYear() - 4; year--) {
+  // Previous 2 full years only (client spec: 2024, 2023)
+  for (let year = asOf.getFullYear() - 1; year >= asOf.getFullYear() - 2; year--) {
     const yearStart = new Date(year, 0, 1);
     const yearEnd = new Date(year, 11, 31);
     
@@ -582,18 +725,28 @@ function generateChartData(
   const portStart = chartData[0].portfolioValue;
   const spxStart = chartData[0].spxValue;
   
+  const portfolioReturns = chartData.map(d => 
+    round((d.portfolioValue / portStart) - 1, 4)!
+  );
+  const benchmarkReturns = chartData.map(d => 
+    round((d.spxValue / spxStart) - 1, 4)!
+  );
+  
+  // Final returns for legend labels (e.g., "+110.74%")
+  const portfolioFinalReturn = portfolioReturns[portfolioReturns.length - 1];
+  const benchmarkFinalReturn = benchmarkReturns[benchmarkReturns.length - 1];
+  
   return {
     dates: chartData.map(d => d.date),
-    portfolioReturns: chartData.map(d => 
-      round((d.portfolioValue / portStart) - 1, 4)!
-    ),
-    benchmarkReturns: chartData.map(d => 
-      round((d.spxValue / spxStart) - 1, 4)!
-    ),
+    portfolioReturns,
+    benchmarkReturns,
     portfolioName,
     benchmarkName: 'S&P 500 TR',
     startDate: chartData[0].date,
-    endDate: chartData[chartData.length - 1].date
+    endDate: chartData[chartData.length - 1].date,
+    portfolioFinalReturn,
+    benchmarkFinalReturn,
+    chartTitle: `${yearsBack}-Year Cumulative Returns vs S&P 500 TR`
   };
 }
 
@@ -803,13 +956,22 @@ function buildComparison(
     }
   }
   
-  // Add 3Y cumulative comparison
+  // Add 3Y cumulative comparison with benchmark KPIs
   if (firstResult.cumulative3Y) {
-    comparison.cumulative3Y = {};
+    comparison.cumulative3Y = {
+      portfolios: {},
+      benchmark: {
+        return: firstResult.cumulative3Y.benchmarkReturn,
+        stdDev: firstResult.cumulative3Y.benchmarkStdDev,
+        sharpe: firstResult.cumulative3Y.benchmarkSharpeRatio,
+        maxDrawdown: firstResult.cumulative3Y.benchmarkMaxDrawdown
+      }
+    };
+    
     for (const portName of portfolioNames) {
       const result = portfolioResults[portName];
       if (result.cumulative3Y) {
-        comparison.cumulative3Y[portName] = {
+        comparison.cumulative3Y.portfolios[portName] = {
           return: result.cumulative3Y.portfolioReturn,
           stdDev: result.cumulative3Y.portfolioStdDev,
           alpha: result.cumulative3Y.portfolioAlpha,
@@ -821,19 +983,24 @@ function buildComparison(
     }
   }
   
-  // Add combined chart data
+  // Add combined chart data with final returns for legends
   if (firstResult.chartData) {
     comparison.chart = {
       dates: firstResult.chartData.dates,
       benchmarkName: firstResult.chartData.benchmarkName,
       benchmarkReturns: firstResult.chartData.benchmarkReturns,
-      portfolios: {}
+      benchmarkFinalReturn: firstResult.chartData.benchmarkFinalReturn,
+      portfolios: {},
+      chartTitle: firstResult.chartData.chartTitle
     };
     
     for (const portName of portfolioNames) {
       const result = portfolioResults[portName];
       if (result.chartData) {
-        comparison.chart.portfolios[portName] = result.chartData.portfolioReturns;
+        comparison.chart.portfolios[portName] = {
+          returns: result.chartData.portfolioReturns,
+          finalReturn: result.chartData.portfolioFinalReturn
+        };
       }
     }
   }
@@ -848,12 +1015,15 @@ function getMethodology(): Record<string, string> {
   return {
     benchmark: 'S&P 500 Total Return Index (^SP500TR) - includes dividends',
     riskFreeRate: '3-Month Treasury Bill (^IRX) - historical rates',
-    returnFrequency: 'Monthly returns for Std Dev, Beta, Alpha, Capture; Daily for Max Drawdown',
-    stdDevAnnualization: 'Monthly Std Dev × sqrt(12)',
-    alphaAnnualization: 'Monthly Alpha × 12',
+    ytdFrequency: 'Weekly data for YTD (Kwanti methodology) - annualized with sqrt(52)',
+    fullYearFrequency: 'Monthly data for full years - annualized with sqrt(12)',
+    maxDrawdown: 'Daily data for true peak-to-trough calculation',
     betaFormula: 'Cov(Portfolio Excess, Benchmark Excess) / Var(Benchmark Excess)',
-    sharpeFormula: '(Return - Risk Free Rate) / Std Dev',
-    captureFormula: 'Compound return in up/down months divided by benchmark',
+    alphaFormula: "Jensen's Alpha: (Avg Excess - Beta × Benchmark Excess) × annualize_factor",
+    sharpeFormula: '(Avg Period Excess × annualize_factor) / Annualized Std Dev - arithmetic method',
+    captureFormula: 'Compound return in up/down months divided by benchmark compound',
+    periods: 'YTD, last 2 full years (2024, 2023)',
+    chartData: 'Cumulative returns starting from 0% with final_return for legend labels',
     dataSource: 'Yahoo Finance (^SP500TR, ^IRX)'
   };
 }

@@ -188,33 +188,42 @@ export function generatePortfolioPDF(
   
   yPos = doc.lastAutoTable.finalY + 10
   
-  // 3Y Cumulative Section (if available)
+  // 3Y Cumulative Section (if available) - with benchmark comparison
   if (portfolioResult.cumulative3Y) {
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
-    doc.text('3-Year Cumulative', margin, yPos)
+    doc.text('3-Year Cumulative Performance', margin, yPos)
     
     yPos += 5
     
     const cum3YData = [
-      ['Return', formatPct(portfolioResult.cumulative3Y.portfolioReturn, 2)],
-      ['Alpha', formatPct(portfolioResult.cumulative3Y.portfolioAlpha, 2)],
-      ['Beta', formatNum(portfolioResult.cumulative3Y.portfolioBeta)],
-      ['Sharpe Ratio', formatNum(portfolioResult.cumulative3Y.portfolioSharpeRatio)],
-      ['Max Drawdown', formatPct(portfolioResult.cumulative3Y.portfolioMaxDrawdown, 1)]
+      ['', portfolioName, 'S&P 500 TR'],
+      ['Return', formatPct(portfolioResult.cumulative3Y.portfolioReturn, 2), formatPct(portfolioResult.cumulative3Y.benchmarkReturn, 2)],
+      ['Std Dev', formatPct(portfolioResult.cumulative3Y.portfolioStdDev, 1), formatPct(portfolioResult.cumulative3Y.benchmarkStdDev, 1)],
+      ['Alpha', formatPct(portfolioResult.cumulative3Y.portfolioAlpha, 1), '0.0%'],
+      ['Beta', formatNum(portfolioResult.cumulative3Y.portfolioBeta), '1.00'],
+      ['Sharpe Ratio', formatNum(portfolioResult.cumulative3Y.portfolioSharpeRatio), formatNum(portfolioResult.cumulative3Y.benchmarkSharpeRatio)],
+      ['Max Drawdown', formatPct(portfolioResult.cumulative3Y.portfolioMaxDrawdown, 1), formatPct(portfolioResult.cumulative3Y.benchmarkMaxDrawdown, 1)]
     ]
     
     autoTable(doc, {
       startY: yPos,
-      body: cum3YData,
-      theme: 'plain',
+      head: [[cum3YData[0][0], cum3YData[0][1], cum3YData[0][2]]],
+      body: cum3YData.slice(1),
+      theme: 'striped',
       styles: {
         fontSize: 9,
         cellPadding: 2
       },
+      headStyles: {
+        fillColor: [66, 139, 202],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold'
+      },
       columnStyles: {
-        0: { cellWidth: 40, fontStyle: 'bold' },
-        1: { cellWidth: 30 }
+        0: { cellWidth: 35, fontStyle: 'bold' },
+        1: { cellWidth: 35 },
+        2: { cellWidth: 35 }
       },
       margin: { left: margin, right: margin }
     })

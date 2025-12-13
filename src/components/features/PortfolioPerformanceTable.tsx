@@ -212,35 +212,93 @@ export default function PortfolioPerformanceTable({
         </p>
       </div>
 
-      {/* 3Y Cumulative Section */}
+      {/* 3Y Cumulative Section - Shows both portfolio and benchmark KPIs */}
       {portfolioResult.cumulative3Y && (
-        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50">
-          <h3 className="text-base font-semibold text-gray-900 mb-3">3-Year Cumulative</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <p className="text-xs text-gray-500">Return</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {formatPct(portfolioResult.cumulative3Y.portfolioReturn, 2)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Alpha</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {formatPct(portfolioResult.cumulative3Y.portfolioAlpha, 2)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Sharpe Ratio</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {formatNum(portfolioResult.cumulative3Y.portfolioSharpeRatio)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Max Drawdown</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {formatPct(portfolioResult.cumulative3Y.portfolioMaxDrawdown, 1)}
-              </p>
-            </div>
+        <div className="px-6 py-4 border-t border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <h3 className="text-base font-semibold text-gray-900 mb-4">3-Year Cumulative Performance</h3>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th className="text-left py-2 pr-4 text-sm font-medium text-gray-500 w-48"></th>
+                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-500">Return</th>
+                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-500">Std Dev</th>
+                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-500">Alpha</th>
+                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-500">Beta</th>
+                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-500">Sharpe</th>
+                  <th className="text-right py-2 px-4 text-sm font-medium text-gray-500">Max DD</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Portfolio row */}
+                <tr>
+                  <td className="py-2 pr-4">
+                    <div className="flex items-center">
+                      <span className="w-3 h-3 rounded-full bg-emerald-500 mr-3 flex-shrink-0"></span>
+                      <span className="text-sm font-semibold text-gray-900">{activePortfolio}</span>
+                    </div>
+                  </td>
+                  <td className="py-2 px-4 text-right text-sm font-bold text-emerald-700">
+                    {formatPct(portfolioResult.cumulative3Y.portfolioReturn, 2)}
+                  </td>
+                  <td className="py-2 px-4 text-right text-sm text-gray-900">
+                    {formatPct(portfolioResult.cumulative3Y.portfolioStdDev, 1)}
+                  </td>
+                  <td className="py-2 px-4 text-right text-sm text-gray-900">
+                    {formatPct(portfolioResult.cumulative3Y.portfolioAlpha, 1)}
+                  </td>
+                  <td className="py-2 px-4 text-right text-sm text-gray-900">
+                    {formatNum(portfolioResult.cumulative3Y.portfolioBeta)}
+                  </td>
+                  <td className="py-2 px-4 text-right text-sm text-gray-900">
+                    {formatNum(portfolioResult.cumulative3Y.portfolioSharpeRatio)}
+                  </td>
+                  <td className="py-2 px-4 text-right text-sm text-gray-900">
+                    {formatPct(portfolioResult.cumulative3Y.portfolioMaxDrawdown, 1)}
+                  </td>
+                </tr>
+                {/* Benchmark row */}
+                <tr className="border-t border-blue-100">
+                  <td className="py-2 pr-4">
+                    <div className="flex items-center">
+                      <span className="w-3 h-3 rounded-full bg-orange-400 mr-3 flex-shrink-0"></span>
+                      <span className="text-sm font-medium text-gray-700">S&P 500 TR</span>
+                    </div>
+                  </td>
+                  <td className="py-2 px-4 text-right text-sm font-bold text-orange-700">
+                    {formatPct(portfolioResult.cumulative3Y.benchmarkReturn, 2)}
+                  </td>
+                  <td className="py-2 px-4 text-right text-sm text-gray-700">
+                    {formatPct(portfolioResult.cumulative3Y.benchmarkStdDev, 1)}
+                  </td>
+                  <td className="py-2 px-4 text-right text-sm text-gray-500">0.0%</td>
+                  <td className="py-2 px-4 text-right text-sm text-gray-500">1.00</td>
+                  <td className="py-2 px-4 text-right text-sm text-gray-700">
+                    {formatNum(portfolioResult.cumulative3Y.benchmarkSharpeRatio)}
+                  </td>
+                  <td className="py-2 px-4 text-right text-sm text-gray-700">
+                    {formatPct(portfolioResult.cumulative3Y.benchmarkMaxDrawdown, 1)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Excess Return Highlight */}
+          <div className="mt-4 pt-3 border-t border-blue-200">
+            <p className="text-sm">
+              <span className="text-gray-600">3Y Excess Return: </span>
+              <span className={`font-bold ${
+                portfolioResult.cumulative3Y.excessReturn >= 0 
+                  ? 'text-emerald-700' 
+                  : 'text-red-600'
+              }`}>
+                {portfolioResult.cumulative3Y.excessReturn >= 0 ? '+' : ''}
+                {formatPct(portfolioResult.cumulative3Y.excessReturn, 2)}
+              </span>
+              <span className="text-gray-500 ml-2">vs benchmark</span>
+            </p>
           </div>
         </div>
       )}
@@ -377,17 +435,71 @@ export function PortfolioComparisonTable({
   const periodNames = comparison.periodNames
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-        <h2 className="text-xl font-semibold text-gray-900">Portfolio Comparison</h2>
-        <p className="text-sm text-gray-500 mt-1">As of {data.asOfDate}</p>
+    <div className="space-y-6">
+      {/* Periodic metrics table */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+          <h2 className="text-xl font-semibold text-gray-900">Portfolio Comparison</h2>
+          <p className="text-sm text-gray-500 mt-1">As of {data.asOfDate}</p>
+        </div>
+
+        {periodNames.map(periodName => (
+          <div key={periodName} className="border-b border-gray-100 last:border-b-0">
+            <div className="px-6 py-3 bg-gray-50">
+              <h3 className="text-sm font-semibold text-gray-900">{periodName}</h3>
+            </div>
+            <div className="px-6 py-4 overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <th className="text-left py-2 pr-4 text-sm font-medium text-gray-500 w-40">Metric</th>
+                    {portfolioNames.map(name => (
+                      <th key={name} className="text-right py-2 px-3 text-sm font-medium text-gray-500 min-w-[100px]">
+                        {name.replace('Clockwise ', '')}
+                      </th>
+                    ))}
+                    <th className="text-right py-2 px-3 text-sm font-medium text-gray-500 min-w-[100px]">
+                      S&P 500 TR
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(comparison.metrics).map(([key, metric]) => (
+                    <tr key={key} className="border-t border-gray-50">
+                      <td className="py-2 pr-4 text-sm text-gray-700">{metric.displayName}</td>
+                      {portfolioNames.map(name => {
+                        const value = metric.byPeriod[periodName]?.[name]
+                        const isPercent = ['return', 'stdDev', 'alpha', 'maxDrawdown'].includes(key)
+                        return (
+                          <td key={name} className="py-2 px-3 text-right text-sm text-gray-900">
+                            {isPercent ? formatPct(value, 1) : formatNum(value)}
+                          </td>
+                        )
+                      })}
+                      <td className="py-2 px-3 text-right text-sm text-gray-600">
+                        {(() => {
+                          const value = metric.benchmark[periodName]
+                          const isPercent = ['return', 'stdDev', 'alpha', 'maxDrawdown'].includes(key)
+                          return isPercent ? formatPct(value, 1) : formatNum(value)
+                        })()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {periodNames.map(periodName => (
-        <div key={periodName} className="border-b border-gray-100 last:border-b-0">
-          <div className="px-6 py-3 bg-gray-50">
-            <h3 className="text-sm font-semibold text-gray-900">{periodName}</h3>
+      {/* 3Y Cumulative Comparison */}
+      {comparison.cumulative3Y && (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <h2 className="text-xl font-semibold text-gray-900">3-Year Cumulative Performance</h2>
+            <p className="text-sm text-gray-500 mt-1">Key metrics across all portfolios</p>
           </div>
+          
           <div className="px-6 py-4 overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -404,32 +516,79 @@ export function PortfolioComparisonTable({
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(comparison.metrics).map(([key, metric]) => (
-                  <tr key={key} className="border-t border-gray-50">
-                    <td className="py-2 pr-4 text-sm text-gray-700">{metric.displayName}</td>
-                    {portfolioNames.map(name => {
-                      const value = metric.byPeriod[periodName]?.[name]
-                      const isPercent = ['return', 'stdDev', 'alpha', 'maxDrawdown'].includes(key)
-                      return (
-                        <td key={name} className="py-2 px-3 text-right text-sm text-gray-900">
-                          {isPercent ? formatPct(value, 1) : formatNum(value)}
-                        </td>
-                      )
-                    })}
-                    <td className="py-2 px-3 text-right text-sm text-gray-600">
-                      {(() => {
-                        const value = metric.benchmark[periodName]
-                        const isPercent = ['return', 'stdDev', 'alpha', 'maxDrawdown'].includes(key)
-                        return isPercent ? formatPct(value, 1) : formatNum(value)
-                      })()}
+                {/* Return */}
+                <tr className="border-t border-gray-50">
+                  <td className="py-2 pr-4 text-sm font-medium text-gray-700">Return</td>
+                  {portfolioNames.map(name => (
+                    <td key={name} className="py-2 px-3 text-right text-sm font-bold text-emerald-700">
+                      {formatPct(comparison.cumulative3Y!.portfolios[name]?.return ?? null, 2)}
                     </td>
-                  </tr>
-                ))}
+                  ))}
+                  <td className="py-2 px-3 text-right text-sm font-bold text-orange-700">
+                    {formatPct(comparison.cumulative3Y!.benchmark.return, 2)}
+                  </td>
+                </tr>
+                {/* Std Dev */}
+                <tr className="border-t border-gray-50">
+                  <td className="py-2 pr-4 text-sm text-gray-700">Std Dev</td>
+                  {portfolioNames.map(name => (
+                    <td key={name} className="py-2 px-3 text-right text-sm text-gray-900">
+                      {formatPct(comparison.cumulative3Y!.portfolios[name]?.stdDev ?? null, 1)}
+                    </td>
+                  ))}
+                  <td className="py-2 px-3 text-right text-sm text-gray-600">
+                    {formatPct(comparison.cumulative3Y!.benchmark.stdDev, 1)}
+                  </td>
+                </tr>
+                {/* Alpha */}
+                <tr className="border-t border-gray-50">
+                  <td className="py-2 pr-4 text-sm text-gray-700">Alpha</td>
+                  {portfolioNames.map(name => (
+                    <td key={name} className="py-2 px-3 text-right text-sm text-gray-900">
+                      {formatPct(comparison.cumulative3Y!.portfolios[name]?.alpha ?? null, 1)}
+                    </td>
+                  ))}
+                  <td className="py-2 px-3 text-right text-sm text-gray-500">0.0%</td>
+                </tr>
+                {/* Beta */}
+                <tr className="border-t border-gray-50">
+                  <td className="py-2 pr-4 text-sm text-gray-700">Beta</td>
+                  {portfolioNames.map(name => (
+                    <td key={name} className="py-2 px-3 text-right text-sm text-gray-900">
+                      {formatNum(comparison.cumulative3Y!.portfolios[name]?.beta ?? null)}
+                    </td>
+                  ))}
+                  <td className="py-2 px-3 text-right text-sm text-gray-500">1.00</td>
+                </tr>
+                {/* Sharpe */}
+                <tr className="border-t border-gray-50">
+                  <td className="py-2 pr-4 text-sm text-gray-700">Sharpe Ratio</td>
+                  {portfolioNames.map(name => (
+                    <td key={name} className="py-2 px-3 text-right text-sm text-gray-900">
+                      {formatNum(comparison.cumulative3Y!.portfolios[name]?.sharpe ?? null)}
+                    </td>
+                  ))}
+                  <td className="py-2 px-3 text-right text-sm text-gray-600">
+                    {formatNum(comparison.cumulative3Y!.benchmark.sharpe)}
+                  </td>
+                </tr>
+                {/* Max Drawdown */}
+                <tr className="border-t border-gray-50">
+                  <td className="py-2 pr-4 text-sm text-gray-700">Max Drawdown</td>
+                  {portfolioNames.map(name => (
+                    <td key={name} className="py-2 px-3 text-right text-sm text-gray-900">
+                      {formatPct(comparison.cumulative3Y!.portfolios[name]?.maxDrawdown ?? null, 1)}
+                    </td>
+                  ))}
+                  <td className="py-2 px-3 text-right text-sm text-gray-600">
+                    {formatPct(comparison.cumulative3Y!.benchmark.maxDrawdown, 1)}
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
         </div>
-      ))}
+      )}
     </div>
   )
 }
