@@ -411,14 +411,14 @@ How long is the average Lifecycle of the Long-Term Technology Cycle and what is 
 ## Current Tech Landscape (Real-Time Data as of ${realTimeData.timestamp}):
 
 **Market Data:**
-- AI investment: $${technology.ai_investment_billions}B+ (latest data)
-- ChatGPT: ${technology.chatgpt_users_millions}M+ weekly active users
-- NVIDIA market cap: $${market.nvidia_market_cap}B
-- Cloud infrastructure spending: $${technology.cloud_spending_billions}B+ annually
-- Major tech layoffs: ${technology.tech_layoffs.toLocaleString()}+ in recent years
-- Enterprise AI adoption: ${technology.enterprise_ai_adoption}% of companies
-- S&P 500 P/E ratio: ${market.sp500_pe_ratio}
-- VIX (volatility): ${market.volatility_vix}
+- AI investment: $${technology.ai_investment_billions ?? 'N/A'}B+ (latest data)
+- ChatGPT: ${technology.chatgpt_users_millions ?? 'N/A'}M+ weekly active users
+- NVIDIA market cap: $${market.nvidia_market_cap ?? 'N/A'}B
+- Cloud infrastructure spending: $${technology.cloud_spending_billions ?? 'N/A'}B+ annually
+- Major tech layoffs: ${technology.tech_layoffs?.toLocaleString() ?? 'N/A'}+ in recent years
+- Enterprise AI adoption: ${technology.enterprise_ai_adoption ?? 'N/A'}% of companies
+- S&P 500 P/E ratio: ${market.sp500_pe_ratio ?? 'N/A'}
+- VIX (volatility): ${market.volatility_vix ?? 'N/A'}
 
 **Note:** Use your real-time knowledge to assess:
 - Latest major AI/tech product launches and capabilities
@@ -530,7 +530,7 @@ Provide only the JSON output, no additional text.`;
   try {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 4000,
+      max_tokens: 8000, // Increased from 4000 to prevent truncation
       temperature: 0.1,
       messages: [{
         role: 'user',
@@ -679,7 +679,7 @@ Provide only the JSON output.`;
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-5-20250929',
-    max_tokens: 4000,
+    max_tokens: 8000, // Increased from 4000 to prevent truncation
     temperature: 0.1,
     messages: [{ role: 'user', content: prompt }],
   });
@@ -1064,7 +1064,7 @@ Provide only JSON.`;
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-5-20250929',
-    max_tokens: 4000,
+    max_tokens: 8000, // Increased from 4000 to prevent truncation
     temperature: 0.1,
     messages: [{ role: 'user', content: prompt }],
   });
@@ -1465,7 +1465,7 @@ Return ONLY this JSON structure:
   try {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 4000,
+      max_tokens: 8000, // Increased from 4000 to prevent truncation
       temperature: 0.1,
       messages: [{ role: 'user', content: prompt }],
     });

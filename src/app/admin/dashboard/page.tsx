@@ -18,12 +18,13 @@ import {
   HiBuildingOffice2,
   HiArrowPath,
   HiXMark,
-  HiFunnel,
   HiUserGroup,
+  HiPresentationChartLine,
   HiDocumentArrowUp,
-  HiPresentationChartLine
+  HiCloudArrowUp
 } from 'react-icons/hi2'
 import type { DisplaySpec, DisplayBlock } from '@/lib/supabase/types'
+import type { ClockwisePortfolio } from '@/app/api/admin/portfolios/route'
 import type { MultiPortfolioResult } from '@/lib/portfolio-metrics'
 import PortfolioPerformanceTable, { PortfolioComparisonTable } from '@/components/features/PortfolioPerformanceTable'
 import { downloadPortfolioPDF, downloadComparisonPDF } from '@/lib/portfolio-pdf'
@@ -131,13 +132,20 @@ export default function AdminDashboardPage() {
   // Main tab for master users
   const [mainTab, setMainTab] = useState<'dashboard' | 'portfolioPerformance'>('dashboard')
   
-  // Portfolio Performance state (master only)
-  const [portfolioData, setPortfolioData] = useState<MultiPortfolioResult | null>(null)
+  // Portfolio Performance state (master only) - Database driven with CSV upload
+  const [clockwisePortfolios, setClockwisePortfolios] = useState<ClockwisePortfolio[]>([])
   const [portfolioLoading, setPortfolioLoading] = useState(false)
   const [portfolioError, setPortfolioError] = useState('')
-  const [portfolioView, setPortfolioView] = useState<'individual' | 'comparison'>('individual')
-  const [selectedPortfolioForPDF, setSelectedPortfolioForPDF] = useState<string>('')
+  const [editingPortfolio, setEditingPortfolio] = useState<ClockwisePortfolio | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadSuccess, setUploadSuccess] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // Portfolio view states (Individual vs Comparison, PDF download)
+  const [portfolioView, setPortfolioView] = useState<'individual' | 'comparison'>('comparison')
+  const [uploadedPortfolioData, setUploadedPortfolioData] = useState<MultiPortfolioResult | null>(null)
+  const [selectedPortfolioForPDF, setSelectedPortfolioForPDF] = useState<string>('')
   
   const router = useRouter()
 
@@ -340,42 +348,126 @@ export default function AdminDashboardPage() {
     }
   }
 
-  // Portfolio CSV upload handler (master only)
-  const handlePortfolioUpload = async (file: File) => {
+  // Fetch Clockwise portfolios from database (master only)
+  const fetchClockwisePortfolios = useCallback(async () => {
     if (!isMaster) return
     
     setPortfolioLoading(true)
     setPortfolioError('')
-    setPortfolioData(null)
     
     try {
-      const formData = new FormData()
-      formData.append('file', file)
+      const response = await fetch('/api/admin/portfolios?admin=true')
+      const result = await response.json()
       
-      const response = await fetch('/api/admin/portfolio-analyze', {
-        method: 'POST',
-        body: formData
+      if (result.success) {
+        setClockwisePortfolios(result.data)
+      } else {
+        setPortfolioError(result.message || 'Failed to fetch portfolios')
+      }
+    } catch (e) {
+      console.error('Portfolio fetch error:', e)
+      setPortfolioError('Network error. Please try again.')
+    } finally {
+      setPortfolioLoading(false)
+    }
+  }, [isMaster])
+
+  // Save portfolio changes
+  const handleSavePortfolio = async (portfolio: ClockwisePortfolio) => {
+    setIsSaving(true)
+    try {
+      const response = await fetch('/api/admin/portfolios', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(portfolio)
       })
       
       const result = await response.json()
       
       if (result.success) {
-        setPortfolioData(result.data)
+        // Update local state
+        setClockwisePortfolios(prev => 
+          prev.map(p => p.id === portfolio.id ? result.data : p)
+        )
+        setEditingPortfolio(null)
       } else {
-        setPortfolioError(result.message || 'Failed to analyze portfolio')
+        alert(result.message || 'Failed to save portfolio')
       }
     } catch (e) {
-      console.error('Portfolio analysis error:', e)
+      console.error('Portfolio save error:', e)
+      alert('Failed to save portfolio')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Fetch portfolios when tab changes to portfolioPerformance
+  useEffect(() => {
+    if (mainTab === 'portfolioPerformance' && isMaster && clockwisePortfolios.length === 0) {
+      fetchClockwisePortfolios()
+    }
+  }, [mainTab, isMaster, clockwisePortfolios.length, fetchClockwisePortfolios])
+
+  // Handle CSV file upload - parse, calculate metrics, save to database AND get detailed analytics
+  const handleCSVUpload = async (file: File) => {
+    if (!isMaster) return
+    
+    setIsUploading(true)
+    setPortfolioError('')
+    setUploadSuccess(false)
+    
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      
+      // Call both APIs in parallel:
+      // 1. Save to database (simple metrics)
+      // 2. Get detailed analytics for PortfolioPerformanceTable
+      const [uploadResponse, analyzeResponse] = await Promise.all([
+        fetch('/api/admin/portfolios/upload', {
+          method: 'POST',
+          body: formData
+        }),
+        fetch('/api/admin/portfolio-analyze', {
+          method: 'POST',
+          body: formData
+        })
+      ])
+      
+      const uploadResult = await uploadResponse.json()
+      const analyzeResult = await analyzeResponse.json()
+      
+      if (uploadResult.success) {
+        setUploadSuccess(true)
+        // Refresh portfolio data from database
+        await fetchClockwisePortfolios()
+        // Clear success message after 3 seconds
+        setTimeout(() => setUploadSuccess(false), 3000)
+      } else {
+        setPortfolioError(uploadResult.message || 'Failed to save portfolio data')
+      }
+      
+      // Store detailed analytics data if available
+      if (analyzeResult.success && analyzeResult.data) {
+        setUploadedPortfolioData(analyzeResult.data)
+        // Set first portfolio as selected for PDF
+        const portfolioNames = Object.keys(analyzeResult.data.portfolios || {})
+        if (portfolioNames.length > 0 && !selectedPortfolioForPDF) {
+          setSelectedPortfolioForPDF(portfolioNames[0])
+        }
+      }
+    } catch (e) {
+      console.error('CSV upload error:', e)
       setPortfolioError('Network error. Please try again.')
     } finally {
-      setPortfolioLoading(false)
+      setIsUploading(false)
     }
   }
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      handlePortfolioUpload(file)
+      handleCSVUpload(file)
     }
     // Reset input so same file can be uploaded again
     if (fileInputRef.current) {
@@ -387,7 +479,7 @@ export default function AdminDashboardPage() {
     e.preventDefault()
     const file = e.dataTransfer.files?.[0]
     if (file && file.name.endsWith('.csv')) {
-      handlePortfolioUpload(file)
+      handleCSVUpload(file)
     } else {
       setPortfolioError('Please upload a CSV file')
     }
@@ -580,7 +672,7 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Portfolio Performance Tab (Master Only) */}
+      {/* Portfolio Performance Tab (Master Only) - Database Driven */}
       {isMaster && mainTab === 'portfolioPerformance' && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-28">
           {/* Header */}
@@ -591,17 +683,88 @@ export default function AdminDashboardPage() {
                   Portfolio Performance
                 </h1>
                 <p className="text-gray-600 mt-1 text-sm sm:text-base">
-                  Clockwise Model Portfolio Risk Metrics & Analysis
+                  Clockwise Model Portfolio 3-Year Cumulative Metrics
                 </p>
               </div>
               
-              {portfolioData && (
-                <div className="flex items-center gap-3">
+              <button
+                onClick={() => fetchClockwisePortfolios()}
+                className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                <HiArrowPath className="w-4 h-4 mr-2" />
+                Refresh Data
+              </button>
+            </div>
+          </div>
+          
+          {/* CSV Upload Section */}
+          <div className="mb-6">
+            <div 
+              className={`bg-white rounded-xl border-2 border-dashed p-6 text-center transition-colors ${
+                isUploading 
+                  ? 'border-blue-400 bg-blue-50' 
+                  : uploadSuccess 
+                    ? 'border-green-400 bg-green-50' 
+                    : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+              }`}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+            >
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileInputChange}
+                accept=".csv"
+                className="hidden"
+              />
+              
+              {isUploading ? (
+                <div className="flex flex-col items-center">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-3"></div>
+                  <p className="text-blue-600 font-medium">Processing CSV...</p>
+                  <p className="text-sm text-blue-500 mt-1">Calculating metrics and saving to database</p>
+                </div>
+              ) : uploadSuccess ? (
+                <div className="flex flex-col items-center">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mb-3">
+                    <HiCheckCircle className="w-6 h-6 text-green-600" />
+                  </div>
+                  <p className="text-green-600 font-medium">Portfolio data updated successfully!</p>
+                  <p className="text-sm text-green-500 mt-1">Data is now available to all advisors and on the Review Tab</p>
+                </div>
+              ) : (
+                <>
+                  <HiCloudArrowUp className="w-10 h-10 mx-auto text-gray-400 mb-3" />
+                  <p className="text-gray-700 font-medium mb-1">Upload Portfolio CSV</p>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Drag and drop your Clockwise Portfolios CSV file here, or click to browse
+                  </p>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                  >
+                    <HiDocumentArrowUp className="w-4 h-4 mr-2" />
+                    Select CSV File
+                  </button>
+                  <p className="text-xs text-gray-400 mt-3">
+                    Expected format: Date, Clockwise Max Growth, Clockwise Moderate, Clockwise Max Income, Clockwise Growth
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+          
+          {/* Detailed Portfolio Analytics (from CSV upload) */}
+          {uploadedPortfolioData && (
+            <div className="space-y-6 mb-6">
+              {/* View Toggle and PDF Download */}
+              <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
                   {/* View toggle */}
                   <div className="flex bg-gray-100 rounded-lg p-1">
                     <button
                       onClick={() => setPortfolioView('individual')}
-                      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                         portfolioView === 'individual'
                           ? 'bg-white text-gray-900 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
@@ -611,7 +774,7 @@ export default function AdminDashboardPage() {
                     </button>
                     <button
                       onClick={() => setPortfolioView('comparison')}
-                      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                         portfolioView === 'comparison'
                           ? 'bg-white text-gray-900 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
@@ -620,71 +783,72 @@ export default function AdminDashboardPage() {
                       Comparison
                     </button>
                   </div>
-                  
-                  {/* Upload new file button */}
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                  >
-                    <HiDocumentArrowUp className="w-4 h-4 mr-2" />
-                    Upload New CSV
-                  </button>
+
+                  {/* PDF Download Section */}
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Individual Portfolio PDF */}
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={selectedPortfolioForPDF || Object.keys(uploadedPortfolioData.portfolios)[0]}
+                        onChange={(e) => setSelectedPortfolioForPDF(e.target.value)}
+                        className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                      >
+                        {Object.keys(uploadedPortfolioData.portfolios).map(name => (
+                          <option key={name} value={name}>{name}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => {
+                          const portfolioName = selectedPortfolioForPDF || Object.keys(uploadedPortfolioData.portfolios)[0]
+                          downloadPortfolioPDF(uploadedPortfolioData, portfolioName)
+                        }}
+                        className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                      >
+                        <HiArrowDownTray className="w-4 h-4 mr-2" />
+                        Download PDF
+                      </button>
+                    </div>
+
+                    {/* Comparison PDF */}
+                    {Object.keys(uploadedPortfolioData.portfolios).length > 1 && (
+                      <button
+                        onClick={() => downloadComparisonPDF(uploadedPortfolioData)}
+                        className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                      >
+                        <HiArrowDownTray className="w-4 h-4 mr-2" />
+                        Comparison PDF
+                      </button>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Hidden file input */}
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileInputChange}
-            accept=".csv"
-            className="hidden"
-          />
-          
-          {/* Upload Section (when no data) */}
-          {!portfolioData && !portfolioLoading && (
-            <div
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <HiDocumentArrowUp className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Upload Portfolio CSV
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Drag and drop your Clockwise portfolio CSV file here, or click to browse
-              </p>
-              <p className="text-sm text-gray-500">
-                Expected format: Date, Portfolio1, Portfolio2, ... (daily values)
-              </p>
-              {portfolioError && (
-                <p className="mt-4 text-red-600 text-sm">{portfolioError}</p>
+              </div>
+
+              {/* Portfolio Performance Tables */}
+              {portfolioView === 'individual' ? (
+                <PortfolioPerformanceTable 
+                  data={uploadedPortfolioData} 
+                  selectedPortfolio={selectedPortfolioForPDF || Object.keys(uploadedPortfolioData.portfolios)[0]}
+                />
+              ) : (
+                <PortfolioComparisonTable data={uploadedPortfolioData} />
               )}
             </div>
           )}
-          
+
           {/* Loading State */}
           {portfolioLoading && (
             <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Analyzing portfolio data...</p>
-              <p className="text-sm text-gray-500 mt-2">Fetching market data and calculating metrics</p>
+              <p className="text-gray-600">Loading portfolio data...</p>
             </div>
           )}
           
           {/* Error State */}
-          {portfolioError && portfolioData === null && !portfolioLoading && (
+          {portfolioError && !portfolioLoading && (
             <div className="bg-red-50 rounded-xl border border-red-200 p-6 text-center">
               <p className="text-red-600 font-medium">{portfolioError}</p>
               <button
-                onClick={() => {
-                  setPortfolioError('')
-                  fileInputRef.current?.click()
-                }}
+                onClick={() => fetchClockwisePortfolios()}
                 className="mt-4 px-4 py-2 text-sm font-medium text-red-600 bg-white border border-red-300 rounded-lg hover:bg-red-50"
               >
                 Try Again
@@ -692,75 +856,343 @@ export default function AdminDashboardPage() {
             </div>
           )}
           
-          {/* Results */}
-          {portfolioData && (
+          {/* Database Portfolio Table (3Y Metrics + Edit) */}
+          {!portfolioLoading && clockwisePortfolios.length > 0 && (
             <div className="space-y-6">
-              {/* Tables */}
-              {portfolioView === 'individual' ? (
-                <PortfolioPerformanceTable data={portfolioData} />
-              ) : (
-                <PortfolioComparisonTable data={portfolioData} />
-              )}
-              
-              {/* PDF Download Section */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center">
-                  <HiArrowDownTray className="w-4 h-4 mr-2" />
-                  Download Report
-                </h3>
-                <div className="flex flex-wrap items-center gap-4">
-                  {/* Individual Portfolio PDF */}
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={selectedPortfolioForPDF || Object.keys(portfolioData.portfolios)[0]}
-                      onChange={(e) => setSelectedPortfolioForPDF(e.target.value)}
-                      className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-                    >
-                      {Object.keys(portfolioData.portfolios).map(name => (
-                        <option key={name} value={name}>{name}</option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={() => {
-                        const portfolioName = selectedPortfolioForPDF || Object.keys(portfolioData.portfolios)[0]
-                        downloadPortfolioPDF(portfolioData, portfolioName)
-                      }}
-                      className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-                    >
-                      <HiArrowDownTray className="w-4 h-4 mr-2" />
-                      Download PDF
-                    </button>
-                  </div>
-                  
-                  {/* Comparison PDF */}
-                  {Object.keys(portfolioData.portfolios).length > 1 && (
-                    <button
-                      onClick={() => downloadComparisonPDF(portfolioData)}
-                      className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                    >
-                      <HiArrowDownTray className="w-4 h-4 mr-2" />
-                      Download Comparison PDF
-                    </button>
-                  )}
+              {/* 3-Year Cumulative Performance Table */}
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+                  <h2 className="text-xl font-semibold text-gray-900">3-Year Cumulative Performance</h2>
+                  <p className="text-sm text-gray-500 mt-1">Click on a value to edit</p>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-40">
+                          Metric
+                        </th>
+                        {clockwisePortfolios.filter(p => !p.is_benchmark).map(portfolio => (
+                          <th 
+                            key={portfolio.id} 
+                            className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-[100px]"
+                          >
+                            {portfolio.name}
+                          </th>
+                        ))}
+                        {clockwisePortfolios.filter(p => p.is_benchmark).map(portfolio => (
+                          <th 
+                            key={portfolio.id} 
+                            className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider min-w-[100px]"
+                          >
+                            {portfolio.name}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {/* Return Row */}
+                      <tr>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-700">Return</td>
+                        {clockwisePortfolios.filter(p => !p.is_benchmark).map(portfolio => (
+                          <td key={portfolio.id} className="px-4 py-3 text-sm text-right font-bold text-emerald-700">
+                            {portfolio.return_3y !== null ? `${(portfolio.return_3y * 100).toFixed(2)}%` : '-'}
+                          </td>
+                        ))}
+                        {clockwisePortfolios.filter(p => p.is_benchmark).map(portfolio => (
+                          <td key={portfolio.id} className="px-4 py-3 text-sm text-right font-bold text-orange-700">
+                            {portfolio.return_3y !== null ? `${(portfolio.return_3y * 100).toFixed(2)}%` : '-'}
+                          </td>
+                        ))}
+                      </tr>
+                      {/* Std Dev Row */}
+                      <tr className="bg-gray-50/50">
+                        <td className="px-4 py-3 text-sm font-medium text-gray-700">Std Dev</td>
+                        {clockwisePortfolios.filter(p => !p.is_benchmark).map(portfolio => (
+                          <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-900">
+                            {portfolio.std_dev !== null ? `${(portfolio.std_dev * 100).toFixed(1)}%` : '-'}
+                          </td>
+                        ))}
+                        {clockwisePortfolios.filter(p => p.is_benchmark).map(portfolio => (
+                          <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-600">
+                            {portfolio.std_dev !== null ? `${(portfolio.std_dev * 100).toFixed(1)}%` : '-'}
+                          </td>
+                        ))}
+                      </tr>
+                      {/* Alpha Row */}
+                      <tr>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-700">Alpha</td>
+                        {clockwisePortfolios.filter(p => !p.is_benchmark).map(portfolio => (
+                          <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-900">
+                            {portfolio.alpha !== null ? `${(portfolio.alpha * 100).toFixed(1)}%` : '-'}
+                          </td>
+                        ))}
+                        {clockwisePortfolios.filter(p => p.is_benchmark).map(() => (
+                          <td key="benchmark-alpha" className="px-4 py-3 text-sm text-right text-gray-500">0.0%</td>
+                        ))}
+                      </tr>
+                      {/* Beta Row */}
+                      <tr className="bg-gray-50/50">
+                        <td className="px-4 py-3 text-sm font-medium text-gray-700">Beta</td>
+                        {clockwisePortfolios.filter(p => !p.is_benchmark).map(portfolio => (
+                          <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-900">
+                            {portfolio.beta !== null ? portfolio.beta.toFixed(2) : '-'}
+                          </td>
+                        ))}
+                        {clockwisePortfolios.filter(p => p.is_benchmark).map(() => (
+                          <td key="benchmark-beta" className="px-4 py-3 text-sm text-right text-gray-500">1.00</td>
+                        ))}
+                      </tr>
+                      {/* Sharpe Ratio Row */}
+                      <tr>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-700">Sharpe Ratio</td>
+                        {clockwisePortfolios.filter(p => !p.is_benchmark).map(portfolio => (
+                          <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-900">
+                            {portfolio.sharpe_ratio !== null ? portfolio.sharpe_ratio.toFixed(2) : '-'}
+                          </td>
+                        ))}
+                        {clockwisePortfolios.filter(p => p.is_benchmark).map(portfolio => (
+                          <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-600">
+                            {portfolio.sharpe_ratio !== null ? portfolio.sharpe_ratio.toFixed(2) : '-'}
+                          </td>
+                        ))}
+                      </tr>
+                      {/* Max Drawdown Row */}
+                      <tr className="bg-gray-50/50">
+                        <td className="px-4 py-3 text-sm font-medium text-gray-700">Max Drawdown</td>
+                        {clockwisePortfolios.filter(p => !p.is_benchmark).map(portfolio => (
+                          <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-900">
+                            {portfolio.max_drawdown !== null ? `${(portfolio.max_drawdown * 100).toFixed(1)}%` : '-'}
+                          </td>
+                        ))}
+                        {clockwisePortfolios.filter(p => p.is_benchmark).map(portfolio => (
+                          <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-600">
+                            {portfolio.max_drawdown !== null ? `${(portfolio.max_drawdown * 100).toFixed(1)}%` : '-'}
+                          </td>
+                        ))}
+                      </tr>
+                      {/* Up Capture Row */}
+                      <tr>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-700">Up Capture</td>
+                        {clockwisePortfolios.filter(p => !p.is_benchmark).map(portfolio => (
+                          <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-900">
+                            {portfolio.up_capture !== null ? portfolio.up_capture.toFixed(2) : '-'}
+                          </td>
+                        ))}
+                        {clockwisePortfolios.filter(p => p.is_benchmark).map(() => (
+                          <td key="benchmark-up" className="px-4 py-3 text-sm text-right text-gray-500">1.00</td>
+                        ))}
+                      </tr>
+                      {/* Down Capture Row */}
+                      <tr className="bg-gray-50/50">
+                        <td className="px-4 py-3 text-sm font-medium text-gray-700">Down Capture</td>
+                        {clockwisePortfolios.filter(p => !p.is_benchmark).map(portfolio => (
+                          <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-900">
+                            {portfolio.down_capture !== null ? portfolio.down_capture.toFixed(2) : '-'}
+                          </td>
+                        ))}
+                        {clockwisePortfolios.filter(p => p.is_benchmark).map(() => (
+                          <td key="benchmark-down" className="px-4 py-3 text-sm text-right text-gray-500">1.00</td>
+                        ))}
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
-              
-              {/* Methodology */}
-              <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Methodology</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-gray-600">
-                  {Object.entries(portfolioData.methodology).map(([key, value]) => (
-                    <div key={key} className="flex">
-                      <span className="font-medium text-gray-700 capitalize mr-2">
-                        {key.replace(/([A-Z])/g, ' $1').trim()}:
-                      </span>
-                      <span>{value}</span>
+
+              {/* Edit Section */}
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center">
+                  <HiChartBar className="w-4 h-4 mr-2" />
+                  Edit Portfolio Metrics
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {clockwisePortfolios.map(portfolio => (
+                    <div 
+                      key={portfolio.id}
+                      className={`p-4 rounded-lg border ${portfolio.is_benchmark ? 'bg-orange-50 border-orange-200' : 'bg-blue-50 border-blue-200'}`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold text-gray-900">{portfolio.name}</h4>
+                        <button
+                          onClick={() => setEditingPortfolio(portfolio)}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Last updated: {portfolio.updated_at ? new Date(portfolio.updated_at).toLocaleDateString() : 'N/A'}
+                        {portfolio.updated_by && ` by ${portfolio.updated_by}`}
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
+
+              {/* Data Note */}
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">Data Management</h3>
+                <p className="text-xs text-gray-600">
+                  Portfolio metrics are stored in the database and displayed on both the Admin Dashboard and the user-facing Review Tab. 
+                  Changes made here will be reflected immediately across the application.
+                </p>
+              </div>
             </div>
           )}
+
+          {/* Empty State */}
+          {!portfolioLoading && clockwisePortfolios.length === 0 && !portfolioError && (
+            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+              <HiChartBar className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Portfolio Data</h3>
+              <p className="text-gray-600 mb-4">
+                Portfolio data will appear here once added to the database.
+              </p>
+              <button
+                onClick={() => fetchClockwisePortfolios()}
+                className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100"
+              >
+                Refresh
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Edit Portfolio Modal */}
+      {editingPortfolio && (
+        <div 
+          className="fixed inset-0 z-[10000] bg-black/50 flex items-center justify-center p-4"
+          onClick={() => setEditingPortfolio(null)}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">Edit {editingPortfolio.name}</h3>
+              <button onClick={() => setEditingPortfolio(null)} className="text-gray-400 hover:text-gray-600">
+                <HiXMark className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Return */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">3-Year Return (as decimal, e.g., 1.1074 for 110.74%)</label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={editingPortfolio.return_3y ?? ''}
+                  onChange={e => setEditingPortfolio({...editingPortfolio, return_3y: e.target.value ? parseFloat(e.target.value) : null})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              
+              {/* Std Dev */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Std Dev (as decimal, e.g., 0.148 for 14.8%)</label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={editingPortfolio.std_dev ?? ''}
+                  onChange={e => setEditingPortfolio({...editingPortfolio, std_dev: e.target.value ? parseFloat(e.target.value) : null})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              
+              {/* Alpha */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Alpha (as decimal, e.g., 0.068 for 6.8%)</label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={editingPortfolio.alpha ?? ''}
+                  onChange={e => setEditingPortfolio({...editingPortfolio, alpha: e.target.value ? parseFloat(e.target.value) : null})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              
+              {/* Beta */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Beta</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editingPortfolio.beta ?? ''}
+                  onChange={e => setEditingPortfolio({...editingPortfolio, beta: e.target.value ? parseFloat(e.target.value) : null})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              
+              {/* Sharpe Ratio */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sharpe Ratio</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editingPortfolio.sharpe_ratio ?? ''}
+                  onChange={e => setEditingPortfolio({...editingPortfolio, sharpe_ratio: e.target.value ? parseFloat(e.target.value) : null})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              
+              {/* Max Drawdown */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Max Drawdown (as negative decimal, e.g., -0.214 for -21.4%)</label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  value={editingPortfolio.max_drawdown ?? ''}
+                  onChange={e => setEditingPortfolio({...editingPortfolio, max_drawdown: e.target.value ? parseFloat(e.target.value) : null})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              
+              {/* Up Capture */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Up Capture</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editingPortfolio.up_capture ?? ''}
+                  onChange={e => setEditingPortfolio({...editingPortfolio, up_capture: e.target.value ? parseFloat(e.target.value) : null})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              
+              {/* Down Capture */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Down Capture</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editingPortfolio.down_capture ?? ''}
+                  onChange={e => setEditingPortfolio({...editingPortfolio, down_capture: e.target.value ? parseFloat(e.target.value) : null})}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+              <button
+                onClick={() => setEditingPortfolio(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleSavePortfolio(editingPortfolio)}
+                disabled={isSaving}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

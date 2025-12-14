@@ -188,6 +188,7 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                   <CycleTab 
                     cycleData={cycleData}
                     portfolioAnalysis={portfolioAnalysis}
+                    timeExpectedReturn={analysisResult.portfolioComparison?.timePortfolio?.expectedReturn}
                     onNext={handleNext}
                     onBack={handleBack}
                     onSlideChange={onMarketSlideChange}

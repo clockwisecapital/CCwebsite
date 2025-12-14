@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import IntakeTab from './IntakeTab';
 import ReviewTab from './ReviewTab';
+import CumulativePerformanceTable from './CumulativePerformanceTable';
 import UnifiedVideoPlayer, { type VideoConfig } from './UnifiedVideoPlayer';
 import { getVideoPath } from '@/hooks/useAvatarVariant';
 
@@ -577,41 +578,10 @@ export default function PortfolioDashboard() {
                         </div>
                       </div>
 
-                      {/* Metrics Table */}
-                      {analysisResult.metrics && analysisResult.metrics.length > 0 && (
-                        <div className="mt-6 overflow-hidden border border-gray-700 rounded-lg">
-                          <table className="min-w-full divide-y divide-gray-700">
-                            <thead className="bg-gray-700">
-                              <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                                  Metric
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                                  Current Status
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                                  Recommendation
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="bg-gray-800 divide-y divide-gray-700">
-                              {analysisResult.metrics.map((row, idx) => (
-                                <tr key={idx}>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-100">
-                                    {row[0]}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                    {row[1]}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                                    {row[2]}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
+                      {/* 3-Year Cumulative Performance - Clockwise Model Portfolios */}
+                      <div className="mt-6">
+                        <CumulativePerformanceTable />
+                      </div>
                     </div>
                   </div>
                 )}

@@ -16,12 +16,14 @@ interface CycleTabProps {
   portfolioAnalysis?: {
     current: PortfolioSimulation;
   };
+  // TIME portfolio's 12-month expected return for S&P 500 backtest display
+  timeExpectedReturn?: number;
   onNext?: () => void;
   onBack?: () => void;
   onSlideChange?: (slide: number) => void;
 }
 
-export default function CycleTab({ cycleData, portfolioAnalysis, onNext, onBack, onSlideChange }: CycleTabProps) {
+export default function CycleTab({ cycleData, portfolioAnalysis, timeExpectedReturn, onNext, onBack, onSlideChange }: CycleTabProps) {
   // Carousel state: 0 = S&P 500 & Cycle Analysis, 1 = Historical Analog, 2 = Performance By Cycle
   const [currentSlide, setCurrentSlide] = useState(0);
   
@@ -204,9 +206,10 @@ export default function CycleTab({ cycleData, portfolioAnalysis, onNext, onBack,
           <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
             <div className="text-xs text-gray-400 mb-1">Expected Return (Median)</div>
             <div className="text-2xl font-bold text-gray-100">
-              {(currentCycle.sp500Backtest.expectedReturn * 100).toFixed(1)}%
+              {/* Use TIME portfolio expected return if available, otherwise fall back to cycle backtest */}
+              {((timeExpectedReturn ?? currentCycle.sp500Backtest.expectedReturn) * 100).toFixed(1)}%
             </div>
-            <div className="text-xs text-gray-500 mt-1">50th percentile, next 12 months</div>
+            <div className="text-xs text-gray-500 mt-1">12 month price target return</div>
           </div>
           
           <div className="grid grid-cols-2 gap-3">
@@ -371,9 +374,16 @@ export default function CycleTab({ cycleData, portfolioAnalysis, onNext, onBack,
                     <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
                       <div className="text-xs text-gray-400 mb-1">Expected Return</div>
                       <div className="text-2xl font-bold text-gray-100">
-                        {formatPercent(portfolioAnalysis.current.cycleResults[portfolioCycleFilter].expectedReturn)}
+                        {/* For Company Cycle, use TIME portfolio expected return */}
+                        {formatPercent(
+                          portfolioCycleFilter === 'company' && timeExpectedReturn !== undefined
+                            ? timeExpectedReturn
+                            : portfolioAnalysis.current.cycleResults[portfolioCycleFilter].expectedReturn
+                        )}
                       </div>
-                      <div className="text-xs text-gray-400 mt-1">Next 12 months (median)</div>
+                      <div className="text-xs text-gray-400 mt-1">
+                        {portfolioCycleFilter === 'company' ? '12 month price target return' : 'Next 12 months (median)'}
+                      </div>
                     </div>
 
                     <div className="bg-emerald-900/20 border border-emerald-800 rounded-lg p-4">
@@ -434,11 +444,15 @@ export default function CycleTab({ cycleData, portfolioAnalysis, onNext, onBack,
                       {availableCycles.map((key) => {
                         const result = portfolioAnalysis.current.cycleResults[key];
                         if (!result) return null;
+                        // For Company Cycle, use TIME portfolio expected return
+                        const displayReturn = key === 'company' && timeExpectedReturn !== undefined
+                          ? timeExpectedReturn
+                          : result.expectedReturn;
                         return (
                           <tr key={key} className={portfolioCycleFilter === key ? 'bg-teal-900/30' : ''}>
                             <td className="px-4 py-3 text-sm font-medium text-gray-100">{cycleData[key]!.name}</td>
                             <td className="px-4 py-3 text-sm text-right text-gray-100 font-semibold">
-                              {formatPercent(result.expectedReturn)}
+                              {formatPercent(displayReturn)}
                             </td>
                             <td className="px-4 py-3 text-sm text-right text-emerald-600 font-semibold">
                               {formatPercent(result.expectedUpside)}
