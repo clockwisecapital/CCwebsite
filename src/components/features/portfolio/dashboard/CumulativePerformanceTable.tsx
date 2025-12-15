@@ -62,7 +62,7 @@ export default function CumulativePerformanceTable({ className = '' }: Cumulativ
   const modelPortfolios = portfolios.filter(p => !p.is_benchmark);
   const benchmark = portfolios.find(p => p.is_benchmark);
 
-  // Define metrics to display
+  // Define metrics to display (matching Admin Dashboard)
   const metrics = [
     { key: 'return_3y', label: 'Return', formatter: (v: number | null) => formatPct(v, 2) },
     { key: 'std_dev', label: 'Std Dev', formatter: (v: number | null) => formatPct(v, 1) },
@@ -70,6 +70,8 @@ export default function CumulativePerformanceTable({ className = '' }: Cumulativ
     { key: 'beta', label: 'Beta', formatter: (v: number | null) => formatNum(v) },
     { key: 'sharpe_ratio', label: 'Sharpe Ratio', formatter: (v: number | null) => formatNum(v) },
     { key: 'max_drawdown', label: 'Max Drawdown', formatter: (v: number | null) => formatPct(v, 1) },
+    { key: 'up_capture', label: 'Up Capture', formatter: (v: number | null) => formatNum(v) },
+    { key: 'down_capture', label: 'Down Capture', formatter: (v: number | null) => formatNum(v) },
   ];
 
   if (isLoading) {
@@ -182,6 +184,10 @@ export default function CumulativePerformanceTable({ className = '' }: Cumulativ
                       ? '0.0%'  // Benchmark alpha is always 0
                       : metric.key === 'beta'
                       ? '1.00'  // Benchmark beta is always 1
+                      : metric.key === 'up_capture'
+                      ? '1.00'  // Benchmark up capture is always 1
+                      : metric.key === 'down_capture'
+                      ? '1.00'  // Benchmark down capture is always 1
                       : metric.formatter(benchmark[metric.key as keyof ClockwisePortfolio] as number | null)
                     }
                   </td>
@@ -192,24 +198,11 @@ export default function CumulativePerformanceTable({ className = '' }: Cumulativ
         </table>
       </div>
 
-      {/* Footer with capture ratios */}
-      <div className="px-4 md:px-6 py-4 border-t border-gray-700 bg-gray-800/50">
-        <div className="flex flex-wrap gap-6 text-xs text-gray-400">
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-300">Up Capture:</span>
-            {modelPortfolios.map(p => (
-              <span key={p.id} className="text-gray-100">{formatNum(p.up_capture)}</span>
-            ))}
-            {benchmark && <span className="text-gray-500">1.00</span>}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-300">Down Capture:</span>
-            {modelPortfolios.map(p => (
-              <span key={p.id} className="text-gray-100">{formatNum(p.down_capture)}</span>
-            ))}
-            {benchmark && <span className="text-gray-500">1.00</span>}
-          </div>
-        </div>
+      {/* Footer note */}
+      <div className="px-4 md:px-6 py-3 border-t border-gray-700 bg-gray-800/50">
+        <p className="text-xs text-gray-500">
+          Benchmark: S&P 500 Total Return Index. All metrics calculated using Morningstar methodology.
+        </p>
       </div>
     </div>
   );

@@ -425,7 +425,7 @@ export default function AdminDashboardPage() {
       
       // Call both APIs in parallel:
       // 1. Save to database (simple metrics)
-      // 2. Get detailed analytics for PortfolioPerformanceTable
+      // 2. Get detailed analytics for PDF generation
       const [uploadResponse, analyzeResponse] = await Promise.all([
         fetch('/api/admin/portfolios/upload', {
           method: 'POST',
@@ -450,7 +450,7 @@ export default function AdminDashboardPage() {
         setPortfolioError(uploadResult.message || 'Failed to save portfolio data')
       }
       
-      // Store detailed analytics data if available
+      // Store detailed analytics data for PDF generation
       if (analyzeResult.success && analyzeResult.data) {
         setUploadedPortfolioData(analyzeResult.data)
         // Set first portfolio as selected for PDF
@@ -757,76 +757,77 @@ export default function AdminDashboardPage() {
             </div>
           </div>
           
-          {/* Detailed Portfolio Analytics (from CSV upload) */}
+          {/* View Toggle and PDF Download (only shown after CSV upload) */}
           {uploadedPortfolioData && (
-            <div className="space-y-6 mb-6">
-              {/* View Toggle and PDF Download */}
-              <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  {/* View toggle */}
-                  <div className="flex bg-gray-100 rounded-lg p-1">
-                    <button
-                      onClick={() => setPortfolioView('individual')}
-                      className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                        portfolioView === 'individual'
-                          ? 'bg-white text-gray-900 shadow-sm'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                {/* View toggle */}
+                <div className="flex bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setPortfolioView('individual')}
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                      portfolioView === 'individual'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Individual
+                  </button>
+                  <button
+                    onClick={() => setPortfolioView('comparison')}
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                      portfolioView === 'comparison'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Comparison
+                  </button>
+                </div>
+
+                {/* PDF Download Section */}
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Individual Portfolio PDF */}
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={selectedPortfolioForPDF || Object.keys(uploadedPortfolioData.portfolios)[0]}
+                      onChange={(e) => setSelectedPortfolioForPDF(e.target.value)}
+                      className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
                     >
-                      Individual
-                    </button>
+                      {Object.keys(uploadedPortfolioData.portfolios).map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </select>
                     <button
-                      onClick={() => setPortfolioView('comparison')}
-                      className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                        portfolioView === 'comparison'
-                          ? 'bg-white text-gray-900 shadow-sm'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
+                      onClick={() => {
+                        const portfolioName = selectedPortfolioForPDF || Object.keys(uploadedPortfolioData.portfolios)[0]
+                        downloadPortfolioPDF(uploadedPortfolioData, portfolioName)
+                      }}
+                      className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
                     >
-                      Comparison
+                      <HiArrowDownTray className="w-4 h-4 mr-2" />
+                      Download PDF
                     </button>
                   </div>
 
-                  {/* PDF Download Section */}
-                  <div className="flex flex-wrap items-center gap-3">
-                    {/* Individual Portfolio PDF */}
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={selectedPortfolioForPDF || Object.keys(uploadedPortfolioData.portfolios)[0]}
-                        onChange={(e) => setSelectedPortfolioForPDF(e.target.value)}
-                        className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-                      >
-                        {Object.keys(uploadedPortfolioData.portfolios).map(name => (
-                          <option key={name} value={name}>{name}</option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={() => {
-                          const portfolioName = selectedPortfolioForPDF || Object.keys(uploadedPortfolioData.portfolios)[0]
-                          downloadPortfolioPDF(uploadedPortfolioData, portfolioName)
-                        }}
-                        className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-                      >
-                        <HiArrowDownTray className="w-4 h-4 mr-2" />
-                        Download PDF
-                      </button>
-                    </div>
-
-                    {/* Comparison PDF */}
-                    {Object.keys(uploadedPortfolioData.portfolios).length > 1 && (
-                      <button
-                        onClick={() => downloadComparisonPDF(uploadedPortfolioData)}
-                        className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                      >
-                        <HiArrowDownTray className="w-4 h-4 mr-2" />
-                        Comparison PDF
-                      </button>
-                    )}
-                  </div>
+                  {/* Comparison PDF */}
+                  {Object.keys(uploadedPortfolioData.portfolios).length > 1 && (
+                    <button
+                      onClick={() => downloadComparisonPDF(uploadedPortfolioData)}
+                      className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                    >
+                      <HiArrowDownTray className="w-4 h-4 mr-2" />
+                      Comparison PDF
+                    </button>
+                  )}
                 </div>
               </div>
+            </div>
+          )}
 
-              {/* Portfolio Performance Tables */}
+          {/* Portfolio Performance Tables (Yearly Breakdowns) */}
+          {uploadedPortfolioData && (
+            <div className="space-y-6">
               {portfolioView === 'individual' ? (
                 <PortfolioPerformanceTable 
                   data={uploadedPortfolioData} 
