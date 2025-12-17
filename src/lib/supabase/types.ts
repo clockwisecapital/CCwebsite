@@ -419,6 +419,171 @@ export interface Database {
         }
         Relationships: []
       }
+      clockwise_portfolios: {
+        Row: {
+          id: string
+          name: string
+          return_3y: number | null
+          std_dev: number | null
+          alpha: number | null
+          beta: number | null
+          sharpe_ratio: number | null
+          max_drawdown: number | null
+          up_capture: number | null
+          down_capture: number | null
+          is_benchmark: boolean
+          updated_at: string | null
+          updated_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          return_3y?: number | null
+          std_dev?: number | null
+          alpha?: number | null
+          beta?: number | null
+          sharpe_ratio?: number | null
+          max_drawdown?: number | null
+          up_capture?: number | null
+          down_capture?: number | null
+          is_benchmark?: boolean
+          updated_at?: string | null
+          updated_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          return_3y?: number | null
+          std_dev?: number | null
+          alpha?: number | null
+          beta?: number | null
+          sharpe_ratio?: number | null
+          max_drawdown?: number | null
+          up_capture?: number | null
+          down_capture?: number | null
+          is_benchmark?: boolean
+          updated_at?: string | null
+          updated_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      clockwise_portfolio_daily_values: {
+        Row: {
+          id: string
+          as_of_date: string
+          data: Json
+          uploaded_at: string | null
+          uploaded_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          as_of_date: string
+          data: Json
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          as_of_date?: string
+          data?: Json
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      clockwise_portfolio_periods: {
+        Row: {
+          id: string
+          portfolio_name: string
+          period_name: string
+          start_date: string
+          end_date: string
+          portfolio_return: number | null
+          benchmark_return: number | null
+          excess_return: number | null
+          portfolio_std_dev: number | null
+          portfolio_alpha: number | null
+          portfolio_beta: number | null
+          portfolio_sharpe_ratio: number | null
+          portfolio_max_drawdown: number | null
+          portfolio_up_capture: number | null
+          portfolio_down_capture: number | null
+          benchmark_std_dev: number | null
+          benchmark_sharpe_ratio: number | null
+          benchmark_max_drawdown: number | null
+          risk_free_rate: number | null
+          num_months: number | null
+          as_of_date: string | null
+          data_start_date: string | null
+          data_end_date: string | null
+          generated_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          portfolio_name: string
+          period_name: string
+          start_date: string
+          end_date: string
+          portfolio_return?: number | null
+          benchmark_return?: number | null
+          excess_return?: number | null
+          portfolio_std_dev?: number | null
+          portfolio_alpha?: number | null
+          portfolio_beta?: number | null
+          portfolio_sharpe_ratio?: number | null
+          portfolio_max_drawdown?: number | null
+          portfolio_up_capture?: number | null
+          portfolio_down_capture?: number | null
+          benchmark_std_dev?: number | null
+          benchmark_sharpe_ratio?: number | null
+          benchmark_max_drawdown?: number | null
+          risk_free_rate?: number | null
+          num_months?: number | null
+          as_of_date?: string | null
+          data_start_date?: string | null
+          data_end_date?: string | null
+          generated_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          portfolio_name?: string
+          period_name?: string
+          start_date?: string
+          end_date?: string
+          portfolio_return?: number | null
+          benchmark_return?: number | null
+          excess_return?: number | null
+          portfolio_std_dev?: number | null
+          portfolio_alpha?: number | null
+          portfolio_beta?: number | null
+          portfolio_sharpe_ratio?: number | null
+          portfolio_max_drawdown?: number | null
+          portfolio_up_capture?: number | null
+          portfolio_down_capture?: number | null
+          benchmark_std_dev?: number | null
+          benchmark_sharpe_ratio?: number | null
+          benchmark_max_drawdown?: number | null
+          risk_free_rate?: number | null
+          num_months?: number | null
+          as_of_date?: string | null
+          data_start_date?: string | null
+          data_end_date?: string | null
+          generated_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

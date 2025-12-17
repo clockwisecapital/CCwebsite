@@ -28,6 +28,8 @@ import type { ClockwisePortfolio } from '@/app/api/admin/portfolios/route'
 import type { MultiPortfolioResult } from '@/lib/portfolio-metrics'
 import PortfolioPerformanceTable, { PortfolioComparisonTable } from '@/components/features/PortfolioPerformanceTable'
 import { downloadPortfolioPDF, downloadComparisonPDF } from '@/lib/portfolio-pdf'
+import CumulativeReturnsChart from '@/components/features/charts/CumulativeReturnsChart'
+import PeriodicReturnsChart from '@/components/features/charts/PeriodicReturnsChart'
 
 // Advisory firms list
 const ADVISORY_FIRMS = [
@@ -149,6 +151,7 @@ export default function AdminDashboardPage() {
   const [portfolioView, setPortfolioView] = useState<'individual' | 'comparison'>('comparison')
   const [uploadedPortfolioData, setUploadedPortfolioData] = useState<MultiPortfolioResult | null>(null)
   const [selectedPortfolioForPDF, setSelectedPortfolioForPDF] = useState<string>('')
+  const [isLoadingPeriodicData, setIsLoadingPeriodicData] = useState(false)
   
   const router = useRouter()
 
@@ -351,10 +354,8 @@ export default function AdminDashboardPage() {
     }
   }
 
-  // Fetch Clockwise portfolios from database (master only)
+  // Fetch Clockwise portfolios from database (all users can view)
   const fetchClockwisePortfolios = useCallback(async () => {
-    if (!isMaster) return
-    
     setPortfolioLoading(true)
     setPortfolioError('')
     
@@ -404,12 +405,44 @@ export default function AdminDashboardPage() {
     }
   }
 
-  // Fetch portfolios when tab changes to portfolioPerformance
+  // Fetch portfolios when tab changes to portfolioPerformance (all users)
   useEffect(() => {
-    if (mainTab === 'portfolioPerformance' && isMaster && clockwisePortfolios.length === 0) {
+    if (mainTab === 'portfolioPerformance' && clockwisePortfolios.length === 0) {
       fetchClockwisePortfolios()
     }
-  }, [mainTab, isMaster, clockwisePortfolios.length, fetchClockwisePortfolios])
+  }, [mainTab, clockwisePortfolios.length, fetchClockwisePortfolios])
+
+  // Fetch period data (yearly breakdown) from database when tab opens (all users)
+  useEffect(() => {
+    const fetchPeriodicData = async () => {
+      if (mainTab !== 'portfolioPerformance') return
+      
+      try {
+        setIsLoadingPeriodicData(true)
+        const response = await fetch('/api/admin/portfolio-periods')
+        const result = await response.json()
+        
+        if (result.success && result.data) {
+          setUploadedPortfolioData(result.data)
+          // Set default selected portfolio for PDF
+          const firstPortfolio = Object.keys(result.data.portfolios)[0]
+          if (firstPortfolio && !selectedPortfolioForPDF) {
+            setSelectedPortfolioForPDF(firstPortfolio)
+          }
+        } else if (!result.data) {
+          // No data in database yet - that's okay, will show after first CSV upload
+          setUploadedPortfolioData(null)
+        }
+      } catch (error) {
+        console.error('Error fetching periodic data:', error)
+        // Don't show error to user, just leave uploadedPortfolioData as null
+      } finally {
+        setIsLoadingPeriodicData(false)
+      }
+    }
+
+    fetchPeriodicData()
+  }, [mainTab, selectedPortfolioForPDF])
 
   // Handle CSV file upload - parse, calculate metrics, save to database AND get detailed analytics
   const handleCSVUpload = async (file: File) => {
@@ -639,44 +672,42 @@ export default function AdminDashboardPage() {
             </div>
           </div>
           
-          {/* Main Tab Navigation (Master only) */}
-          {isMaster && (
-            <div className="border-t border-gray-100">
-              <nav className="flex space-x-8" aria-label="Main tabs">
-                <button
-                  onClick={() => setMainTab('dashboard')}
-                  className={`py-3 px-1 border-b-2 text-sm font-medium transition-colors ${
-                    mainTab === 'dashboard'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center">
-                    <HiChartBar className="w-4 h-4 mr-2" />
-                    Dashboard
-                  </div>
-                </button>
-                <button
-                  onClick={() => setMainTab('portfolioPerformance')}
-                  className={`py-3 px-1 border-b-2 text-sm font-medium transition-colors ${
-                    mainTab === 'portfolioPerformance'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center">
-                    <HiPresentationChartLine className="w-4 h-4 mr-2" />
-                    Portfolio Performance
-                  </div>
-                </button>
-              </nav>
-            </div>
-          )}
+          {/* Main Tab Navigation (All Users) */}
+          <div className="border-t border-gray-100">
+            <nav className="flex space-x-8" aria-label="Main tabs">
+              <button
+                onClick={() => setMainTab('dashboard')}
+                className={`py-3 px-1 border-b-2 text-sm font-medium transition-colors ${
+                  mainTab === 'dashboard'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center">
+                  <HiChartBar className="w-4 h-4 mr-2" />
+                  Dashboard
+                </div>
+              </button>
+              <button
+                onClick={() => setMainTab('portfolioPerformance')}
+                className={`py-3 px-1 border-b-2 text-sm font-medium transition-colors ${
+                  mainTab === 'portfolioPerformance'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center">
+                  <HiPresentationChartLine className="w-4 h-4 mr-2" />
+                  Portfolio Performance
+                </div>
+              </button>
+            </nav>
+          </div>
         </div>
       </div>
 
-      {/* Portfolio Performance Tab (Master Only) - Database Driven */}
-      {isMaster && mainTab === 'portfolioPerformance' && (
+      {/* Portfolio Performance Tab - Database Driven */}
+      {mainTab === 'portfolioPerformance' && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-28">
           {/* Header */}
           <div className="mb-8">
@@ -700,64 +731,66 @@ export default function AdminDashboardPage() {
             </div>
           </div>
           
-          {/* CSV Upload Section */}
-          <div className="mb-6">
-            <div 
-              className={`bg-white rounded-xl border-2 border-dashed p-6 text-center transition-colors ${
-                isUploading 
-                  ? 'border-blue-400 bg-blue-50' 
-                  : uploadSuccess 
-                    ? 'border-green-400 bg-green-50' 
-                    : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-              }`}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-            >
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileInputChange}
-                accept=".csv"
-                className="hidden"
-              />
-              
-              {isUploading ? (
-                <div className="flex flex-col items-center">
-                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-3"></div>
-                  <p className="text-blue-600 font-medium">Processing CSV...</p>
-                  <p className="text-sm text-blue-500 mt-1">Calculating metrics and saving to database</p>
-                </div>
-              ) : uploadSuccess ? (
-                <div className="flex flex-col items-center">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mb-3">
-                    <HiCheckCircle className="w-6 h-6 text-green-600" />
+          {/* CSV Upload Section (Master Only) */}
+          {isMaster && (
+            <div className="mb-6">
+              <div 
+                className={`bg-white rounded-xl border-2 border-dashed p-6 text-center transition-colors ${
+                  isUploading 
+                    ? 'border-blue-400 bg-blue-50' 
+                    : uploadSuccess 
+                      ? 'border-green-400 bg-green-50' 
+                      : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                }`}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+              >
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileInputChange}
+                  accept=".csv"
+                  className="hidden"
+                />
+                
+                {isUploading ? (
+                  <div className="flex flex-col items-center">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-3"></div>
+                    <p className="text-blue-600 font-medium">Processing CSV...</p>
+                    <p className="text-sm text-blue-500 mt-1">Calculating metrics and saving to database</p>
                   </div>
-                  <p className="text-green-600 font-medium">Portfolio data updated successfully!</p>
-                  <p className="text-sm text-green-500 mt-1">Data is now available to all advisors and on the Review Tab</p>
-                </div>
-              ) : (
-                <>
-                  <HiCloudArrowUp className="w-10 h-10 mx-auto text-gray-400 mb-3" />
-                  <p className="text-gray-700 font-medium mb-1">Upload Portfolio CSV</p>
-                  <p className="text-sm text-gray-500 mb-4">
-                    Drag and drop your Clockwise Portfolios CSV file here, or click to browse
-                  </p>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-                  >
-                    <HiDocumentArrowUp className="w-4 h-4 mr-2" />
-                    Select CSV File
-                  </button>
-                  <p className="text-xs text-gray-400 mt-3">
-                    Expected format: Date, Clockwise Max Growth, Clockwise Moderate, Clockwise Max Income, Clockwise Growth
-                  </p>
-                </>
-              )}
+                ) : uploadSuccess ? (
+                  <div className="flex flex-col items-center">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mb-3">
+                      <HiCheckCircle className="w-6 h-6 text-green-600" />
+                    </div>
+                    <p className="text-green-600 font-medium">Portfolio data updated successfully!</p>
+                    <p className="text-sm text-green-500 mt-1">Data is now available to all advisors and on the Review Tab</p>
+                  </div>
+                ) : (
+                  <>
+                    <HiCloudArrowUp className="w-10 h-10 mx-auto text-gray-400 mb-3" />
+                    <p className="text-gray-700 font-medium mb-1">Upload Portfolio CSV</p>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Drag and drop your Clockwise Portfolios CSV file here, or click to browse
+                    </p>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                    >
+                      <HiDocumentArrowUp className="w-4 h-4 mr-2" />
+                      Select CSV File
+                    </button>
+                    <p className="text-xs text-gray-400 mt-3">
+                      Expected format: Date, Clockwise Max Growth, Clockwise Moderate, Clockwise Max Income, Clockwise Growth
+                    </p>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          )}
           
-          {/* View Toggle and PDF Download (only shown after CSV upload) */}
+          {/* View Toggle and PDF Download */}
           {uploadedPortfolioData && (
             <div className="bg-white rounded-xl border border-gray-200 p-4">
               <div className="flex flex-wrap items-center justify-between gap-4">
@@ -826,7 +859,12 @@ export default function AdminDashboardPage() {
           )}
 
           {/* Portfolio Performance Tables (Yearly Breakdowns) */}
-          {uploadedPortfolioData && (
+          {isLoadingPeriodicData ? (
+            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading portfolio performance data...</p>
+            </div>
+          ) : uploadedPortfolioData ? (
             <div className="space-y-6">
               {portfolioView === 'individual' ? (
                 <PortfolioPerformanceTable 
@@ -836,6 +874,42 @@ export default function AdminDashboardPage() {
               ) : (
                 <PortfolioComparisonTable data={uploadedPortfolioData} />
               )}
+
+              {/* Performance Charts */}
+              {uploadedPortfolioData.comparison?.chart && (
+                <div className="space-y-6 mt-6">
+                  {/* Cumulative Returns Line Chart */}
+                  <CumulativeReturnsChart
+                    dates={uploadedPortfolioData.comparison.chart.dates}
+                    benchmarkName={uploadedPortfolioData.comparison.chart.benchmarkName}
+                    benchmarkReturns={uploadedPortfolioData.comparison.chart.benchmarkReturns}
+                    benchmarkFinalReturn={uploadedPortfolioData.comparison.chart.benchmarkFinalReturn}
+                    portfolios={uploadedPortfolioData.comparison.chart.portfolios}
+                    chartTitle={uploadedPortfolioData.comparison.chart.chartTitle}
+                  />
+
+                  {/* Periodic Returns Bar Chart */}
+                  {uploadedPortfolioData.comparison?.metrics?.return && (
+                    <PeriodicReturnsChart
+                      portfolioNames={uploadedPortfolioData.comparison.portfolioNames}
+                      periodNames={uploadedPortfolioData.comparison.periodNames}
+                      returnsByPeriod={uploadedPortfolioData.comparison.metrics.return.byPeriod}
+                      benchmarkReturns={uploadedPortfolioData.comparison.metrics.return.benchmark}
+                      benchmarkName={uploadedPortfolioData.comparison.chart.benchmarkName}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 p-12 text-center">
+              <HiChartBar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 font-medium mb-2">No portfolio performance data yet</p>
+              <p className="text-gray-500 text-sm">
+                {isMaster 
+                  ? 'Upload a CSV file above to see yearly breakdowns and metrics' 
+                  : 'Performance data will appear here once uploaded by master admin'}
+              </p>
             </div>
           )}
 
@@ -867,7 +941,7 @@ export default function AdminDashboardPage() {
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
                   <h2 className="text-xl font-semibold text-gray-900">3-Year Cumulative Performance</h2>
-                  <p className="text-sm text-gray-500 mt-1">Click on a value to edit</p>
+                  {isMaster && <p className="text-sm text-gray-500 mt-1">Click on a value to edit</p>}
                 </div>
                 
                 <div className="overflow-x-auto">
@@ -1018,45 +1092,49 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              {/* Edit Section */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center">
-                  <HiChartBar className="w-4 h-4 mr-2" />
-                  Edit Portfolio Metrics
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {clockwisePortfolios.map(portfolio => (
-                    <div 
-                      key={portfolio.id}
-                      className={`p-4 rounded-lg border ${portfolio.is_benchmark ? 'bg-orange-50 border-orange-200' : 'bg-blue-50 border-blue-200'}`}
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-semibold text-gray-900">{portfolio.name}</h4>
-                        <button
-                          onClick={() => setEditingPortfolio(portfolio)}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              {/* Edit Section (Master Only) */}
+              {isMaster && (
+                <>
+                  <div className="bg-white rounded-xl border border-gray-200 p-6">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center">
+                      <HiChartBar className="w-4 h-4 mr-2" />
+                      Edit Portfolio Metrics
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {clockwisePortfolios.map(portfolio => (
+                        <div 
+                          key={portfolio.id}
+                          className={`p-4 rounded-lg border ${portfolio.is_benchmark ? 'bg-orange-50 border-orange-200' : 'bg-blue-50 border-blue-200'}`}
                         >
-                          Edit
-                        </button>
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Last updated: {portfolio.updated_at ? new Date(portfolio.updated_at).toLocaleDateString() : 'N/A'}
-                        {portfolio.updated_by && ` by ${portfolio.updated_by}`}
-                      </div>
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-semibold text-gray-900">{portfolio.name}</h4>
+                            <button
+                              onClick={() => setEditingPortfolio(portfolio)}
+                              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                            >
+                              Edit
+                            </button>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Last updated: {portfolio.updated_at ? new Date(portfolio.updated_at).toLocaleDateString() : 'N/A'}
+                            {portfolio.updated_by && ` by ${portfolio.updated_by}`}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
 
-              {/* Data Note */}
-              <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Data Management</h3>
-                <p className="text-xs text-gray-600">
-                  Portfolio metrics are stored in the database and displayed on both the Admin Dashboard and the user-facing Review Tab. 
-                  Changes made here will be reflected immediately across the application.
-                </p>
-              </div>
+                  {/* Data Note */}
+                  <div className="bg-gray-50 rounded-xl border border-gray-200 p-6">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-2">Data Management</h3>
+                    <p className="text-xs text-gray-600">
+                      Portfolio metrics are stored in the database and displayed on both the Admin Dashboard and the user-facing Review Tab. 
+                      Changes made here will be reflected immediately across the application.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -1079,8 +1157,8 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Edit Portfolio Modal */}
-      {editingPortfolio && (
+      {/* Edit Portfolio Modal (Master Only) */}
+      {isMaster && editingPortfolio && (
         <div 
           className="fixed inset-0 z-[10000] bg-black/50 flex items-center justify-center p-4"
           onClick={() => setEditingPortfolio(null)}

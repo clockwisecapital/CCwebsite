@@ -692,11 +692,23 @@ export async function POST(req: NextRequest) {
     // Also store the daily values in a separate table for historical reference (if table exists)
     // This allows us to recalculate metrics later if needed
     try {
+      console.log('💾 Saving daily values to database...')
+      console.log('  - As of date:', parsedData.asOfDate)
+      console.log('  - Portfolio count:', Object.keys(parsedData.portfolios).length)
+      console.log('  - Portfolio names:', Object.keys(parsedData.portfolios))
+      
+      // Include S&P 500 benchmark data in the daily values
+      const dailyValuesData = { ...parsedData.portfolios }
+      if (sp500TRData.length > 0) {
+        dailyValuesData['$SPX'] = sp500TRData
+        console.log('  - Including S&P 500 benchmark with', sp500TRData.length, 'data points')
+      }
+      
       const { error: valuesError } = await supabase
         .from('clockwise_portfolio_daily_values')
         .upsert({
           as_of_date: parsedData.asOfDate,
-          data: parsedData.portfolios,
+          data: dailyValuesData,
           uploaded_at: new Date().toISOString(),
           uploaded_by: session.username
         }, {
@@ -704,11 +716,12 @@ export async function POST(req: NextRequest) {
         })
       
       if (valuesError) {
-        // Table might not exist yet, that's okay
-        console.log('Note: Daily values table not available:', valuesError.message)
+        console.error('❌ Error saving daily values:', valuesError)
+      } else {
+        console.log('✅ Daily values saved successfully (including benchmark)')
       }
-    } catch {
-      // Ignore errors for the optional daily values table
+    } catch (err) {
+      console.error('❌ Exception saving daily values:', err)
     }
     
     return NextResponse.json({ 

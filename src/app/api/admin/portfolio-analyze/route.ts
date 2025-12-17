@@ -18,6 +18,7 @@ import {
   PortfolioDataPoint,
   MultiPortfolioResult 
 } from '@/lib/portfolio-metrics'
+import { createClient } from '@supabase/supabase-js'
 
 // =============================================================================
 // CSV PARSING
@@ -322,6 +323,72 @@ export async function POST(request: NextRequest) {
         },
         { status: 500 }
       )
+    }
+
+    // Save period metrics to database for persistent display
+    try {
+      console.log('💾 Saving period metrics to database...')
+      
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      
+      if (supabaseUrl && supabaseServiceKey) {
+        const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+          auth: { persistSession: false }
+        })
+        
+        // Collect all period metrics from all portfolios
+        const periodInserts = []
+        
+        for (const [portfolioName, analysisResult] of Object.entries(result.portfolios)) {
+          for (const period of analysisResult.periods) {
+            periodInserts.push({
+              portfolio_name: portfolioName,
+              period_name: period.periodName,
+              start_date: period.startDate,
+              end_date: period.endDate,
+              portfolio_return: period.portfolioReturn,
+              benchmark_return: period.benchmarkReturn,
+              excess_return: period.excessReturn,
+              portfolio_std_dev: period.portfolioStdDev,
+              portfolio_alpha: period.portfolioAlpha,
+              portfolio_beta: period.portfolioBeta,
+              portfolio_sharpe_ratio: period.portfolioSharpeRatio,
+              portfolio_max_drawdown: period.portfolioMaxDrawdown,
+              portfolio_up_capture: period.portfolioUpCapture,
+              portfolio_down_capture: period.portfolioDownCapture,
+              benchmark_std_dev: period.benchmarkStdDev,
+              benchmark_sharpe_ratio: period.benchmarkSharpeRatio,
+              benchmark_max_drawdown: period.benchmarkMaxDrawdown,
+              risk_free_rate: period.riskFreeRate,
+              num_months: period.numMonths,
+              as_of_date: result.asOfDate,
+              data_start_date: result.dataStartDate,
+              data_end_date: result.dataEndDate,
+            })
+          }
+        }
+        
+        // Upsert period metrics (will update if already exists, insert if new)
+        if (periodInserts.length > 0) {
+          const { error: periodError } = await supabase
+            .from('clockwise_portfolio_periods')
+            .upsert(periodInserts, { 
+              onConflict: 'portfolio_name,period_name',
+              ignoreDuplicates: false 
+            })
+          
+          if (periodError) {
+            console.error('Error saving period metrics:', periodError)
+            // Don't fail the whole request if DB save fails
+          } else {
+            console.log(`✓ Saved ${periodInserts.length} period metrics to database`)
+          }
+        }
+      }
+    } catch (dbError) {
+      // Log but don't fail the request
+      console.error('Database save error (non-fatal):', dbError)
     }
 
     return NextResponse.json({
