@@ -1,6 +1,7 @@
 'use client';
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { sortPortfolioNames, getPortfolioColor } from '@/lib/portfolio-order';
 
 interface CumulativeReturnsChartProps {
   dates: string[];
@@ -41,17 +42,6 @@ function formatPercent(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-/**
- * Portfolio colors - matching the style from your image
- */
-const PORTFOLIO_COLORS = [
-  '#10b981', // Green (for Clockwise portfolios)
-  '#3b82f6', // Blue
-  '#8b5cf6', // Purple
-  '#ec4899', // Pink
-  '#f59e0b', // Amber (for benchmark)
-];
-
 export default function CumulativeReturnsChart({
   dates,
   benchmarkName,
@@ -76,8 +66,8 @@ export default function CumulativeReturnsChart({
     return dataPoint;
   });
 
-  // Get portfolio names for legend
-  const portfolioNames = Object.keys(portfolios);
+  // Get portfolio names for legend (sorted in standard order)
+  const portfolioNames = sortPortfolioNames(Object.keys(portfolios));
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -115,42 +105,62 @@ export default function CumulativeReturnsChart({
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
             }}
           />
-          <Legend
-            formatter={(value: string) => {
-              // Add final return to legend
-              if (value === benchmarkName) {
-                return `${value} (${formatPercent(benchmarkFinalReturn)})`;
-              }
-              const portfolio = portfolios[value];
-              if (portfolio) {
-                return `${value} (${formatPercent(portfolio.finalReturn)})`;
-              }
-              return value;
-            }}
-            wrapperStyle={{ paddingTop: '20px' }}
-          />
-          
-          {/* Render portfolio lines */}
-          {portfolioNames.map((name, index) => (
+          {/* Render portfolio lines in sorted order */}
+          {portfolioNames.map((name) => (
             <Line
               key={name}
               type="monotone"
               dataKey={name}
-              stroke={PORTFOLIO_COLORS[index % PORTFOLIO_COLORS.length]}
+              stroke={getPortfolioColor(name)}
               strokeWidth={2}
               dot={false}
               activeDot={{ r: 6 }}
             />
           ))}
           
-          {/* Render benchmark line */}
+          {/* Render benchmark line last */}
           <Line
             type="monotone"
             dataKey={benchmarkName}
-            stroke="#f59e0b"
+            stroke={getPortfolioColor(benchmarkName)}
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 6 }}
+          />
+          
+          <Legend
+            wrapperStyle={{ paddingTop: '20px' }}
+            content={(props) => {
+              // Custom legend to control order and display
+              const items = [
+                ...portfolioNames.map((name) => ({
+                  value: `${name} (${formatPercent(portfolios[name].finalReturn)})`,
+                  color: getPortfolioColor(name),
+                })),
+                {
+                  value: `${benchmarkName} (${formatPercent(benchmarkFinalReturn)})`,
+                  color: getPortfolioColor(benchmarkName),
+                }
+              ];
+
+              return (
+                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px', paddingTop: '20px' }}>
+                  {items.map((item, index) => (
+                    <div key={index} style={{ display: 'flex', alignItems: 'center', fontSize: '12px' }}>
+                      <span style={{ 
+                        display: 'inline-block', 
+                        width: '12px', 
+                        height: '12px', 
+                        backgroundColor: item.color,
+                        marginRight: '6px',
+                        borderRadius: '2px'
+                      }} />
+                      <span style={{ color: '#374151' }}>{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            }}
           />
         </LineChart>
       </ResponsiveContainer>

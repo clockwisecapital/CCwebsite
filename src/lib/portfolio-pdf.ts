@@ -7,6 +7,7 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import type { MultiPortfolioResult, PeriodMetrics } from './portfolio-metrics'
+import { sortPortfolioNames } from './portfolio-order'
 
 // Extend jsPDF type to include autoTable
 declare module 'jspdf' {
@@ -406,7 +407,7 @@ export function generateComparisonPDF(data: MultiPortfolioResult): jsPDF {
   let yPos = 20
   
   const { comparison } = data
-  const portfolioNames = comparison.portfolioNames
+  const portfolioNames = sortPortfolioNames(comparison.portfolioNames)
   const periodNames = comparison.periodNames
   
   // Header

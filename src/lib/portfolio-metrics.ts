@@ -13,6 +13,7 @@
  */
 
 import { MarketDataPoint } from './market-data';
+import { sortPortfolioNames } from './portfolio-order';
 
 // =============================================================================
 // TYPE DEFINITIONS
@@ -903,7 +904,7 @@ export function analyzeMultiplePortfolios(
 function buildComparison(
   portfolioResults: Record<string, AnalysisResult>
 ): ComparisonData {
-  const portfolioNames = Object.keys(portfolioResults);
+  const portfolioNames = sortPortfolioNames(Object.keys(portfolioResults));
   const firstResult = portfolioResults[portfolioNames[0]];
   const periodNames = firstResult.periods.map(p => p.periodName);
   

@@ -1,6 +1,7 @@
 'use client';
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { sortPortfolioNames, getPortfolioColor } from '@/lib/portfolio-order';
 
 interface PeriodicReturnsChartProps {
   portfolioNames: string[];
@@ -11,18 +12,6 @@ interface PeriodicReturnsChartProps {
 }
 
 /**
- * Portfolio colors - matching cumulative chart
- */
-const PORTFOLIO_COLORS = [
-  '#10b981', // Green
-  '#3b82f6', // Blue
-  '#8b5cf6', // Purple
-  '#ec4899', // Pink
-];
-
-const BENCHMARK_COLOR = '#f59e0b'; // Amber
-
-/**
  * Format percentage for display
  */
 function formatPercent(value: number | null): string {
@@ -31,12 +20,15 @@ function formatPercent(value: number | null): string {
 }
 
 export default function PeriodicReturnsChart({
-  portfolioNames,
+  portfolioNames: unsortedPortfolioNames,
   periodNames,
   returnsByPeriod,
   benchmarkReturns,
   benchmarkName,
 }: PeriodicReturnsChartProps) {
+  // Sort portfolio names in standard order
+  const portfolioNames = sortPortfolioNames(unsortedPortfolioNames);
+  
   // Transform data for Recharts
   const chartData = periodNames.map(period => {
     const dataPoint: Record<string, any> = {
@@ -94,23 +86,56 @@ export default function PeriodicReturnsChart({
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
             }}
           />
-          <Legend wrapperStyle={{ paddingTop: '20px' }} />
-          
-          {/* Render portfolio bars */}
-          {portfolioNames.map((name, index) => (
+          {/* Render portfolio bars in sorted order */}
+          {portfolioNames.map((name) => (
             <Bar
               key={name}
               dataKey={name}
-              fill={PORTFOLIO_COLORS[index % PORTFOLIO_COLORS.length]}
+              fill={getPortfolioColor(name)}
               radius={[4, 4, 0, 0]}
             />
           ))}
           
-          {/* Render benchmark bar */}
+          {/* Render benchmark bar last */}
           <Bar
             dataKey={benchmarkName}
-            fill={BENCHMARK_COLOR}
+            fill={getPortfolioColor(benchmarkName)}
             radius={[4, 4, 0, 0]}
+          />
+          
+          <Legend 
+            wrapperStyle={{ paddingTop: '20px' }}
+            content={(props) => {
+              // Custom legend to control order and display
+              const items = [
+                ...portfolioNames.map((name) => ({
+                  value: name,
+                  color: getPortfolioColor(name),
+                })),
+                {
+                  value: benchmarkName,
+                  color: getPortfolioColor(benchmarkName),
+                }
+              ];
+
+              return (
+                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px', paddingTop: '20px' }}>
+                  {items.map((item, index) => (
+                    <div key={index} style={{ display: 'flex', alignItems: 'center', fontSize: '12px' }}>
+                      <span style={{ 
+                        display: 'inline-block', 
+                        width: '12px', 
+                        height: '12px', 
+                        backgroundColor: item.color,
+                        marginRight: '6px',
+                        borderRadius: '2px'
+                      }} />
+                      <span style={{ color: '#374151' }}>{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            }}
           />
         </BarChart>
       </ResponsiveContainer>

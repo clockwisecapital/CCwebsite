@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { sortPortfolioNames } from '@/lib/portfolio-order'
 import { createAdminSupabaseClient } from '@/lib/supabase/server'
 import type { MultiPortfolioResult, AnalysisResult, PeriodMetrics } from '@/lib/portfolio-metrics'
 
@@ -121,7 +122,7 @@ export async function GET(req: NextRequest) {
     }
     
     // Construct comparison data
-    const portfolioNames = Array.from(portfolioMap.keys())
+    const portfolioNames = sortPortfolioNames(Array.from(portfolioMap.keys()))
     const allPeriodNames = [...new Set(periods.map((p: DBPeriod) => p.period_name))]
     
     const metrics: Record<string, any> = {
@@ -240,21 +241,30 @@ export async function GET(req: NextRequest) {
           const benchmarkValues = portfoliosData[benchmarkKey]
           console.log('✓ Benchmark has', benchmarkValues.length, 'data points')
           
-          const dates = benchmarkValues.map((d: {date: string}) => d.date)
+          // Filter to last 3 years only (matching table calculation)
+          const lastDate = new Date(benchmarkValues[benchmarkValues.length - 1].date)
+          const cutoffDate = new Date(lastDate)
+          cutoffDate.setFullYear(cutoffDate.getFullYear() - 3)
           
-          // Calculate cumulative returns for benchmark
-          const benchmarkReturns = benchmarkValues.map((d: {value: number}, i: number) => {
+          const last3YBenchmark = benchmarkValues.filter((v: {date: string}) => new Date(v.date) >= cutoffDate)
+          console.log('✓ Filtered to last 3 years:', last3YBenchmark.length, 'data points')
+          
+          const dates = last3YBenchmark.map((d: {date: string}) => d.date)
+          
+          // Calculate cumulative returns for benchmark (3Y only)
+          const benchmarkReturns = last3YBenchmark.map((d: {value: number}, i: number) => {
             if (i === 0) return 0
-            return (d.value - benchmarkValues[0].value) / benchmarkValues[0].value
+            return (d.value - last3YBenchmark[0].value) / last3YBenchmark[0].value
           })
           
-          // Calculate cumulative returns for each portfolio
+          // Calculate cumulative returns for each portfolio (3Y only)
           const chartPortfolios: Record<string, { returns: number[]; finalReturn: number }> = {}
           
           for (const [portName, values] of Object.entries(portfoliosData)) {
             if (portName === benchmarkKey) continue // Skip benchmark
             
-            const portValues = values as Array<{value: number}>
+            // Filter this portfolio to last 3 years too
+            const portValues = (values as Array<{date: string; value: number}>).filter(v => new Date(v.date) >= cutoffDate)
             const returns = portValues.map((d, i) => {
               if (i === 0) return 0
               return (d.value - portValues[0].value) / portValues[0].value

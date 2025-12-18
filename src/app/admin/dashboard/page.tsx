@@ -30,6 +30,7 @@ import PortfolioPerformanceTable, { PortfolioComparisonTable } from '@/component
 import { downloadPortfolioPDF, downloadComparisonPDF } from '@/lib/portfolio-pdf'
 import CumulativeReturnsChart from '@/components/features/charts/CumulativeReturnsChart'
 import PeriodicReturnsChart from '@/components/features/charts/PeriodicReturnsChart'
+import { sortPortfolioObjects } from '@/lib/portfolio-order'
 
 // Advisory firms list
 const ADVISORY_FIRMS = [
@@ -132,7 +133,14 @@ export default function AdminDashboardPage() {
   } | null>(null)
   
   // Main tab for master users
-  const [mainTab, setMainTab] = useState<'dashboard' | 'portfolioPerformance'>('dashboard')
+  // Persist main tab selection in sessionStorage
+  const [mainTab, setMainTab] = useState<'dashboard' | 'portfolioPerformance'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('admin-main-tab')
+      return (saved as 'dashboard' | 'portfolioPerformance') || 'dashboard'
+    }
+    return 'dashboard'
+  })
   
   // Disclosure modal state
   const [showDisclosureModal, setShowDisclosureModal] = useState(false)
@@ -412,6 +420,13 @@ export default function AdminDashboardPage() {
     }
   }, [mainTab, clockwisePortfolios.length, fetchClockwisePortfolios])
 
+  // Persist tab selection to sessionStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('admin-main-tab', mainTab)
+    }
+  }, [mainTab])
+
   // Fetch period data (yearly breakdown) from database when tab opens (all users)
   useEffect(() => {
     const fetchPeriodicData = async () => {
@@ -419,10 +434,18 @@ export default function AdminDashboardPage() {
       
       try {
         setIsLoadingPeriodicData(true)
+        console.log('📊 Fetching periodic data from database...')
         const response = await fetch('/api/admin/portfolio-periods')
         const result = await response.json()
         
+        console.log('📊 Portfolio periods API response:', result)
+        
         if (result.success && result.data) {
+          console.log('✅ Loaded periodic data:', {
+            portfolios: Object.keys(result.data.portfolios).length,
+            hasChart: !!result.data.comparison?.chart,
+            periods: result.data.comparison?.periodNames
+          })
           setUploadedPortfolioData(result.data)
           // Set default selected portfolio for PDF
           const firstPortfolio = Object.keys(result.data.portfolios)[0]
@@ -430,11 +453,14 @@ export default function AdminDashboardPage() {
             setSelectedPortfolioForPDF(firstPortfolio)
           }
         } else if (!result.data) {
+          console.log('⚠️ No periodic data in database yet')
           // No data in database yet - that's okay, will show after first CSV upload
           setUploadedPortfolioData(null)
+        } else {
+          console.error('❌ Failed to load periodic data:', result.message)
         }
       } catch (error) {
-        console.error('Error fetching periodic data:', error)
+        console.error('❌ Error fetching periodic data:', error)
         // Don't show error to user, just leave uploadedPortfolioData as null
       } finally {
         setIsLoadingPeriodicData(false)
@@ -951,7 +977,7 @@ export default function AdminDashboardPage() {
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-40">
                           Metric
                         </th>
-                        {clockwisePortfolios.filter(p => !p.is_benchmark).map(portfolio => (
+                        {sortPortfolioObjects(clockwisePortfolios.filter(p => !p.is_benchmark)).map(portfolio => (
                           <th 
                             key={portfolio.id} 
                             className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider min-w-[100px]"
@@ -959,7 +985,7 @@ export default function AdminDashboardPage() {
                             {portfolio.name}
                           </th>
                         ))}
-                        {clockwisePortfolios.filter(p => p.is_benchmark).map(portfolio => (
+                        {sortPortfolioObjects(clockwisePortfolios.filter(p => p.is_benchmark)).map(portfolio => (
                           <th 
                             key={portfolio.id} 
                             className="px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider min-w-[100px]"
@@ -973,13 +999,13 @@ export default function AdminDashboardPage() {
                       {/* Return Row */}
                       <tr>
                         <td className="px-4 py-3 text-sm font-medium text-gray-700">Return</td>
-                        {clockwisePortfolios.filter(p => !p.is_benchmark).map(portfolio => (
-                          <td key={portfolio.id} className="px-4 py-3 text-sm text-right font-bold text-emerald-700">
+                        {sortPortfolioObjects(clockwisePortfolios.filter(p => !p.is_benchmark)).map(portfolio => (
+                          <td key={portfolio.id} className="px-4 py-3 text-sm text-right font-bold text-green-600">
                             {portfolio.return_3y !== null ? `${(portfolio.return_3y * 100).toFixed(2)}%` : '-'}
                           </td>
                         ))}
-                        {clockwisePortfolios.filter(p => p.is_benchmark).map(portfolio => (
-                          <td key={portfolio.id} className="px-4 py-3 text-sm text-right font-bold text-orange-700">
+                        {sortPortfolioObjects(clockwisePortfolios.filter(p => p.is_benchmark)).map(portfolio => (
+                          <td key={portfolio.id} className="px-4 py-3 text-sm text-right font-bold text-red-600">
                             {portfolio.return_3y !== null ? `${(portfolio.return_3y * 100).toFixed(2)}%` : '-'}
                           </td>
                         ))}
@@ -987,12 +1013,12 @@ export default function AdminDashboardPage() {
                       {/* Std Dev Row */}
                       <tr className="bg-gray-50/50">
                         <td className="px-4 py-3 text-sm font-medium text-gray-700">Std Dev</td>
-                        {clockwisePortfolios.filter(p => !p.is_benchmark).map(portfolio => (
+                        {sortPortfolioObjects(clockwisePortfolios.filter(p => !p.is_benchmark)).map(portfolio => (
                           <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-900">
                             {portfolio.std_dev !== null ? `${(portfolio.std_dev * 100).toFixed(1)}%` : '-'}
                           </td>
                         ))}
-                        {clockwisePortfolios.filter(p => p.is_benchmark).map(portfolio => (
+                        {sortPortfolioObjects(clockwisePortfolios.filter(p => p.is_benchmark)).map(portfolio => (
                           <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-600">
                             {portfolio.std_dev !== null ? `${(portfolio.std_dev * 100).toFixed(1)}%` : '-'}
                           </td>
@@ -1001,36 +1027,36 @@ export default function AdminDashboardPage() {
                       {/* Alpha Row */}
                       <tr>
                         <td className="px-4 py-3 text-sm font-medium text-gray-700">Alpha</td>
-                        {clockwisePortfolios.filter(p => !p.is_benchmark).map(portfolio => (
+                        {sortPortfolioObjects(clockwisePortfolios.filter(p => !p.is_benchmark)).map(portfolio => (
                           <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-900">
                             {portfolio.alpha !== null ? `${(portfolio.alpha * 100).toFixed(1)}%` : '-'}
                           </td>
                         ))}
-                        {clockwisePortfolios.filter(p => p.is_benchmark).map(() => (
+                        {sortPortfolioObjects(clockwisePortfolios.filter(p => p.is_benchmark)).map(() => (
                           <td key="benchmark-alpha" className="px-4 py-3 text-sm text-right text-gray-500">0.0%</td>
                         ))}
                       </tr>
                       {/* Beta Row */}
                       <tr className="bg-gray-50/50">
                         <td className="px-4 py-3 text-sm font-medium text-gray-700">Beta</td>
-                        {clockwisePortfolios.filter(p => !p.is_benchmark).map(portfolio => (
+                        {sortPortfolioObjects(clockwisePortfolios.filter(p => !p.is_benchmark)).map(portfolio => (
                           <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-900">
                             {portfolio.beta !== null ? portfolio.beta.toFixed(2) : '-'}
                           </td>
                         ))}
-                        {clockwisePortfolios.filter(p => p.is_benchmark).map(() => (
+                        {sortPortfolioObjects(clockwisePortfolios.filter(p => p.is_benchmark)).map(() => (
                           <td key="benchmark-beta" className="px-4 py-3 text-sm text-right text-gray-500">1.00</td>
                         ))}
                       </tr>
                       {/* Sharpe Ratio Row */}
                       <tr>
                         <td className="px-4 py-3 text-sm font-medium text-gray-700">Sharpe Ratio</td>
-                        {clockwisePortfolios.filter(p => !p.is_benchmark).map(portfolio => (
+                        {sortPortfolioObjects(clockwisePortfolios.filter(p => !p.is_benchmark)).map(portfolio => (
                           <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-900">
                             {portfolio.sharpe_ratio !== null ? portfolio.sharpe_ratio.toFixed(2) : '-'}
                           </td>
                         ))}
-                        {clockwisePortfolios.filter(p => p.is_benchmark).map(portfolio => (
+                        {sortPortfolioObjects(clockwisePortfolios.filter(p => p.is_benchmark)).map(portfolio => (
                           <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-600">
                             {portfolio.sharpe_ratio !== null ? portfolio.sharpe_ratio.toFixed(2) : '-'}
                           </td>
@@ -1039,12 +1065,12 @@ export default function AdminDashboardPage() {
                       {/* Max Drawdown Row */}
                       <tr className="bg-gray-50/50">
                         <td className="px-4 py-3 text-sm font-medium text-gray-700">Max Drawdown</td>
-                        {clockwisePortfolios.filter(p => !p.is_benchmark).map(portfolio => (
+                        {sortPortfolioObjects(clockwisePortfolios.filter(p => !p.is_benchmark)).map(portfolio => (
                           <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-900">
                             {portfolio.max_drawdown !== null ? `${(portfolio.max_drawdown * 100).toFixed(1)}%` : '-'}
                           </td>
                         ))}
-                        {clockwisePortfolios.filter(p => p.is_benchmark).map(portfolio => (
+                        {sortPortfolioObjects(clockwisePortfolios.filter(p => p.is_benchmark)).map(portfolio => (
                           <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-600">
                             {portfolio.max_drawdown !== null ? `${(portfolio.max_drawdown * 100).toFixed(1)}%` : '-'}
                           </td>
@@ -1053,24 +1079,24 @@ export default function AdminDashboardPage() {
                       {/* Up Capture Row */}
                       <tr>
                         <td className="px-4 py-3 text-sm font-medium text-gray-700">Up Capture</td>
-                        {clockwisePortfolios.filter(p => !p.is_benchmark).map(portfolio => (
+                        {sortPortfolioObjects(clockwisePortfolios.filter(p => !p.is_benchmark)).map(portfolio => (
                           <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-900">
                             {portfolio.up_capture !== null ? portfolio.up_capture.toFixed(2) : '-'}
                           </td>
                         ))}
-                        {clockwisePortfolios.filter(p => p.is_benchmark).map(() => (
+                        {sortPortfolioObjects(clockwisePortfolios.filter(p => p.is_benchmark)).map(() => (
                           <td key="benchmark-up" className="px-4 py-3 text-sm text-right text-gray-500">1.00</td>
                         ))}
                       </tr>
                       {/* Down Capture Row */}
                       <tr className="bg-gray-50/50">
                         <td className="px-4 py-3 text-sm font-medium text-gray-700">Down Capture</td>
-                        {clockwisePortfolios.filter(p => !p.is_benchmark).map(portfolio => (
+                        {sortPortfolioObjects(clockwisePortfolios.filter(p => !p.is_benchmark)).map(portfolio => (
                           <td key={portfolio.id} className="px-4 py-3 text-sm text-right text-gray-900">
                             {portfolio.down_capture !== null ? portfolio.down_capture.toFixed(2) : '-'}
                           </td>
                         ))}
-                        {clockwisePortfolios.filter(p => p.is_benchmark).map(() => (
+                        {sortPortfolioObjects(clockwisePortfolios.filter(p => p.is_benchmark)).map(() => (
                           <td key="benchmark-down" className="px-4 py-3 text-sm text-right text-gray-500">1.00</td>
                         ))}
                       </tr>

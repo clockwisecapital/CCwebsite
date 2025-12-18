@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import type { ClockwisePortfolio } from '@/app/api/admin/portfolios/route';
+import { sortPortfolioObjects } from '@/lib/portfolio-order';
 
 interface CumulativePerformanceTableProps {
   className?: string;
@@ -58,8 +59,8 @@ export default function CumulativePerformanceTable({ className = '' }: Cumulativ
     fetchPortfolios();
   }, []);
 
-  // Separate portfolios from benchmark
-  const modelPortfolios = portfolios.filter(p => !p.is_benchmark);
+  // Separate portfolios from benchmark and sort them
+  const modelPortfolios = sortPortfolioObjects(portfolios.filter(p => !p.is_benchmark));
   const benchmark = portfolios.find(p => p.is_benchmark);
 
   // Define metrics to display (matching Admin Dashboard)
@@ -163,14 +164,13 @@ export default function CumulativePerformanceTable({ className = '' }: Cumulativ
                 {modelPortfolios.map(portfolio => {
                   const value = portfolio[metric.key as keyof ClockwisePortfolio] as number | null;
                   const isReturn = metric.key === 'return_3y';
-                  const isPositive = value !== null && value > 0;
                   
                   return (
                     <td 
                       key={portfolio.id}
                       className={`px-4 py-3 text-sm text-right font-semibold ${
                         isReturn 
-                          ? isPositive ? 'text-emerald-400' : 'text-rose-400'
+                          ? 'text-green-400'
                           : 'text-gray-100'
                       }`}
                     >
@@ -179,7 +179,9 @@ export default function CumulativePerformanceTable({ className = '' }: Cumulativ
                   );
                 })}
                 {benchmark && (
-                  <td className="px-4 py-3 text-sm text-right font-medium text-gray-400">
+                  <td className={`px-4 py-3 text-sm text-right font-medium ${
+                    metric.key === 'return_3y' ? 'text-red-400' : 'text-gray-400'
+                  }`}>
                     {metric.key === 'alpha' 
                       ? '0.0%'  // Benchmark alpha is always 0
                       : metric.key === 'beta'

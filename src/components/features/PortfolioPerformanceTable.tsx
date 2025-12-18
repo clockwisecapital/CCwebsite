@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { MultiPortfolioResult, PeriodMetrics } from '@/lib/portfolio-metrics'
+import { sortPortfolioNames } from '@/lib/portfolio-order'
 
 interface PortfolioPerformanceTableProps {
   data: MultiPortfolioResult
@@ -34,7 +35,7 @@ export default function PortfolioPerformanceTable({
   data,
   selectedPortfolio
 }: PortfolioPerformanceTableProps) {
-  const portfolioNames = Object.keys(data.portfolios)
+  const portfolioNames = sortPortfolioNames(Object.keys(data.portfolios))
   const [activePortfolio, setActivePortfolio] = useState(
     selectedPortfolio || portfolioNames[0]
   )
@@ -150,7 +151,7 @@ export default function PortfolioPerformanceTable({
                   </div>
                 </td>
                 {periods.map(p => (
-                  <td key={p.periodName} className="py-2 px-3 text-right text-sm font-medium text-gray-900">
+                  <td key={p.periodName} className="py-2 px-3 text-right text-sm font-medium text-green-600">
                     {formatPct(p.portfolioReturn, 2)}
                   </td>
                 ))}
@@ -164,7 +165,7 @@ export default function PortfolioPerformanceTable({
                   </div>
                 </td>
                 {periods.map(p => (
-                  <td key={p.periodName} className="py-2 px-3 text-right text-sm text-gray-700">
+                  <td key={p.periodName} className="py-2 px-3 text-right text-sm text-red-600">
                     {formatPct(p.benchmarkReturn, 2)}
                   </td>
                 ))}
@@ -340,7 +341,7 @@ export function PortfolioComparisonTable({
   data: MultiPortfolioResult
 }) {
   const { comparison } = data
-  const portfolioNames = comparison.portfolioNames
+  const portfolioNames = sortPortfolioNames(comparison.portfolioNames)
   const periodNames = comparison.periodNames
 
   return (
@@ -379,13 +380,14 @@ export function PortfolioComparisonTable({
                       {portfolioNames.map(name => {
                         const value = metric.byPeriod[periodName]?.[name]
                         const isPercent = ['return', 'stdDev', 'alpha', 'maxDrawdown'].includes(key)
+                        const isReturn = key === 'return'
                         return (
-                          <td key={name} className="py-2 px-3 text-right text-sm text-gray-900">
+                          <td key={name} className={`py-2 px-3 text-right text-sm ${isReturn ? 'text-green-600 font-medium' : 'text-gray-900'}`}>
                             {isPercent ? formatPct(value, 1) : formatNum(value)}
                           </td>
                         )
                       })}
-                      <td className="py-2 px-3 text-right text-sm text-gray-600">
+                      <td className={`py-2 px-3 text-right text-sm ${key === 'return' ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
                         {(() => {
                           const value = metric.benchmark[periodName]
                           const isPercent = ['return', 'stdDev', 'alpha', 'maxDrawdown'].includes(key)
