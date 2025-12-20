@@ -9,6 +9,7 @@ import {
   getCacheStats 
 } from '@/lib/cycle-cache';
 import { createGoalProbabilityInput, calculateGoalProbability, LONG_TERM_AVERAGES } from '@/lib/services/goal-probability';
+import { getIndexScenarioReturns } from '@/lib/supabase/database';
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
@@ -243,9 +244,10 @@ export async function POST(req: NextRequest) {
     });
     console.log(`✅ Portfolio impact analysis completed (${Date.now() - portfolioStartTime}ms)`);
 
-    const goalStartTime = Date.now();
-    const goalAnalysis = await analyzeGoalProbability(intakeData, portfolioAnalysis);
-    console.log(`✅ Goal probability analysis completed (${Date.now() - goalStartTime}ms)`);
+    // COMMENTED OUT: Goal analysis now handled by fast endpoint only
+    // const goalStartTime = Date.now();
+    // const goalAnalysis = await analyzeGoalProbability(intakeData, portfolioAnalysis);
+    // console.log(`✅ Goal probability analysis completed (${Date.now() - goalStartTime}ms)`);
 
     const cycleAnalysisResult: CycleAnalysisResult = {
       cycles: {
@@ -257,7 +259,7 @@ export async function POST(req: NextRequest) {
         company: companyAnalysis,
       },
       portfolioAnalysis,
-      goalAnalysis,
+      // goalAnalysis removed - handled by fast endpoint only
     };
 
     return NextResponse.json({
@@ -1504,7 +1506,10 @@ Return ONLY this JSON structure:
 // ======================
 // GOAL ANALYSIS
 // ======================
+// COMMENTED OUT: Goal analysis now handled by fast endpoint only
+// This function is no longer used in analyze-cycles route
 
+/*
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function analyzeGoalProbability(intakeData: any, portfolioAnalysis: any): Promise<any> {
   // Use correct field names from IntakeFormData
@@ -1517,17 +1522,38 @@ async function analyzeGoalProbability(intakeData: any, portfolioAnalysis: any): 
   // This ensures Goal and Portfolio calculations are consistent
   const year1Return = portfolioAnalysis.current.userPortfolio?.year1Return;
 
-  console.log('🎯 Analyzing goal probability with LONG-TERM AVERAGES:', {
+  console.log('🎯 Analyzing goal probability:', {
     goalAmount,
     currentAmount,
     timeHorizon,
     monthlyContribution,
     year1Return: year1Return !== undefined ? (year1Return * 100).toFixed(1) + '%' : 'using long-term',
-    longTermAverages: LONG_TERM_AVERAGES
   });
 
-  // Create input for goal probability calculation - now with Year 1 return from portfolio
-  const probabilityInput = createGoalProbabilityInput(intakeData, year1Return);
+  // NEW: Fetch scenario returns for all goals (used in Year 1 for multi-year goals)
+  let scenarioReturns: Map<string, {bull: number, expected: number, bear: number}> | undefined = undefined;
+  try {
+    scenarioReturns = await getIndexScenarioReturns();
+    console.log(`📊 Loaded ${scenarioReturns.size} ETF scenarios`);
+  } catch (error) {
+    console.error('❌ Failed to fetch scenario returns:', error);
+    // Continue without scenarios - will fall back to Monte Carlo
+  }
+
+  // Get holdings from intake data (if provided)
+  const holdings = intakeData.specificHoldings?.filter((h: any) => h.ticker && h.percentage) || undefined;
+  
+  // Get Monte Carlo results from portfolio analysis (for individual stocks)
+  const monteCarloResults = portfolioAnalysis.current.userPortfolio?.monteCarloResults || null;
+
+  // Create input for goal probability calculation
+  const probabilityInput = createGoalProbabilityInput(
+    intakeData, 
+    year1Return,
+    scenarioReturns,  // NEW: CSV scenario data
+    holdings,  // NEW: Holdings for weighted calculation
+    monteCarloResults  // NEW: Monte Carlo results for fallback
+  );
   
   if (!probabilityInput) {
     console.warn('Could not create goal probability input, using fallback calculation');
@@ -1606,3 +1632,4 @@ async function analyzeGoalProbability(intakeData: any, portfolioAnalysis: any): 
     recommendation,
   };
 }
+*/

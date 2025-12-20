@@ -78,22 +78,30 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
             
             {/* Total Value and Portfolio Metrics */}
             <div className="mb-6 space-y-3">
-              <div className="bg-gray-700/50 rounded-lg p-4">
-                <div className="text-sm text-gray-400 mb-1">Total Portfolio Value</div>
-                <div className="text-2xl font-bold text-blue-400">
-                  {formatCurrency(portfolioComparison.userPortfolio.totalValue)}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-700/50 rounded-lg p-4">
+                  <div className="text-sm text-gray-400 mb-1">Starting Value</div>
+                  <div className="text-2xl font-bold text-blue-400">
+                    {formatCurrency(portfolioComparison.userPortfolio.totalValue)}
+                  </div>
+                </div>
+                <div className="bg-gray-700/50 rounded-lg p-4">
+                  <div className="text-sm text-gray-400 mb-1">Ending Value</div>
+                  <div className="text-2xl font-bold text-emerald-400">
+                    {formatCurrency(portfolioComparison.userPortfolio.totalValue * (1 + portfolioComparison.userPortfolio.expectedReturn))}
+                  </div>
                 </div>
               </div>
               {/* Portfolio Performance Metrics - Now using portfolio-level Monte Carlo */}
               <div className="grid grid-cols-3 gap-2">
                 <div className="bg-gray-700/50 rounded-lg p-3">
-                  <div className="text-xs text-gray-400 mb-1">Expected Return ({timeLabel})</div>
+                  <div className="text-xs text-gray-400 mb-1">Expected Scenario ({timeLabel})</div>
                   <div className={`text-lg font-bold ${portfolioComparison.userPortfolio.expectedReturn > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                     {formatPercent(portfolioComparison.userPortfolio.expectedReturn)}
                   </div>
                 </div>
                 <div className="bg-gray-700/50 rounded-lg p-3">
-                  <div className="text-xs text-gray-400 mb-1">Annual Upside ({timeLabel})</div>
+                  <div className="text-xs text-gray-400 mb-1">Bull Scenario ({timeLabel})</div>
                   <div className="text-lg font-bold text-emerald-400">
                     {portfolioComparison.userPortfolio.upside !== undefined 
                       ? formatPercent(portfolioComparison.userPortfolio.upside) 
@@ -101,7 +109,7 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
                   </div>
                 </div>
                 <div className="bg-gray-700/50 rounded-lg p-3">
-                  <div className="text-xs text-gray-400 mb-1">Annual Downside ({timeLabel})</div>
+                  <div className="text-xs text-gray-400 mb-1">Bear Scenario ({timeLabel})</div>
                   <div className="text-lg font-bold text-rose-400">
                     {portfolioComparison.userPortfolio.downside !== undefined 
                       ? formatPercent(portfolioComparison.userPortfolio.downside) 
@@ -178,22 +186,30 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
             
             {/* Total Value and Portfolio Metrics */}
             <div className="mb-6 space-y-3">
-              <div className="bg-teal-900/20 rounded-lg p-4 border border-teal-800">
-                <div className="text-sm text-teal-400 mb-1">Total Portfolio Value</div>
-                <div className="text-2xl font-bold text-teal-300">
-                  {formatCurrency(portfolioComparison.timePortfolio.totalValue)}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-teal-900/20 rounded-lg p-4 border border-teal-800">
+                  <div className="text-sm text-teal-400 mb-1">Starting Value</div>
+                  <div className="text-2xl font-bold text-teal-300">
+                    {formatCurrency(portfolioComparison.timePortfolio.totalValue)}
+                  </div>
+                </div>
+                <div className="bg-teal-900/20 rounded-lg p-4 border border-teal-800">
+                  <div className="text-sm text-teal-400 mb-1">Ending Value</div>
+                  <div className="text-2xl font-bold text-emerald-300">
+                    {formatCurrency(portfolioComparison.timePortfolio.totalValue * (1 + portfolioComparison.timePortfolio.expectedReturn))}
+                  </div>
                 </div>
               </div>
               {/* Portfolio Performance Metrics - Now using portfolio-level Monte Carlo */}
               <div className="grid grid-cols-3 gap-2">
                 <div className="bg-teal-900/20 rounded-lg p-3 border border-teal-800">
-                  <div className="text-xs text-teal-400 mb-1">Expected Return ({timeLabel})</div>
+                  <div className="text-xs text-teal-400 mb-1">Expected Scenario ({timeLabel})</div>
                   <div className={`text-lg font-bold ${portfolioComparison.timePortfolio.expectedReturn > 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
                     {formatPercent(portfolioComparison.timePortfolio.expectedReturn)}
                   </div>
                 </div>
                 <div className="bg-teal-900/20 rounded-lg p-3 border border-teal-800">
-                  <div className="text-xs text-teal-400 mb-1">Annual Upside ({timeLabel})</div>
+                  <div className="text-xs text-teal-400 mb-1">Bull Scenario ({timeLabel})</div>
                   <div className="text-lg font-bold text-emerald-300">
                     {portfolioComparison.timePortfolio.upside !== undefined 
                       ? formatPercent(portfolioComparison.timePortfolio.upside) 
@@ -201,7 +217,7 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
                   </div>
                 </div>
                 <div className="bg-teal-900/20 rounded-lg p-3 border border-teal-800">
-                  <div className="text-xs text-teal-400 mb-1">Annual Downside ({timeLabel})</div>
+                  <div className="text-xs text-teal-400 mb-1">Bear Scenario ({timeLabel})</div>
                   <div className="text-lg font-bold text-rose-300">
                     {portfolioComparison.timePortfolio.downside !== undefined 
                       ? formatPercent(portfolioComparison.timePortfolio.downside) 

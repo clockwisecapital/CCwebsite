@@ -6,7 +6,7 @@ import {
   LONG_TERM_AVERAGES
 } from '@/lib/services/goal-probability';
 import { calculateYear1Return } from '@/lib/services/year1-return';
-import { getIndexSectorTargets, getTgtPrices } from '@/lib/supabase/database';
+import { getIndexSectorTargets, getTgtPrices, getIndexScenarioReturns } from '@/lib/supabase/database';
 import { fetchBatchCurrentPrices } from '@/lib/services/monte-carlo';
 
 // ============================================================================
@@ -143,6 +143,7 @@ export async function POST(request: NextRequest) {
     // CALCULATE YEAR 1 RETURN FROM USER'S HOLDINGS
     // ============================================================================
     let year1Return: number | undefined = undefined;
+    const factsetReturnsMap = new Map<string, number>();
     
     if (hasSpecificHoldings && intakeData.specificHoldings && intakeData.specificHoldings.length > 0) {
       try {
@@ -184,6 +185,9 @@ export async function POST(request: NextRequest) {
                 currentPrices  // For underlying index prices (shorts)
               );
               
+              // Store individual Year 1 return for scenario calculation
+              factsetReturnsMap.set(ticker, holdingYear1Result.return);
+              
               weightedYear1Return += holdingYear1Result.return * weight;
               totalWeight += weight;
               
@@ -202,6 +206,49 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ============================================================================
+    // FETCH SCENARIO RETURNS FOR BULL/BASE/BEAR CALCULATIONS
+    // ============================================================================
+    let scenarioReturns: Map<string, {bull: number, expected: number, bear: number}> | undefined = undefined;
+    try {
+      scenarioReturns = await getIndexScenarioReturns();
+      console.log(`📊 Loaded ${scenarioReturns.size} ETF scenarios`);
+    } catch (error) {
+      console.error('❌ Failed to fetch scenario returns:', error);
+      // Continue without scenarios - will fall back to Monte Carlo
+    }
+
+    // Get holdings for weighted calculations
+    let holdings = intakeData.specificHoldings?.filter((h: any) => h.ticker && h.percentage) || undefined;
+    
+    // ============================================================================
+    // CREATE SYNTHETIC HOLDINGS IF NO SPECIFIC HOLDINGS PROVIDED
+    // ============================================================================
+    // Use proxy ETFs (SPY, AGG, VNQ, GLD) based on allocation to enable scenario calculations
+    if (!holdings || holdings.length === 0) {
+      const syntheticHoldings = [];
+      
+      if (portfolio.stocks > 0) {
+        syntheticHoldings.push({ ticker: 'SPY', percentage: portfolio.stocks, weight: portfolio.stocks });
+      }
+      if (portfolio.bonds > 0) {
+        syntheticHoldings.push({ ticker: 'AGG', percentage: portfolio.bonds, weight: portfolio.bonds });
+      }
+      if (portfolio.realEstate > 0) {
+        syntheticHoldings.push({ ticker: 'VNQ', percentage: portfolio.realEstate, weight: portfolio.realEstate });
+      }
+      if (portfolio.commodities > 0) {
+        syntheticHoldings.push({ ticker: 'GLD', percentage: portfolio.commodities, weight: portfolio.commodities });
+      }
+      // Note: Cash and alternatives don't have proxy ETFs in scenario data
+      
+      if (syntheticHoldings.length > 0) {
+        holdings = syntheticHoldings;
+        console.log('📊 Created synthetic holdings for scenario calculation:', 
+          syntheticHoldings.map(h => `${h.ticker}: ${h.percentage}%`).join(', '));
+      }
+    }
+
     console.log('📊 Goal analysis inputs:', {
       totalValue,
       goalAmount,
@@ -212,8 +259,15 @@ export async function POST(request: NextRequest) {
       allocation: portfolio
     });
 
-    // Create input for goal probability calculation - now with Year 1 return from holdings
-    const probabilityInput = createGoalProbabilityInput(intakeData, year1Return);
+    // Create input for goal probability calculation - now with Year 1 return and scenario data
+    const probabilityInput = createGoalProbabilityInput(
+      intakeData, 
+      year1Return,
+      scenarioReturns,
+      holdings,
+      undefined,  // no monteCarloResults in fast analysis
+      factsetReturnsMap  // FactSet Year 1 returns for individual stocks
+    );
     
     let goalAnalysis;
     

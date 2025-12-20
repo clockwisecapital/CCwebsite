@@ -14,7 +14,7 @@ export interface CycleAnalysisResult {
     current: PortfolioSimulation;
   };
   
-  goalAnalysis: GoalAnalysis;
+  goalAnalysis?: GoalAnalysis; // Optional - now handled by fast endpoint
 }
 
 export interface CycleData {

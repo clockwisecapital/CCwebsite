@@ -777,6 +777,63 @@ export async function getIndexSectorTargets(): Promise<Map<string, number>> {
 }
 
 /**
+ * Get index scenario returns (Bull/Base/Bear) from database
+ * Used for 12-month goal calculations with specific scenario forecasts
+ * 
+ * @returns Map of ticker to scenario returns object
+ */
+export async function getIndexScenarioReturns(): Promise<Map<string, {
+  bull: number;
+  expected: number;
+  bear: number;
+}>> {
+  try {
+    const supabase = createAdminSupabaseClient()
+    
+    console.log('📊 Fetching index scenario returns from database...')
+    
+    const { data, error } = await supabase
+      .from('index_scenario_returns' as any)
+      .select('ticker, bull_return_1yr, expected_return_1_5yr, bear_return_3yr')
+
+    if (error) {
+      console.error('❌ Error fetching index scenario returns:', error)
+      return new Map()
+    }
+
+    const scenarioMap = new Map<string, {
+      bull: number;
+      expected: number;
+      bear: number;
+    }>()
+    
+    if (data) {
+      data.forEach((row: any) => {
+        const ticker = row.ticker
+        const bull = row.bull_return_1yr
+        const expected = row.expected_return_1_5yr
+        const bear = row.bear_return_3yr
+        
+        if (ticker && bull !== null && expected !== null && bear !== null) {
+          scenarioMap.set(ticker, {
+            bull: Number(bull),
+            expected: Number(expected),
+            bear: Number(bear)
+          })
+          console.log(`  ✓ ${ticker}: Bull ${(Number(bull) * 100).toFixed(1)}%, Expected ${(Number(expected) * 100).toFixed(1)}%, Bear ${(Number(bear) * 100).toFixed(1)}%`)
+        }
+      })
+    }
+
+    console.log(`✅ Loaded ${scenarioMap.size} index scenario returns`)
+    return scenarioMap
+  } catch (error) {
+    console.error('❌ Database error fetching index scenario returns:', error)
+    return new Map()
+  }
+}
+
+/**
  * Update price in holding_weights table
  */
 export async function updateHoldingPrice(ticker: string, price: number): Promise<boolean> {

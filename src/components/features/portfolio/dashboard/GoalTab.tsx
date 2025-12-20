@@ -130,7 +130,7 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }:
           {/* Probability Range */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 text-center">
-              <div className="text-xs text-gray-300 mb-2">Best Case Scenario</div>
+              <div className="text-xs text-gray-300 mb-2">Bull Scenario</div>
               <div className="text-3xl font-bold text-emerald-600">
                 {formatPercent(goalAnalysis.probabilityOfSuccess.upside)}
               </div>
@@ -146,7 +146,7 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }:
             </div>
 
             <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 text-center">
-              <div className="text-xs text-gray-300 mb-2">Worst Case Scenario</div>
+              <div className="text-xs text-gray-300 mb-2">Bear Scenario</div>
               <div className="text-3xl font-bold text-rose-600">
                 {formatPercent(goalAnalysis.probabilityOfSuccess.downside)}
               </div>
@@ -184,7 +184,7 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }:
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-emerald-900/20 border border-emerald-800 rounded-lg p-4">
-            <div className="text-sm text-emerald-700 mb-2">Upside Scenario</div>
+            <div className="text-sm text-emerald-700 mb-2">Bull Scenario</div>
             <div className="text-2xl font-bold text-gray-100">
               {formatCurrency(goalAnalysis.projectedValues.upside)}
             </div>
@@ -220,7 +220,7 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }:
           </div>
 
           <div className="bg-rose-900/20 border border-rose-800 rounded-lg p-4">
-            <div className="text-sm text-rose-700 mb-2">Downside Scenario</div>
+            <div className="text-sm text-rose-700 mb-2">Bear Scenario</div>
             <div className="text-2xl font-bold text-gray-100">
               {formatCurrency(goalAnalysis.projectedValues.downside)}
             </div>

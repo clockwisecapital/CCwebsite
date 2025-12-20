@@ -35,6 +35,9 @@ interface GoalProbabilityInput {
   };
   year1Return?: number;            // Optional: Year 1 return from user's holdings
   monteCarloResults?: Map<string, MonteCarloResult>; // Optional: for specific holdings
+  holdings?: Array<{ticker: string, weight: number}>; // NEW: For weighted calculation
+  scenarioReturns?: Map<string, {bull: number, expected: number, bear: number}>; // NEW: CSV scenarios
+  factsetReturns?: Map<string, number>; // NEW: FactSet Year 1 returns for individual stocks
 }
 
 interface GoalProbabilityResult {
@@ -131,6 +134,11 @@ function runGoalMonteCarloSimulation(
   upside: number; 
   downside: number;
   probabilityOfSuccess: number;
+  probabilityAtPercentiles: {
+    p5: number;   // Probability at 5th percentile (bear scenario)
+    p50: number;  // Probability at 50th percentile (expected scenario)
+    p95: number;  // Probability at 95th percentile (bull scenario)
+  };
 } {
   const results: number[] = [];
   const monthlyVolatility = volatility / Math.sqrt(12);
@@ -165,12 +173,29 @@ function runGoalMonteCarloSimulation(
 
   results.sort((a, b) => a - b);
   const probabilityOfSuccess = successCount / simulations;
+  
+  // Calculate probability at each percentile
+  // At 5th percentile: what % of outcomes at that level reach the goal
+  const p5Index = Math.floor(simulations * 0.05);
+  const p50Index = Math.floor(simulations * 0.50);
+  const p95Index = Math.floor(simulations * 0.95);
+  
+  const probabilityAtPercentiles = {
+    p5: results[p5Index] >= goalAmount ? 
+        (simulations - p5Index) / simulations : // If 5th percentile succeeds, count from there up
+        0.05, // If not, very low probability
+    p50: probabilityOfSuccess, // Median = overall probability
+    p95: results[p95Index] >= goalAmount ? 
+        Math.min(0.99, 0.90 + (results[p95Index] - goalAmount) / goalAmount * 0.09) : // High probability if 95th succeeds
+        (simulations - p95Index) / simulations
+  };
 
   return {
-    downside: results[Math.floor(simulations * 0.05)],
-    median: results[Math.floor(simulations * 0.50)],
-    upside: results[Math.floor(simulations * 0.95)],
-    probabilityOfSuccess
+    downside: results[p5Index],
+    median: results[p50Index],
+    upside: results[p95Index],
+    probabilityOfSuccess,
+    probabilityAtPercentiles
   };
 }
 
@@ -185,19 +210,283 @@ function randomNormal(mean: number, stdDev: number): number {
 }
 
 /**
- * Calculate probability of reaching goal
- * 
- * Year 1: Uses user's holdings return (if provided), otherwise asset class average
- * Years 2+: Uses asset class weighted long-term averages
+ * Calculate future value with monthly contributions
+ * Simple compound interest with regular additions
  */
-export function calculateGoalProbability(input: GoalProbabilityInput): GoalProbabilityResult {
+function calculateFutureValueWithContributions(
+  startingValue: number,
+  annualReturn: number,
+  monthlyContribution: number,
+  years: number
+): number {
+  const monthlyRate = annualReturn / 12;
+  const months = years * 12;
+  
+  let value = startingValue;
+  for (let month = 0; month < months; month++) {
+    value += monthlyContribution;
+    value *= (1 + monthlyRate);
+  }
+  
+  return value;
+}
+
+/**
+ * Calculate multi-year value with Year 1 scenario + Years 2+ long-term returns
+ * Used for Bull/Base/Bear projections in multi-year goals
+ */
+function calculateMultiYearValue(
+  startingValue: number,
+  year1Return: number,
+  longTermReturn: number,
+  monthlyContribution: number,
+  years: number
+): number {
+  if (years === 1) {
+    // Single year - just use Year 1 return
+    return calculateFutureValueWithContributions(
+      startingValue,
+      year1Return,
+      monthlyContribution,
+      1
+    );
+  }
+  
+  // Year 1 with specific return
+  let value = calculateFutureValueWithContributions(
+    startingValue,
+    year1Return,
+    monthlyContribution,
+    1
+  );
+  
+  // Years 2+ with long-term return
+  value = calculateFutureValueWithContributions(
+    value,
+    longTermReturn,
+    monthlyContribution,
+    years - 1
+  );
+  
+  return value;
+}
+
+/**
+ * Calculate weighted portfolio returns across Bull/Expected/Bear scenarios
+ * Combines CSV data for ETFs with FactSet/Monte Carlo for individual stocks
+ */
+function calculateWeightedScenarioReturns(
+  holdings: Array<{ticker: string, weight: number}>,
+  scenarioReturns: Map<string, {bull: number, expected: number, bear: number}>,
+  monteCarloResults?: Map<string, MonteCarloResult>,
+  factsetReturns?: Map<string, number>
+): {bull: number, expected: number, bear: number} {
+  let bullReturn = 0;
+  let expectedReturn = 0;
+  let bearReturn = 0;
+  
+  for (const holding of holdings) {
+    const weight = holding.weight / 100;
+    const scenarios = scenarioReturns.get(holding.ticker);
+    
+    if (scenarios) {
+      // ETF in database - use CSV scenarios
+      bullReturn += weight * scenarios.bull;
+      expectedReturn += weight * scenarios.expected;
+      bearReturn += weight * scenarios.bear;
+      console.log(`  ${holding.ticker}: Using CSV scenarios (${(scenarios.bull * 100).toFixed(1)}%, ${(scenarios.expected * 100).toFixed(1)}%, ${(scenarios.bear * 100).toFixed(1)}%)`);
+    } else {
+      // Individual stock - try Monte Carlo first, then FactSet with estimated spread
+      const mc = monteCarloResults?.get(holding.ticker);
+      const factsetReturn = factsetReturns?.get(holding.ticker);
+      
+      if (mc) {
+        // Use Monte Carlo upside/downside
+        bullReturn += weight * mc.upside;
+        expectedReturn += weight * mc.median;
+        bearReturn += weight * mc.downside;
+        console.log(`  ${holding.ticker}: Using Monte Carlo (${(mc.upside * 100).toFixed(1)}%, ${(mc.median * 100).toFixed(1)}%, ${(mc.downside * 100).toFixed(1)}%)`);
+      } else if (factsetReturn !== undefined) {
+        // Use FactSet expected with estimated bull/bear spread based on stock volatility
+        // Typical individual stock: ~20-30% volatility → ±30% spread from expected
+        const bullSpread = factsetReturn + 0.30; // +30% upside
+        const bearSpread = factsetReturn - 0.30; // -30% downside
+        bullReturn += weight * bullSpread;
+        expectedReturn += weight * factsetReturn;
+        bearReturn += weight * bearSpread;
+        console.log(`  ${holding.ticker}: Using FactSet with spread (${(bullSpread * 100).toFixed(1)}%, ${(factsetReturn * 100).toFixed(1)}%, ${(bearSpread * 100).toFixed(1)}%)`);
+      } else {
+        // Fallback to long-term average for stocks
+        const fallbackReturn = LONG_TERM_AVERAGES.stocks;
+        bullReturn += weight * fallbackReturn * 1.4;
+        expectedReturn += weight * fallbackReturn;
+        bearReturn += weight * fallbackReturn * 0.6;
+        console.log(`  ${holding.ticker}: Using fallback (${(fallbackReturn * 100).toFixed(1)}%)`);
+      }
+    }
+  }
+  
+  return {bull: bullReturn, expected: expectedReturn, bear: bearReturn};
+}
+
+/**
+ * Calculate 12-month goal scenarios using CSV data
+ * Uses Bull/Expected/Bear returns from database for ETFs
+ * Falls back to Monte Carlo for individual stocks
+ */
+function calculate12MonthScenarios(
+  input: GoalProbabilityInput
+): GoalProbabilityResult {
+  console.log('📊 Calculating 12-month scenarios with CSV data');
+  
+  if (!input.holdings || input.holdings.length === 0 || !input.scenarioReturns) {
+    console.warn('⚠️ Missing holdings or scenario returns, falling back to Monte Carlo');
+    // Fall back to regular Monte Carlo if no holdings data
+    return calculateGoalProbabilityWithMonteCarlo(input);
+  }
+  
+  // Calculate weighted returns for each scenario
+  const weightedReturns = calculateWeightedScenarioReturns(
+    input.holdings,
+    input.scenarioReturns,
+    input.monteCarloResults,
+    input.factsetReturns
+  );
+  
+  console.log('📊 Weighted scenario returns:', {
+    bull: (weightedReturns.bull * 100).toFixed(1) + '%',
+    expected: (weightedReturns.expected * 100).toFixed(1) + '%',
+    bear: (weightedReturns.bear * 100).toFixed(1) + '%'
+  });
+  
+  // Calculate future values with monthly contributions for each scenario
+  const bullValue = calculateFutureValueWithContributions(
+    input.currentAmount,
+    weightedReturns.bull,
+    input.monthlyContribution,
+    1 // 12 months
+  );
+  
+  const expectedValue = calculateFutureValueWithContributions(
+    input.currentAmount,
+    weightedReturns.expected,
+    input.monthlyContribution,
+    1 // 12 months
+  );
+  
+  const bearValue = calculateFutureValueWithContributions(
+    input.currentAmount,
+    weightedReturns.bear,
+    input.monthlyContribution,
+    1 // 12 months
+  );
+  
+  // Run separate Monte Carlo for each scenario to get accurate probabilities
+  const longTermReturn = calculateExpectedReturn(input.portfolio);
+  const stockWeight = input.portfolio.stocks / 100;
+  const bondWeight = input.portfolio.bonds / 100;
+  const cashWeight = input.portfolio.cash / 100;
+  const estimatedVolatility = 
+    stockWeight * 0.18 +
+    bondWeight * 0.06 +
+    cashWeight * 0.01 +
+    (1 - stockWeight - bondWeight - cashWeight) * 0.12;
+  
+  const bullMC = runGoalMonteCarloSimulation(
+    input.currentAmount,
+    input.goalAmount,
+    1, // 12 months
+    input.monthlyContribution,
+    weightedReturns.bull,
+    longTermReturn,
+    estimatedVolatility
+  );
+  
+  const expectedMC = runGoalMonteCarloSimulation(
+    input.currentAmount,
+    input.goalAmount,
+    1, // 12 months
+    input.monthlyContribution,
+    weightedReturns.expected,
+    longTermReturn,
+    estimatedVolatility
+  );
+  
+  const bearMC = runGoalMonteCarloSimulation(
+    input.currentAmount,
+    input.goalAmount,
+    1, // 12 months
+    input.monthlyContribution,
+    weightedReturns.bear,
+    longTermReturn,
+    estimatedVolatility
+  );
+  
+  const probabilityOfSuccess = {
+    median: expectedMC.probabilityOfSuccess,
+    downside: bearMC.probabilityOfSuccess,
+    upside: bullMC.probabilityOfSuccess
+  };
+  
+  console.log('📊 12-month scenario results:', {
+    bullValue: bullValue.toFixed(0),
+    expectedValue: expectedValue.toFixed(0),
+    bearValue: bearValue.toFixed(0),
+    bullProbability: (bullMC.probabilityOfSuccess * 100).toFixed(1) + '%',
+    expectedProbability: (expectedMC.probabilityOfSuccess * 100).toFixed(1) + '%',
+    bearProbability: (bearMC.probabilityOfSuccess * 100).toFixed(1) + '%'
+  });
+  
+  return {
+    probabilityOfSuccess,
+    projectedValues: {
+      upside: bullValue,
+      median: expectedValue,
+      downside: bearValue
+    },
+    shortfall: {
+      upside: bullValue - input.goalAmount,
+      median: expectedValue - input.goalAmount,
+      downside: bearValue - input.goalAmount
+    },
+    expectedReturn: weightedReturns.expected
+  };
+}
+
+/**
+ * Calculate probability of reaching goal using Monte Carlo
+ * Now uses Bull/Base/Bear scenarios for Year 1 when available (multi-year goals)
+ */
+function calculateGoalProbabilityWithMonteCarlo(input: GoalProbabilityInput): GoalProbabilityResult {
   // Long-term return from asset allocation (for Years 2+)
   const longTermReturn = calculateExpectedReturn(input.portfolio);
 
-  // Year 1 return: use provided value from user's holdings, or fall back to long-term
-  const year1Return = input.year1Return ?? longTermReturn;
+  // Check if we have scenario data for Year 1 (Bull/Base/Bear from CSV)
+  let year1Bull, year1Expected, year1Bear;
+  let useScenarioProjections = false;
+  
+  if (input.scenarioReturns && input.holdings && input.holdings.length > 0) {
+    // Calculate weighted Bull/Base/Bear for Year 1
+    const scenarios = calculateWeightedScenarioReturns(
+      input.holdings,
+      input.scenarioReturns,
+      input.monteCarloResults,
+      input.factsetReturns
+    );
+    year1Bull = scenarios.bull;
+    year1Expected = scenarios.expected;
+    year1Bear = scenarios.bear;
+    useScenarioProjections = true;
+    console.log('📊 Using Bull/Base/Bear scenarios for Year 1 of multi-year goal');
+  } else {
+    // Fallback to single year1Return with Monte Carlo volatility
+    const year1Return = input.year1Return ?? longTermReturn;
+    year1Expected = year1Return;
+    // Will use Monte Carlo for upside/downside
+    console.log('📊 Using Monte Carlo volatility for Year 1 (no scenario data)');
+  }
 
-  // Volatility from asset class weights (same for all years)
+  // Volatility from asset class weights (for Monte Carlo probability calculation)
   const stockWeight = input.portfolio.stocks / 100;
   const bondWeight = input.portfolio.bonds / 100;
   const cashWeight = input.portfolio.cash / 100;
@@ -207,58 +496,160 @@ export function calculateGoalProbability(input: GoalProbabilityInput): GoalProba
     cashWeight * 0.01 +       // Cash: 1% volatility
     (1 - stockWeight - bondWeight - cashWeight) * 0.12; // Other: 12% volatility
 
-  // Run Monte Carlo with Year 1 vs Years 2+ distinction
-  const simulationResult = runGoalMonteCarloSimulation(
-    input.currentAmount,
-    input.goalAmount,
-    input.timeHorizon,
-    input.monthlyContribution,
-    year1Return,              // Year 1: user's holdings or asset class
-    longTermReturn,           // Years 2+: asset class average
-    estimatedVolatility
-  );
+  // Calculate projected values and probabilities
+  let bullValue, expectedValue, bearValue;
+  let bullProbability, expectedProbability, bearProbability;
+  
+  if (useScenarioProjections) {
+    // Use Bull/Base/Bear scenarios for Year 1, long-term for Years 2+
+    bullValue = calculateMultiYearValue(
+      input.currentAmount,
+      year1Bull!,
+      longTermReturn,
+      input.monthlyContribution,
+      input.timeHorizon
+    );
+    
+    expectedValue = calculateMultiYearValue(
+      input.currentAmount,
+      year1Expected,
+      longTermReturn,
+      input.monthlyContribution,
+      input.timeHorizon
+    );
+    
+    bearValue = calculateMultiYearValue(
+      input.currentAmount,
+      year1Bear!,
+      longTermReturn,
+      input.monthlyContribution,
+      input.timeHorizon
+    );
+    
+    console.log('📊 Scenario-based projections:', {
+      bull: bullValue.toFixed(0),
+      expected: expectedValue.toFixed(0),
+      bear: bearValue.toFixed(0)
+    });
+    
+    // Run separate Monte Carlo for each scenario to get accurate probabilities
+    const bullMC = runGoalMonteCarloSimulation(
+      input.currentAmount,
+      input.goalAmount,
+      input.timeHorizon,
+      input.monthlyContribution,
+      year1Bull!,
+      longTermReturn,
+      estimatedVolatility
+    );
+    
+    const expectedMC = runGoalMonteCarloSimulation(
+      input.currentAmount,
+      input.goalAmount,
+      input.timeHorizon,
+      input.monthlyContribution,
+      year1Expected,
+      longTermReturn,
+      estimatedVolatility
+    );
+    
+    const bearMC = runGoalMonteCarloSimulation(
+      input.currentAmount,
+      input.goalAmount,
+      input.timeHorizon,
+      input.monthlyContribution,
+      year1Bear!,
+      longTermReturn,
+      estimatedVolatility
+    );
+    
+    bullProbability = bullMC.probabilityOfSuccess;
+    expectedProbability = expectedMC.probabilityOfSuccess;
+    bearProbability = bearMC.probabilityOfSuccess;
+    
+    console.log('📊 Scenario probabilities:', {
+      bull: (bullProbability * 100).toFixed(1) + '%',
+      expected: (expectedProbability * 100).toFixed(1) + '%',
+      bear: (bearProbability * 100).toFixed(1) + '%'
+    });
+    
+  } else {
+    // Use Monte Carlo simulation for all projections
+    const simulationResult = runGoalMonteCarloSimulation(
+      input.currentAmount,
+      input.goalAmount,
+      input.timeHorizon,
+      input.monthlyContribution,
+      year1Expected,
+      longTermReturn,
+      estimatedVolatility
+    );
+    
+    bullValue = simulationResult.upside;
+    expectedValue = simulationResult.median;
+    bearValue = simulationResult.downside;
+    
+    bullProbability = simulationResult.probabilityAtPercentiles.p95;
+    expectedProbability = simulationResult.probabilityOfSuccess;
+    bearProbability = simulationResult.probabilityAtPercentiles.p5;
+  }
 
-  // Use actual probability from simulation (% of simulations that reached goal)
-  // The median probability is the main figure - downside/upside show projected values context
   const probabilityOfSuccess = {
-    // Main probability: actual % of simulations that reached goal
-    median: simulationResult.probabilityOfSuccess,
-    // For context: if you hit downside scenario, what % of goal would you reach?
-    downside: Math.min(1.0, simulationResult.downside / input.goalAmount),
-    // For context: if you hit upside scenario, what % of goal would you reach?
-    upside: Math.min(1.0, simulationResult.upside / input.goalAmount)
+    median: expectedProbability,
+    downside: bearProbability,
+    upside: bullProbability
   };
   
   console.log(`🎯 Goal Probability Calculation:`, {
     currentAmount: input.currentAmount,
     goalAmount: input.goalAmount,
     timeHorizon: input.timeHorizon,
-    year1Return: (year1Return * 100).toFixed(1) + '%',
+    year1Expected: (year1Expected * 100).toFixed(1) + '%',
     longTermReturn: (longTermReturn * 100).toFixed(1) + '%',
     volatility: (estimatedVolatility * 100).toFixed(1) + '%',
-    actualProbability: (simulationResult.probabilityOfSuccess * 100).toFixed(1) + '%',
-    projectedMedian: simulationResult.median,
-    projectedDownside: simulationResult.downside,
-    projectedUpside: simulationResult.upside
+    expectedProbability: (expectedProbability * 100).toFixed(1) + '%',
+    bullProbability: (bullProbability * 100).toFixed(1) + '%',
+    bearProbability: (bearProbability * 100).toFixed(1) + '%',
+    projectedMedian: expectedValue.toFixed(0),
+    projectedBear: bearValue.toFixed(0),
+    projectedBull: bullValue.toFixed(0)
   });
 
   // Calculate shortfall (difference from goal)
   const shortfall = {
-    downside: simulationResult.downside - input.goalAmount,
-    median: simulationResult.median - input.goalAmount,
-    upside: simulationResult.upside - input.goalAmount
+    downside: bearValue - input.goalAmount,
+    median: expectedValue - input.goalAmount,
+    upside: bullValue - input.goalAmount
   };
 
   return {
     probabilityOfSuccess,
     projectedValues: {
-      median: simulationResult.median,
-      downside: simulationResult.downside,
-      upside: simulationResult.upside
+      median: expectedValue,
+      downside: bearValue,
+      upside: bullValue
     },
     shortfall,
-    expectedReturn: longTermReturn  // Long-term asset class average
+    expectedReturn: longTermReturn
   };
+}
+
+/**
+ * Calculate probability of reaching goal
+ * 
+ * For 12-month goals: Uses Bull/Base/Bear scenarios from CSV database
+ * For multi-year goals: Uses Monte Carlo with Year 1 holdings + Years 2+ asset class averages
+ */
+export function calculateGoalProbability(input: GoalProbabilityInput): GoalProbabilityResult {
+  // Check if this is a 12-month goal with scenario data
+  if (input.timeHorizon === 1 && input.scenarioReturns && input.holdings) {
+    console.log('🎯 Using 12-month CSV scenarios for goal calculation');
+    return calculate12MonthScenarios(input);
+  }
+  
+  // Otherwise use Monte Carlo simulation
+  console.log('🎯 Using Monte Carlo simulation for goal calculation');
+  return calculateGoalProbabilityWithMonteCarlo(input);
 }
 
 /**
@@ -266,12 +657,22 @@ export function calculateGoalProbability(input: GoalProbabilityInput): GoalProba
  */
 export function createGoalProbabilityInput(
   intakeData: IntakeFormData,
-  year1Return?: number  // Optional: Pass calculated Year 1 return from holdings
+  year1Return?: number,  // Optional: Pass calculated Year 1 return from holdings
+  scenarioReturns?: Map<string, {bull: number, expected: number, bear: number}>,  // Optional: CSV scenarios
+  holdings?: Array<{ticker: string, percentage: number}>,  // Optional: Holdings for weighting
+  monteCarloResults?: Map<string, MonteCarloResult>,  // Optional: Monte Carlo results for individual stocks
+  factsetReturns?: Map<string, number>  // Optional: FactSet Year 1 returns for individual stocks
 ): GoalProbabilityInput | null {
   // Validate required fields
   if (!intakeData.goalAmount || !intakeData.timeHorizon) {
     return null;
   }
+
+  // Transform holdings to have weight property
+  const transformedHoldings = holdings?.map(h => ({
+    ticker: h.ticker,
+    weight: h.percentage
+  }));
 
   return {
     currentAmount: intakeData.portfolio.totalValue || 0,
@@ -286,7 +687,11 @@ export function createGoalProbabilityInput(
       commodities: intakeData.portfolio.commodities,
       alternatives: intakeData.portfolio.alternatives
     },
-    year1Return  // Pass through to ensure Goal uses same Year 1 as Portfolio
+    year1Return,  // Pass through to ensure Goal uses same Year 1 as Portfolio
+    scenarioReturns,  // Pass CSV scenario data
+    holdings: transformedHoldings,  // Pass holdings for weighted calculation
+    monteCarloResults,  // Pass Monte Carlo results for fallback
+    factsetReturns  // Pass FactSet returns for individual stocks
   };
 }
 

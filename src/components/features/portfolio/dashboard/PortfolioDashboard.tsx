@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import IntakeTab from './IntakeTab';
 import ReviewTab from './ReviewTab';
-import CumulativePerformanceTable from './CumulativePerformanceTable';
 import UnifiedVideoPlayer, { type VideoConfig } from './UnifiedVideoPlayer';
 import { getVideoPath } from '@/hooks/useAvatarVariant';
 
@@ -576,11 +575,6 @@ export default function PortfolioDashboard() {
                             <p className="text-xs text-blue-400">Clockwise portfolio solutions available</p>
                           </div>
                         </div>
-                      </div>
-
-                      {/* 3-Year Cumulative Performance - Clockwise Model Portfolios */}
-                      <div className="mt-6">
-                        <CumulativePerformanceTable />
                       </div>
                     </div>
                   </div>
