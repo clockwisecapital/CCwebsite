@@ -20,6 +20,17 @@ export const LONG_TERM_AVERAGES = {
   alternatives: 0.05 // 5% real (blend of alternatives)
 } as const;
 
+// Nominal (not inflation-adjusted) returns for Years 2+ fallback
+// Historical averages: stocks ~10%, bonds ~5%, etc.
+export const LONG_TERM_NOMINAL = {
+  stocks: 0.10,      // 10% nominal (vs 7% real)
+  bonds: 0.05,       // 5% nominal (vs 2% real)
+  realEstate: 0.08,  // 8% nominal (vs 5% real)
+  commodities: 0.04, // 4% nominal (vs 1% real)
+  cash: 0.03,        // 3% nominal (vs 0% real)
+  alternatives: 0.08 // 8% nominal (vs 5% real)
+} as const;
+
 interface GoalProbabilityInput {
   currentAmount: number;           // Current portfolio value
   goalAmount: number;              // Target goal amount
@@ -79,12 +90,12 @@ export function calculateExpectedReturn(portfolio: GoalProbabilityInput['portfol
   const normalize = (value: number) => (value / totalAllocation) * 100;
 
   const weightedReturn = 
-    (normalize(portfolio.stocks) / 100) * LONG_TERM_AVERAGES.stocks +
-    (normalize(portfolio.bonds) / 100) * LONG_TERM_AVERAGES.bonds +
-    (normalize(portfolio.cash) / 100) * LONG_TERM_AVERAGES.cash +
-    (normalize(portfolio.realEstate) / 100) * LONG_TERM_AVERAGES.realEstate +
-    (normalize(portfolio.commodities) / 100) * LONG_TERM_AVERAGES.commodities +
-    (normalize(portfolio.alternatives) / 100) * LONG_TERM_AVERAGES.alternatives;
+    (normalize(portfolio.stocks) / 100) * LONG_TERM_NOMINAL.stocks +
+    (normalize(portfolio.bonds) / 100) * LONG_TERM_NOMINAL.bonds +
+    (normalize(portfolio.cash) / 100) * LONG_TERM_NOMINAL.cash +
+    (normalize(portfolio.realEstate) / 100) * LONG_TERM_NOMINAL.realEstate +
+    (normalize(portfolio.commodities) / 100) * LONG_TERM_NOMINAL.commodities +
+    (normalize(portfolio.alternatives) / 100) * LONG_TERM_NOMINAL.alternatives;
 
   return weightedReturn;
 }
@@ -317,7 +328,7 @@ function calculateWeightedScenarioReturns(
         console.log(`  ${holding.ticker}: Using FactSet with spread (${(bullSpread * 100).toFixed(1)}%, ${(factsetReturn * 100).toFixed(1)}%, ${(bearSpread * 100).toFixed(1)}%)`);
       } else {
         // Fallback to long-term average for stocks
-        const fallbackReturn = LONG_TERM_AVERAGES.stocks;
+        const fallbackReturn = LONG_TERM_NOMINAL.stocks;
         bullReturn += weight * fallbackReturn * 1.4;
         expectedReturn += weight * fallbackReturn;
         bearReturn += weight * fallbackReturn * 0.6;
@@ -359,82 +370,33 @@ function calculate12MonthScenarios(
     bear: (weightedReturns.bear * 100).toFixed(1) + '%'
   });
   
-  // Calculate future values with monthly contributions for each scenario
-  const bullValue = calculateFutureValueWithContributions(
-    input.currentAmount,
-    weightedReturns.bull,
-    input.monthlyContribution,
-    1 // 12 months
-  );
+  // Calculate future values for 1-year goals using SIMPLE annual return (no monthly compounding)
+  // If there are monthly contributions, we'll apply them simply
+  const totalContributions = input.monthlyContribution * 12;
   
-  const expectedValue = calculateFutureValueWithContributions(
-    input.currentAmount,
-    weightedReturns.expected,
-    input.monthlyContribution,
-    1 // 12 months
-  );
+  const bullValue = (input.currentAmount + totalContributions) * (1 + weightedReturns.bull);
+  const expectedValue = (input.currentAmount + totalContributions) * (1 + weightedReturns.expected);
+  const bearValue = (input.currentAmount + totalContributions) * (1 + weightedReturns.bear);
   
-  const bearValue = calculateFutureValueWithContributions(
-    input.currentAmount,
-    weightedReturns.bear,
-    input.monthlyContribution,
-    1 // 12 months
-  );
-  
-  // Run separate Monte Carlo for each scenario to get accurate probabilities
-  const longTermReturn = calculateExpectedReturn(input.portfolio);
-  const stockWeight = input.portfolio.stocks / 100;
-  const bondWeight = input.portfolio.bonds / 100;
-  const cashWeight = input.portfolio.cash / 100;
-  const estimatedVolatility = 
-    stockWeight * 0.18 +
-    bondWeight * 0.06 +
-    cashWeight * 0.01 +
-    (1 - stockWeight - bondWeight - cashWeight) * 0.12;
-  
-  const bullMC = runGoalMonteCarloSimulation(
-    input.currentAmount,
-    input.goalAmount,
-    1, // 12 months
-    input.monthlyContribution,
-    weightedReturns.bull,
-    longTermReturn,
-    estimatedVolatility
-  );
-  
-  const expectedMC = runGoalMonteCarloSimulation(
-    input.currentAmount,
-    input.goalAmount,
-    1, // 12 months
-    input.monthlyContribution,
-    weightedReturns.expected,
-    longTermReturn,
-    estimatedVolatility
-  );
-  
-  const bearMC = runGoalMonteCarloSimulation(
-    input.currentAmount,
-    input.goalAmount,
-    1, // 12 months
-    input.monthlyContribution,
-    weightedReturns.bear,
-    longTermReturn,
-    estimatedVolatility
-  );
+  // For 1-year goals: ALL scenarios are deterministic (no Monte Carlo)
+  // If projected value >= goal, probability = 1.0, otherwise 0.0
+  const bullProbability = bullValue >= input.goalAmount ? 1.0 : 0.0;
+  const expectedProbability = expectedValue >= input.goalAmount ? 1.0 : 0.0;
+  const bearProbability = bearValue >= input.goalAmount ? 1.0 : 0.0;
   
   const probabilityOfSuccess = {
-    median: expectedMC.probabilityOfSuccess,
-    downside: bearMC.probabilityOfSuccess,
-    upside: bullMC.probabilityOfSuccess
+    median: expectedProbability,
+    downside: bearProbability,
+    upside: bullProbability
   };
   
   console.log('📊 12-month scenario results:', {
     bullValue: bullValue.toFixed(0),
     expectedValue: expectedValue.toFixed(0),
     bearValue: bearValue.toFixed(0),
-    bullProbability: (bullMC.probabilityOfSuccess * 100).toFixed(1) + '%',
-    expectedProbability: (expectedMC.probabilityOfSuccess * 100).toFixed(1) + '%',
-    bearProbability: (bearMC.probabilityOfSuccess * 100).toFixed(1) + '%'
+    bullProbability: (bullProbability * 100).toFixed(1) + '%',
+    expectedProbability: (expectedProbability * 100).toFixed(1) + '%',
+    bearProbability: (bearProbability * 100).toFixed(1) + '%'
   });
   
   return {
@@ -630,7 +592,7 @@ function calculateGoalProbabilityWithMonteCarlo(input: GoalProbabilityInput): Go
       upside: bullValue
     },
     shortfall,
-    expectedReturn: longTermReturn
+    expectedReturn: year1Expected
   };
 }
 

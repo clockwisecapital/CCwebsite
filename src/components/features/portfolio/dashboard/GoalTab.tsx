@@ -119,35 +119,35 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }:
         <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-6">
           <div className="text-center mb-6">
             <div className="text-sm text-gray-300 mb-2">Expected Probability (Median)</div>
-            <div className={`text-6xl font-bold text-${medianColor}-600 mb-2`}>
+            <div className={`text-4xl sm:text-5xl md:text-6xl font-bold text-${medianColor}-600 mb-2`}>
               {formatPercent(goalAnalysis.probabilityOfSuccess.median)}
             </div>
-            <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold bg-${medianColor}-100 text-${medianColor}-800`}>
+            <div className={`inline-flex items-center px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold bg-${medianColor}-100 text-${medianColor}-800`}>
               {getStatusText(goalAnalysis.probabilityOfSuccess.median)} Probability
             </div>
           </div>
 
           {/* Probability Range */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 text-center">
-              <div className="text-xs text-gray-300 mb-2 h-8 flex items-center justify-center">Bull Scenario</div>
-              <div className="text-3xl font-bold text-emerald-600">
+            <div className="bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-700 text-center">
+              <div className="text-xs text-gray-300 mb-2 h-auto sm:h-8 flex items-center justify-center">Bull Scenario</div>
+              <div className="text-2xl sm:text-3xl font-bold text-emerald-600">
                 {formatPercent(goalAnalysis.probabilityOfSuccess.upside)}
               </div>
               <div className="text-xs text-gray-400 mt-1">95th percentile</div>
             </div>
 
-            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 text-center">
-              <div className="text-xs text-gray-300 mb-2 h-8 flex items-center justify-center">Inflation Adjusted Expected Scenario</div>
-              <div className={`text-3xl font-bold text-${medianColor}-600`}>
+            <div className="bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-700 text-center">
+              <div className="text-xs text-gray-300 mb-2 h-auto sm:h-8 flex items-center justify-center">Expected Scenario</div>
+              <div className={`text-2xl sm:text-3xl font-bold text-${medianColor}-600`}>
                 {formatPercent(goalAnalysis.probabilityOfSuccess.median)}
               </div>
               <div className="text-xs text-gray-400 mt-1">50th percentile</div>
             </div>
 
-            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 text-center">
-              <div className="text-xs text-gray-300 mb-2 h-8 flex items-center justify-center">Bear Scenario</div>
-              <div className="text-3xl font-bold text-rose-600">
+            <div className="bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-700 text-center">
+              <div className="text-xs text-gray-300 mb-2 h-auto sm:h-8 flex items-center justify-center">Bear Scenario</div>
+              <div className="text-2xl sm:text-3xl font-bold text-rose-600">
                 {formatPercent(goalAnalysis.probabilityOfSuccess.downside)}
               </div>
               <div className="text-xs text-gray-400 mt-1">5th percentile</div>
@@ -177,15 +177,15 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }:
 
         {/* SLIDE 2: Projected Portfolio Values */}
         <CarouselSlide isActive={currentSlide === 1} direction={getSlideDirection(1)}>
-          <h2 className="text-xl md:text-2xl font-bold text-gray-100 mb-4">Projected Portfolio Values</h2>
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-100 mb-4">Projected Portfolio Values</h2>
           <p className="text-sm text-gray-400 mb-6">
             Estimated portfolio value in {goalAnalysis.timeHorizon} {goalAnalysis.timeHorizon === 1 ? 'year' : 'years'}
           </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-emerald-900/20 border border-emerald-800 rounded-lg p-4">
-            <div className="text-sm text-emerald-700 mb-2 h-10 flex items-start">Bull Scenario</div>
-            <div className="text-2xl font-bold text-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-6">
+          <div className="bg-emerald-900/20 border border-emerald-800 rounded-lg p-3 sm:p-4">
+            <div className="text-sm text-emerald-700 mb-2 h-auto sm:h-10 flex items-start">Bull Scenario</div>
+            <div className="text-xl sm:text-2xl font-bold text-gray-100">
               {formatCurrency(goalAnalysis.projectedValues.upside)}
             </div>
             <div className="text-xs text-gray-400 mt-2">
@@ -201,9 +201,9 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }:
             </div>
           </div>
 
-          <div className={`bg-${medianColor}-50 border border-${medianColor}-200 rounded-lg p-4`}>
-            <div className={`text-sm text-${medianColor}-800 mb-2 font-semibold h-10 flex items-start`}>Inflation Adjusted Expected Scenario</div>
-            <div className="text-2xl font-bold text-gray-900">
+          <div className={`bg-${medianColor}-50 border border-${medianColor}-200 rounded-lg p-3 sm:p-4`}>
+            <div className={`text-sm text-${medianColor}-800 mb-2 font-semibold h-auto sm:h-10 flex items-start`}>Expected Scenario</div>
+            <div className="text-xl sm:text-2xl font-bold text-gray-900">
               {formatCurrency(goalAnalysis.projectedValues.median)}
             </div>
             <div className="text-xs mt-2">
@@ -219,9 +219,9 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }:
             </div>
           </div>
 
-          <div className="bg-rose-900/20 border border-rose-800 rounded-lg p-4">
-            <div className="text-sm text-rose-700 mb-2 h-10 flex items-start">Bear Scenario</div>
-            <div className="text-2xl font-bold text-gray-100">
+          <div className="bg-rose-900/20 border border-rose-800 rounded-lg p-3 sm:p-4">
+            <div className="text-sm text-rose-700 mb-2 h-auto sm:h-10 flex items-start">Bear Scenario</div>
+            <div className="text-xl sm:text-2xl font-bold text-gray-100">
               {formatCurrency(goalAnalysis.projectedValues.downside)}
             </div>
             <div className="text-xs text-gray-400 mt-2">

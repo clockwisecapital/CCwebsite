@@ -9,11 +9,12 @@
  */
 
 import { isShortETF, getShortInfo } from '@/lib/constants/clockwise-targets';
-import { LONG_TERM_AVERAGES } from './goal-probability';
+import { LONG_TERM_NOMINAL } from './goal-probability';
 
-export type AssetClass = keyof typeof LONG_TERM_AVERAGES;
+export type AssetClass = keyof typeof LONG_TERM_NOMINAL;
 
 export type Year1ReturnSource = 
+  | 'index_vals_expected' // INDEX VALS CSV expected scenario
   | 'factset'           // FactSet analyst target price
   | 'clockwise'         // Clockwise internal index/sector target
   | 'short_formula'     // Calculated from underlying index
@@ -41,11 +42,23 @@ export async function calculateYear1Return(
   factsetTargetPrice: number | null,
   indexTargets: Map<string, number>,
   currentPrices: Map<string, number>,
-  assetClass: AssetClass = 'stocks'
+  assetClass: AssetClass = 'stocks',
+  indexScenarioReturns?: Map<string, {bull: number, expected: number, bear: number}>
 ): Promise<Year1ReturnResult> {
   const upperTicker = ticker.toUpperCase();
 
-  // 1. Check if it's a short/inverse ETF
+  // 1. Check INDEX VALS scenarios first (for ETFs)
+  if (indexScenarioReturns && indexScenarioReturns.has(upperTicker)) {
+    const scenarios = indexScenarioReturns.get(upperTicker)!;
+    console.log(`📊 ${upperTicker} using INDEX VALS expected scenario: ${(scenarios.expected * 100).toFixed(1)}%`);
+    return {
+      return: scenarios.expected,
+      source: 'index_vals_expected',
+      details: `INDEX VALS expected scenario for ${upperTicker} (${(scenarios.expected * 100).toFixed(1)}%)`
+    };
+  }
+
+  // 2. Check if it's a short/inverse ETF
   if (isShortETF(upperTicker)) {
     const shortInfo = getShortInfo(upperTicker)!;
     const { underlying, leverage } = shortInfo;
@@ -55,7 +68,7 @@ export async function calculateYear1Return(
     if (!indexTarget) {
       console.warn(`⚠️ No Clockwise target for underlying ${underlying} of short ${upperTicker}`);
       return {
-        return: LONG_TERM_AVERAGES[assetClass],
+        return: LONG_TERM_NOMINAL[assetClass],
         source: 'asset_class_fallback',
         details: `Unknown underlying ${underlying} for short ${upperTicker}`
       };
@@ -66,7 +79,7 @@ export async function calculateYear1Return(
     if (!indexCurrentPrice) {
       console.warn(`⚠️ No current price for underlying ${underlying} of short ${upperTicker}`);
       return {
-        return: LONG_TERM_AVERAGES[assetClass],
+        return: LONG_TERM_NOMINAL[assetClass],
         source: 'asset_class_fallback',
         details: `Could not get price for ${underlying}`
       };
@@ -92,7 +105,7 @@ export async function calculateYear1Return(
     };
   }
 
-  // 2. Check if it's an index/sector ETF with Clockwise target
+  // 3. Check if it's an index/sector ETF with Clockwise target
   const clockwiseTarget = indexTargets.get(upperTicker);
   if (clockwiseTarget) {
     const returnVal = (clockwiseTarget / currentPrice) - 1;
@@ -110,7 +123,7 @@ export async function calculateYear1Return(
     };
   }
 
-  // 3. Individual stock - use FactSet target
+  // 4. Individual stock - use FactSet target
   if (factsetTargetPrice && factsetTargetPrice > 0 && currentPrice > 0) {
     const returnVal = (factsetTargetPrice / currentPrice) - 1;
     
@@ -127,12 +140,12 @@ export async function calculateYear1Return(
     };
   }
 
-  // 4. Fallback - use asset class average
+  // 5. Fallback - use asset class average
   console.warn(`⚠️ ${upperTicker} using fallback asset class average (${assetClass})`);
   return {
-    return: LONG_TERM_AVERAGES[assetClass],
+    return: LONG_TERM_NOMINAL[assetClass],
     source: 'asset_class_fallback',
-    details: `No target available, using ${assetClass} average (${(LONG_TERM_AVERAGES[assetClass] * 100).toFixed(1)}%)`
+    details: `No target available, using ${assetClass} average (${(LONG_TERM_NOMINAL[assetClass] * 100).toFixed(1)}%)`
   };
 }
 

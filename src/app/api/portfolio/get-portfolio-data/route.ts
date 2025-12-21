@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTgtPrices, getHoldingWeights, getIndexSectorTargets } from '@/lib/supabase/database';
+import { getTgtPrices, getHoldingWeights, getIndexSectorTargets, getIndexScenarioReturns } from '@/lib/supabase/database';
 import { fetchBatchCurrentPrices, runBatchMonteCarloSimulations, runPortfolioMonteCarloSimulation } from '@/lib/services/monte-carlo';
 import type { AssetClass } from '@/lib/services/monte-carlo';
 import { createProxyPortfolio, getProxyMessage, REPRESENTATIVE_ETFS } from '@/lib/services/proxy-portfolio';
-import { LONG_TERM_AVERAGES } from '@/lib/services/goal-probability';
+import { LONG_TERM_AVERAGES, LONG_TERM_NOMINAL } from '@/lib/services/goal-probability';
 import { calculateYear1Return, getRequiredUnderlyingTickers } from '@/lib/services/year1-return';
 import { getCachedTimePortfolio, setCachedTimePortfolio } from '@/lib/services/time-portfolio-cache';
 import type { PortfolioComparison, PositionAnalysis } from '@/types/portfolio';
@@ -123,12 +123,12 @@ function calculateLongTermReturn(allocation: PortfolioAllocation): number {
   const normalize = (value: number) => value / total;
   
   return (
-    normalize(allocation.stocks) * LONG_TERM_AVERAGES.stocks +
-    normalize(allocation.bonds) * LONG_TERM_AVERAGES.bonds +
-    normalize(allocation.cash) * LONG_TERM_AVERAGES.cash +
-    normalize(allocation.realEstate) * LONG_TERM_AVERAGES.realEstate +
-    normalize(allocation.commodities) * LONG_TERM_AVERAGES.commodities +
-    normalize(allocation.alternatives) * LONG_TERM_AVERAGES.alternatives
+    normalize(allocation.stocks) * LONG_TERM_NOMINAL.stocks +
+    normalize(allocation.bonds) * LONG_TERM_NOMINAL.bonds +
+    normalize(allocation.cash) * LONG_TERM_NOMINAL.cash +
+    normalize(allocation.realEstate) * LONG_TERM_NOMINAL.realEstate +
+    normalize(allocation.commodities) * LONG_TERM_NOMINAL.commodities +
+    normalize(allocation.alternatives) * LONG_TERM_NOMINAL.alternatives
   );
 }
 
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
       longTermReturn = calculateLongTermReturn(portfolioAllocation);
     } else {
       // Default to stocks if no allocation and no holdings
-      longTermReturn = LONG_TERM_AVERAGES.stocks;
+      longTermReturn = LONG_TERM_NOMINAL.stocks;
     }
     
     console.log(`📊 Time horizon: ${timeHorizon} years, Long-term return: ${(longTermReturn * 100).toFixed(1)}%`);
@@ -261,6 +261,11 @@ export async function POST(request: NextRequest) {
     const indexTargets = await getIndexSectorTargets();
     console.log(`✅ Loaded ${indexTargets.size} Clockwise index targets`);
 
+    // 2b. Fetch INDEX VALS scenario returns (for ETFs)
+    console.log('Fetching INDEX VALS scenario returns...');
+    const indexScenarioReturns = await getIndexScenarioReturns();
+    console.log(`✅ Loaded ${indexScenarioReturns.size} INDEX VALS ETF scenarios`);
+
     // 3. Fetch current prices for tickers we need to process
     console.log('Fetching current prices...');
     const currentPrices = await fetchBatchCurrentPrices(tickersWithUnderlyings);
@@ -292,7 +297,8 @@ export async function POST(request: NextRequest) {
         factsetTarget,
         indexTargets,
         currentPrices,
-        'stocks' // Default asset class
+        'stocks', // Default asset class
+        indexScenarioReturns // INDEX VALS expected scenarios for ETFs
       );
       
       year1Returns.set(ticker, result.return);
@@ -336,7 +342,7 @@ export async function POST(request: NextRequest) {
       
       // Calculate blended expected return over timeframe (Year 1 + Years 2+ long-term)
       const tickerAssetClass = getAssetClassForTicker(holding.ticker);
-      const tickerLongTermReturn = LONG_TERM_AVERAGES[tickerAssetClass] || LONG_TERM_AVERAGES.stocks;
+      const tickerLongTermReturn = LONG_TERM_NOMINAL[tickerAssetClass] || LONG_TERM_NOMINAL.stocks;
       const expectedReturn = year1Return !== null 
         ? calculateBlendedReturn(year1Return, tickerLongTermReturn, timeHorizon)
         : null;
@@ -421,6 +427,10 @@ export async function POST(request: NextRequest) {
       upside: (userPortfolioMC.upside * 100).toFixed(1) + '%',
       downside: (userPortfolioMC.downside * 100).toFixed(1) + '%'
     });
+    
+    // For multi-year portfolios (2+), use Monte Carlo median instead of deterministic expected return
+    const userFinalExpectedReturn = timeHorizon >= 2 ? userPortfolioMC.median : userExpectedReturn;
+    console.log(`📊 User Portfolio Final Expected Return (${timeHorizon}yr): ${(userFinalExpectedReturn * 100).toFixed(1)}%${timeHorizon >= 2 ? ' (MC median)' : ' (deterministic)'}`);
 
     // 8. Build TIME Portfolio Analysis (use cache if available)
     let timePositions: PositionAnalysis[];
@@ -464,7 +474,7 @@ export async function POST(request: NextRequest) {
             const currentPrice = currentPrices.get(ticker) || 0;
             const factsetTarget = targetPrices.get(ticker) || null;
             const result = await calculateYear1Return(
-              ticker, currentPrice, factsetTarget, indexTargets, currentPrices, 'stocks'
+              ticker, currentPrice, factsetTarget, indexTargets, currentPrices, 'stocks', indexScenarioReturns
             );
             year1Returns.set(ticker, result.return);
           }
@@ -495,7 +505,7 @@ export async function POST(request: NextRequest) {
           
           // Calculate blended expected return over timeframe (Year 1 + Years 2+ long-term)
           const tickerAssetClass = getAssetClassForTicker(holding.stockTicker);
-          const tickerLongTermReturn = LONG_TERM_AVERAGES[tickerAssetClass] || LONG_TERM_AVERAGES.stocks;
+          const tickerLongTermReturn = LONG_TERM_NOMINAL[tickerAssetClass] || LONG_TERM_NOMINAL.stocks;
           const expectedReturn = year1Return !== null 
             ? calculateBlendedReturn(year1Return, tickerLongTermReturn, timeHorizon)
             : null;
@@ -525,7 +535,7 @@ export async function POST(request: NextRequest) {
       }
       timeYear1Return = totalTimeYear1Weight > 0 ? timeYear1Return / totalTimeYear1Weight : 0;
       
-      const timeLongTermReturn = LONG_TERM_AVERAGES.stocks;
+      const timeLongTermReturn = LONG_TERM_NOMINAL.stocks;
       timeExpectedReturn = calculateBlendedReturn(timeYear1Return, timeLongTermReturn, timeHorizon);
       
       console.log(`📊 TIME Portfolio - Year 1: ${(timeYear1Return * 100).toFixed(1)}%, Blended (${timeHorizon}yr): ${(timeExpectedReturn * 100).toFixed(1)}%`);
@@ -566,6 +576,7 @@ export async function POST(request: NextRequest) {
       });
       
       // Cache the TIME portfolio for future requests (Supabase)
+      // We'll cache the raw values and apply the conditional logic after
       await setCachedTimePortfolio({
         positions: timePositions,
         topPositions: timeTopPositions,
@@ -574,6 +585,11 @@ export async function POST(request: NextRequest) {
         portfolioMonteCarlo: timePortfolioMC
       });
     }
+    
+    // For multi-year portfolios (2+), use Monte Carlo median instead of deterministic expected return
+    // Apply this logic whether using cache or fresh calculation
+    const timeFinalExpectedReturn = timeHorizon >= 2 ? timePortfolioMC.median : timeExpectedReturn;
+    console.log(`📊 TIME Portfolio Final Expected Return (${timeHorizon}yr): ${(timeFinalExpectedReturn * 100).toFixed(1)}%${timeHorizon >= 2 ? ' (MC median)' : ' (deterministic)'}`);
 
     // Calculate TIME portfolio value (same as user's for comparison)
     const timePortfolioValue = portfolioValue;
@@ -582,7 +598,7 @@ export async function POST(request: NextRequest) {
     const comparison: PortfolioComparison = {
       userPortfolio: {
         totalValue: portfolioValue,
-        expectedReturn: userExpectedReturn,
+        expectedReturn: userFinalExpectedReturn,
         upside: userPortfolioMC.upside,     // Portfolio-level (diversified)
         downside: userPortfolioMC.downside, // Portfolio-level (diversified)
         positions: userPositions,
@@ -592,7 +608,7 @@ export async function POST(request: NextRequest) {
       },
       timePortfolio: {
         totalValue: timePortfolioValue,
-        expectedReturn: timeExpectedReturn,
+        expectedReturn: timeFinalExpectedReturn,
         upside: timePortfolioMC.upside,     // Portfolio-level (diversified)
         downside: timePortfolioMC.downside, // Portfolio-level (diversified)
         positions: timePositions,

@@ -21,15 +21,15 @@ const SIMULATIONS = 5000;  // Reduced from 10K - still statistically valid, 2x f
 const TRADING_DAYS_PER_YEAR = 252;
 const CONCURRENCY_LIMIT = 5; // Max concurrent Yahoo Finance requests to avoid rate limiting
 
-// Long-term asset class averages (REAL returns - inflation-adjusted)
+// Long-term asset class averages (NOMINAL returns - not inflation-adjusted)
 // Based on 100+ years of historical data (Ibbotson/Morningstar)
 const ASSET_CLASS_RETURNS = {
-  stocks: 0.07,       // 7% real (vs 10% nominal)
-  bonds: 0.02,        // 2% real (vs 5% nominal)
-  realEstate: 0.05,   // 5% real
-  commodities: 0.01,  // 1% real
-  cash: 0.00,         // 0% real (matches inflation)
-  alternatives: 0.05  // 5% real (blend of alternatives)
+  stocks: 0.10,       // 10% nominal (vs 7% real)
+  bonds: 0.05,        // 5% nominal (vs 2% real)
+  realEstate: 0.08,   // 8% nominal (vs 5% real)
+  commodities: 0.04,  // 4% nominal (vs 1% real)
+  cash: 0.03,         // 3% nominal (vs 0% real)
+  alternatives: 0.08  // 8% nominal (vs 5% real)
 } as const;
 
 // Typical annual volatilities for each asset class
