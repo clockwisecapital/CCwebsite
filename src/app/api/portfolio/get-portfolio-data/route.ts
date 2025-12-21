@@ -421,26 +421,27 @@ export async function POST(request: NextRequest) {
     
     const userPortfolioMC = userPortfolioMCPositions.length > 0
       ? runPortfolioMonteCarloSimulation(userPortfolioMCPositions, timeHorizon)
-      : { upside: 0, downside: 0, median: 0, simulations: 0 };
+      : { upside: 0, downside: 0, median: 0, volatility: 0, simulations: 0 };
     
     console.log(`📊 User Portfolio-Level Monte Carlo:`, {
       upside: (userPortfolioMC.upside * 100).toFixed(1) + '%',
-      downside: (userPortfolioMC.downside * 100).toFixed(1) + '%'
+      downside: (userPortfolioMC.downside * 100).toFixed(1) + '%',
+      volatility: (userPortfolioMC.volatility * 100).toFixed(1) + '%'
     });
     
     // For multi-year portfolios (2+), use Monte Carlo median instead of deterministic expected return
-    // IMPORTANT: Monte Carlo median is cumulative, so annualize it for display
+    // Use cumulative median directly (not annualized)
     const userFinalExpectedReturn = timeHorizon >= 2 
-      ? annualizeReturn(userPortfolioMC.median, timeHorizon)
+      ? userPortfolioMC.median
       : userExpectedReturn;
-    console.log(`📊 User Portfolio Final Expected Return (${timeHorizon}yr): ${(userFinalExpectedReturn * 100).toFixed(1)}%${timeHorizon >= 2 ? ' (MC median, annualized)' : ' (deterministic)'}`);
+    console.log(`📊 User Portfolio Final Expected Return (${timeHorizon}yr): ${(userFinalExpectedReturn * 100).toFixed(1)}%${timeHorizon >= 2 ? ' (MC median, cumulative)' : ' (deterministic)'}`);
 
     // 8. Build TIME Portfolio Analysis (use cache if available)
     let timePositions: PositionAnalysis[];
     let timeTopPositions: PositionAnalysis[];
     let timeExpectedReturn: number;
     let timeYear1Return: number;
-    let timePortfolioMC: { upside: number; downside: number; median: number };
+    let timePortfolioMC: { upside: number; downside: number; median: number; volatility: number };
     
     if (useTimeCache && cachedTimePortfolio) {
       // Use cached TIME portfolio data
@@ -571,11 +572,12 @@ export async function POST(request: NextRequest) {
       
       timePortfolioMC = timePortfolioMCPositions.length > 0
         ? runPortfolioMonteCarloSimulation(timePortfolioMCPositions, timeHorizon)
-        : { upside: 0, downside: 0, median: 0, simulations: 0 };
+        : { upside: 0, downside: 0, median: 0, volatility: 0, simulations: 0 };
       
       console.log(`📊 TIME Portfolio-Level Monte Carlo:`, {
         upside: (timePortfolioMC.upside * 100).toFixed(1) + '%',
-        downside: (timePortfolioMC.downside * 100).toFixed(1) + '%'
+        downside: (timePortfolioMC.downside * 100).toFixed(1) + '%',
+        volatility: (timePortfolioMC.volatility * 100).toFixed(1) + '%'
       });
       
       // Cache the TIME portfolio for future requests (Supabase)
@@ -591,32 +593,26 @@ export async function POST(request: NextRequest) {
     
     // For multi-year portfolios (2+), use Monte Carlo median instead of deterministic expected return
     // Apply this logic whether using cache or fresh calculation
-    // IMPORTANT: Monte Carlo median is cumulative, so annualize it for display
+    // Use cumulative median directly (not annualized)
     const timeFinalExpectedReturn = timeHorizon >= 2 
-      ? annualizeReturn(timePortfolioMC.median, timeHorizon)
+      ? timePortfolioMC.median
       : timeExpectedReturn;
-    console.log(`📊 TIME Portfolio Final Expected Return (${timeHorizon}yr): ${(timeFinalExpectedReturn * 100).toFixed(1)}%${timeHorizon >= 2 ? ' (MC median, annualized)' : ' (deterministic)'}`);
+    console.log(`📊 TIME Portfolio Final Expected Return (${timeHorizon}yr): ${(timeFinalExpectedReturn * 100).toFixed(1)}%${timeHorizon >= 2 ? ' (MC median, cumulative)' : ' (deterministic)'}`);
 
     // Calculate TIME portfolio value (same as user's for comparison)
     const timePortfolioValue = portfolioValue;
 
     // 9. Build response
-    // IMPORTANT: Annualize Monte Carlo upside/downside for UI display
-    // Monte Carlo returns are cumulative over timeHorizon, but we display as "Annualized" in the UI
-    const userAnnualizedUpside = annualizeReturn(userPortfolioMC.upside, timeHorizon);
-    const userAnnualizedDownside = annualizeReturn(userPortfolioMC.downside, timeHorizon);
-    const timeAnnualizedUpside = annualizeReturn(timePortfolioMC.upside, timeHorizon);
-    const timeAnnualizedDownside = annualizeReturn(timePortfolioMC.downside, timeHorizon);
-    
-    console.log(`📊 User Portfolio - Annualized Bull: ${(userAnnualizedUpside * 100).toFixed(1)}%, Bear: ${(userAnnualizedDownside * 100).toFixed(1)}%`);
-    console.log(`📊 TIME Portfolio - Annualized Bull: ${(timeAnnualizedUpside * 100).toFixed(1)}%, Bear: ${(timeAnnualizedDownside * 100).toFixed(1)}%`);
+    // Use Monte Carlo upside (95th percentile) and downside (5th percentile) directly
+    console.log(`📊 User Portfolio - Bull (95th percentile): ${(userPortfolioMC.upside * 100).toFixed(1)}%, Bear (5th percentile): ${(userPortfolioMC.downside * 100).toFixed(1)}%`);
+    console.log(`📊 TIME Portfolio - Bull (95th percentile): ${(timePortfolioMC.upside * 100).toFixed(1)}%, Bear (5th percentile): ${(timePortfolioMC.downside * 100).toFixed(1)}%`);
     
     const comparison: PortfolioComparison = {
       userPortfolio: {
         totalValue: portfolioValue,
         expectedReturn: userFinalExpectedReturn,
-        upside: userAnnualizedUpside,     // Annualized from cumulative MC
-        downside: userAnnualizedDownside, // Annualized from cumulative MC
+        upside: userPortfolioMC.upside,     // 95th percentile from Monte Carlo
+        downside: userPortfolioMC.downside, // 5th percentile from Monte Carlo
         positions: userPositions,
         topPositions: userTopPositions,
         isUsingProxy: isUsingProxy,
@@ -625,8 +621,8 @@ export async function POST(request: NextRequest) {
       timePortfolio: {
         totalValue: timePortfolioValue,
         expectedReturn: timeFinalExpectedReturn,
-        upside: timeAnnualizedUpside,     // Annualized from cumulative MC
-        downside: timeAnnualizedDownside, // Annualized from cumulative MC
+        upside: timePortfolioMC.upside,     // 95th percentile from Monte Carlo
+        downside: timePortfolioMC.downside, // 5th percentile from Monte Carlo
         positions: timePositions,
         topPositions: timeTopPositions
       },

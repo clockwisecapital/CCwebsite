@@ -225,7 +225,7 @@ export const refreshTimePortfolioCache = inngest.createFunction(
       
       const portfolioMC = portfolioMCPositions.length > 0
         ? runPortfolioMonteCarloSimulation(portfolioMCPositions, 10)
-        : { upside: 0, downside: 0, median: 0 };
+        : { upside: 0, downside: 0, median: 0, volatility: 0 };
       
       await setCachedTimePortfolio({
         positions,

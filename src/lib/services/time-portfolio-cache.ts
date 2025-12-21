@@ -24,6 +24,7 @@ export interface CachedTimePortfolio {
     upside: number;
     downside: number;
     median: number;
+    volatility: number;
   };
   timeHorizon: number;
   updatedAt: Date;
@@ -39,6 +40,7 @@ interface TimePortfolioCacheRow {
   portfolio_upside: number;
   portfolio_downside: number;
   portfolio_median: number;
+  portfolio_volatility: number;
   time_horizon: number;
   created_at: string;
   updated_at: string;
@@ -132,6 +134,7 @@ export async function getCachedTimePortfolio(): Promise<CachedTimePortfolio | nu
         upside: row.portfolio_upside,
         downside: row.portfolio_downside,
         median: row.portfolio_median,
+        volatility: row.portfolio_volatility || 0.15, // Default to 15% if missing (for old cache)
       },
       timeHorizon: row.time_horizon,
       updatedAt,
@@ -154,6 +157,7 @@ export async function setCachedTimePortfolio(data: {
     upside: number;
     downside: number;
     median: number;
+    volatility: number;
   };
   timeHorizon?: number;
 }): Promise<boolean> {
@@ -169,6 +173,7 @@ export async function setCachedTimePortfolio(data: {
       portfolio_upside: data.portfolioMonteCarlo.upside,
       portfolio_downside: data.portfolioMonteCarlo.downside,
       portfolio_median: data.portfolioMonteCarlo.median,
+      portfolio_volatility: data.portfolioMonteCarlo.volatility,
       time_horizon: data.timeHorizon || 10,
     };
     

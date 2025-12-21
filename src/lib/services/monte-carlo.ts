@@ -34,7 +34,7 @@ const ASSET_CLASS_RETURNS = {
 
 // Typical annual volatilities for each asset class
 const ASSET_CLASS_VOLATILITIES = {
-  stocks: 0.18,       // 18%
+  stocks: 0.17,       // 17%
   bonds: 0.06,        // 6%
   realEstate: 0.15,   // 15%
   commodities: 0.20,  // 20%
@@ -58,9 +58,10 @@ export type AssetClass = keyof typeof ASSET_CLASS_RETURNS;
  * Portfolio-level Monte Carlo result
  */
 export interface PortfolioMonteCarloResult {
-  upside: number;      // 95th percentile of annual returns (diversified)
-  downside: number;    // 5th percentile of annual returns (diversified)
-  median: number;      // 50th percentile annualized return
+  upside: number;      // 95th percentile of ANNUAL returns (best single year)
+  downside: number;    // 5th percentile of ANNUAL returns (worst single year)
+  median: number;      // 50th percentile ANNUALIZED return (expected per year)
+  volatility: number;  // Portfolio-level annualized volatility (standard deviation)
   simulations: number;
 }
 
@@ -568,20 +569,23 @@ export function runPortfolioMonteCarloSimulation(
   };
   const median = annualizeReturn(totalMedian, timeHorizon);
   
+  // Get best/worst annual returns (95th/5th percentile of any single year)
   const upside = percentile(allPortfolioAnnualReturns, 0.95);
   const downside = percentile(allPortfolioAnnualReturns, 0.05);
   
   console.log(`📊 Portfolio Monte Carlo results:`, {
-    upside: (upside * 100).toFixed(1) + '%',
-    downside: (downside * 100).toFixed(1) + '%',
-    median: (median * 100).toFixed(1) + '%',
-    totalAnnualReturns: allPortfolioAnnualReturns.length
+    medianAnnualized: (median * 100).toFixed(1) + '%',
+    upside: (upside * 100).toFixed(1) + '% (best year)',
+    downside: (downside * 100).toFixed(1) + '% (worst year)',
+    volatility: (portfolioVolatility * 100).toFixed(1) + '%',
+    simulations: SIMULATIONS
   });
   
   return {
     upside,
     downside,
     median,
+    volatility: portfolioVolatility,
     simulations: SIMULATIONS
   };
 }
