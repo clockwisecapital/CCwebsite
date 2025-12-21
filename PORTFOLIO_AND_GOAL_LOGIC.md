@@ -1,328 +1,282 @@
-# Portfolio & Goal Calculation Guide
+# How We Calculate Your Money's Future
 
-**Simple explanations of how we calculate your investment projections.**
-
----
-
-## Table of Contents
-1. [Quick Overview](#quick-overview)
-2. [The Data Sources](#the-data-sources)
-3. [1-Year Goals (Simple)](#1-year-goals-simple)
-4. [Multi-Year Goals (2+ years)](#multi-year-goals-2-years)
-5. [Portfolio Tab Explained](#portfolio-tab-explained)
-6. [Goal Tab Explained](#goal-tab-explained)
-7. [Examples](#examples)
+**Think of this like a weather forecast, but for your money.**
 
 ---
 
-## Quick Overview
+## The Two Things We Show You
 
-**What we calculate:**
-- **Portfolio Tab**: Shows how much money your investments will grow to
-- **Goal Tab**: Shows the probability you'll reach a specific dollar goal
+### 1. Portfolio Tab = "How much money will I have?"
+Shows you a number like: **$1,680,000**
 
-**Two time periods, two methods:**
-- **1 Year**: Simple, deterministic math (no randomness)
-- **2+ Years**: Monte Carlo simulation (includes market ups and downs)
+### 2. Goal Tab = "Will I reach my specific goal?"
+Shows you a percentage like: **83%**
 
----
-
-## The Data Sources
-
-### Where Year 1 Returns Come From
-
-**ETFs (like SPY, QQQ, etc.):**
-- Source: **INDEX VALS Database** (our CSV file with Bull/Expected/Bear scenarios)
-- Example: SPY Expected = 6.9% for next year
-
-**Individual Stocks (like AAPL, GOOGL, etc.):**
-- Source: **FactSet** (professional analyst target prices)
-- Example: AAPL target price = $285, current = $274 → 4.3% return
-
-**If we don't have data:**
-- Fallback: 10% (historical stock market average)
-
-### Where Years 2+ Returns Come From
-
-**All investments use the same long-term averages:**
-- Stocks: **10% per year** (nominal, not adjusted for inflation)
-- Bonds: **5% per year**
-- Cash: **3% per year**
-- Real Estate: **8% per year**
+**That's it. Everything else is just explaining HOW we get those numbers.**
 
 ---
 
-## 1-Year Goals (Simple)
+## Part 1: Where Do We Get Year 1 Numbers?
 
-### How It Works
+### For Index Funds (SPY, QQQ, etc.)
+We have a special database with predictions:
+- **Bull** = Things go well → 9.9%
+- **Expected** = Normal year → 6.9%  
+- **Bear** = Things go poorly → -2.1%
 
-**Step 1: Calculate projected value**
-```
-Starting Money × (1 + Return) = Ending Money
-```
+**Example:** If you have SPY, we use 6.9% for next year.
 
-**Step 2: Compare to goal**
-```
-If Ending Money ≥ Goal → 100% probability
-If Ending Money < Goal → 0% probability
-```
+### For Individual Stocks (Apple, Google, etc.)
+Professional analysts predict where the stock will be in 1 year.
+- Apple today: $274
+- Apple predicted: $285
+- Difference: 4.3% growth
 
-### Example: SPY for 1 Year
-
-**Your situation:**
-- Starting: $750,000
-- Return: 6.9% (from INDEX VALS)
-- Goal: $800,000
-
-**Calculation:**
-```
-$750,000 × 1.069 = $801,750
-$801,750 ≥ $800,000 ✓
-Probability: 100%
-```
-
-**Three scenarios (Bull/Expected/Bear):**
-- **Bull (9.9%)**: $750k × 1.099 = $824,250 → 100% ✓
-- **Expected (6.9%)**: $750k × 1.069 = $801,750 → 100% ✓
-- **Bear (-2.1%)**: $750k × 0.979 = $734,250 → 0% ✗
+### If We Don't Have Data
+We use 10% (the stock market's average over the last 100 years).
 
 ---
 
-## Multi-Year Goals (2+ years)
+## Part 2: What About Years 2, 3, 4... 10?
 
-### How It Works
+**We can't predict specifics that far out.**
 
-**Step 1: Year 1 uses specific returns**
-```
-After Year 1 = Starting Money × (1 + Year 1 Return)
-```
+So we use history:
+- Stocks usually grow **10% per year** on average
+- Bonds usually grow **5% per year** on average
+- Cash usually grows **3% per year** on average
 
-**Step 2: Years 2+ use long-term returns**
-```
-After 10 Years = After Year 1 × (1.10)^9
-(Assuming 10% for stocks)
-```
+**Why different from Year 1?** Because analysts can predict 1 year ahead, but not 10 years ahead.
 
-**Step 3: Run 10,000 simulations**
-- Each simulation adds random market ups and downs (volatility)
-- Some simulations do better, some do worse
-- We count how many reach your goal
+---
 
-**Step 4: Calculate probability**
+## Part 3: 1-Year Goals (The Simple Version)
+
+### The Math
 ```
-Probability = (Simulations that reached goal) / 10,000
+Your Money × Growth = Future Money
 ```
 
-### Example: SPY for 10 Years
+### Real Example
+- You have: **$750,000**
+- Growth: **6.9%** (that's like adding 6.9%)
+- Calculator: $750,000 × 1.069 = **$801,750**
 
-**Your situation:**
-- Starting: $750,000
-- Year 1 Return: 6.9% (from INDEX VALS)
-- Years 2-10 Return: 10% per year (long-term average)
-- Goal: $1,000,000
+### Did You Hit Your Goal?
+- Goal was: **$800,000**
+- You'll have: **$801,750** ✓
+- **You win!** → 100% chance
 
-**Calculation:**
+**That's all there is to it for 1 year. Simple multiplication.**
+
+---
+
+## Part 4: Multi-Year Goals (The Complex Version, Simplified)
+
+### Why It Gets Complicated
+
+**The stock market is like a roller coaster:**
+- Some years: UP 30%! 🎉
+- Some years: DOWN 20%! 😰
+- **We can't predict which**
+
+### How We Handle Uncertainty
+
+We play out **10,000 different futures**:
+
+**Future #1:** Great first 3 years, bad next 2, then great again → You end with $2.1M ✓  
+**Future #2:** Bad first year, then steady growth → You end with $1.8M ✓  
+**Future #3:** Really unlucky, lots of down years → You end with $900k ✗  
+...  
+**Future #10,000:** Mixed results → You end with $1.9M ✓
+
+### Count the Winners
+Out of 10,000 futures:
+- **8,300** reached your $1M goal ✓
+- **1,700** fell short ✗
+
+**Your probability: 8,300 ÷ 10,000 = 83%**
+
+---
+
+## Part 5: Real Examples (With Your Money)
+
+### Example A: Easy 1-Year Goal
+
+**Situation:**
+- You have: $500,000
+- Your goal: $503,000 (you only need $3,000 more)
+- Time: 1 year
+- Investment: SPY (index fund)
+
+**What Happens:**
+```
+Expected: $500,000 × 1.069 = $534,500
+Your goal: $503,000
+Difference: $31,500 extra! ✓
+```
+
+**Result:** 100% chance of success (you're way over!)
+
+---
+
+### Example B: Hard 10-Year Goal
+
+**Situation:**
+- You have: $750,000
+- Your goal: $2,000,000 (you need to nearly triple it)
+- Time: 10 years
+- Investment: SPY (index fund)
+
+**What Happens:**
+We play out 10,000 possible futures...
+
+**The middle result (median):**
 ```
 Year 1: $750,000 × 1.069 = $801,750
-Years 2-10: $801,750 × (1.10)^9 = $1,895,000
-
-But wait! We run 10,000 simulations with volatility:
-- Some simulations: $2.3M (lucky!)
-- Some simulations: $1.5M (unlucky)
-- Median outcome: $1.9M
+Years 2-10: $801,750 grows at 10%/year = $1,680,000
 ```
 
-**Result:**
-- Expected Value: $1,900,000
-- Probability: 83% (8,300 out of 10,000 simulations reached $1M)
+**Your goal:** $2,000,000  
+**Middle result:** $1,680,000  
+**You're short by:** $320,000 ✗
 
-**Why not 100%?**
-Even though the median is $1.9M, some unlucky simulation paths (with lots of down years early on) fell short of $1M.
+**Result:** 42% chance of success
+
+**Why only 42%?** 
+- 4,200 futures got lucky and reached $2M ✓
+- 5,800 futures weren't lucky enough ✗
 
 ---
 
-## Portfolio Tab Explained
+### Example C: Two Portfolios Compared
 
-### What It Shows
+**Your Portfolio (100% SPY):**
+- Year 1 prediction: 6.9%
+- 10-year result: **$1,680,000**
 
-**Starting Value:** Your portfolio today  
-**Ending Value:** What your portfolio will grow to  
-**Expected Scenario:** The median return (50th percentile)  
-**Bull Scenario:** The optimistic return (95th percentile)  
-**Bear Scenario:** The pessimistic return (5th percentile)
+**TIME Portfolio (30 different stocks):**
+- Year 1 prediction: 13.7% (better!)
+- 10-year result: **$1,770,000**
 
-### How We Calculate It
-
-**1-Year Portfolio:**
-```
-Ending Value = Starting Value × (1 + Expected Return)
-Example: $750k × 1.069 = $801,750
-```
-
-**10-Year Portfolio:**
-```
-Ending Value = Starting Value × (1 + Expected Return)^10
-Example: $750k × (1.084)^10 = $1,680,000
-
-Note: Expected Return is 8.4% (Monte Carlo median, includes volatility drag)
-```
-
-### Why Monte Carlo for Multi-Year?
-
-**Volatility drag** means your actual return is less than the arithmetic average:
-- Year 1: Up 20% → $100k becomes $120k
-- Year 2: Down 20% → $120k becomes $96k
-- You lost money even though average = 0%!
-
-Monte Carlo captures this reality.
+**Why is TIME higher?**
+- TIME has better predictions for Year 1 (13.7% vs 6.9%)
+- That head start compounds over 10 years
+- Extra $90,000!
 
 ---
 
-## Goal Tab Explained
+## Part 6: Why Don't the Two Tabs Match?
 
-### What It Shows
+### You Might See:
+- **Portfolio Tab:** "You'll have $1,680,000"
+- **Goal Tab:** "83% chance of hitting $1,000,000"
 
-**Expected Probability:** Chance you reach your goal (median scenario)  
-**Bull Probability:** Chance you reach your goal (optimistic scenario)  
-**Bear Probability:** Chance you reach your goal (pessimistic scenario)
+**Wait, what?**
 
-**Projected Values:** Dollar amounts for each scenario  
-**Above/Below Goal:** How much you exceed or miss your goal
+### Explanation:
 
-### How We Calculate It
+**Portfolio Tab** answers: *"What's the most likely amount?"*
+- Answer: $1,680,000 (the middle of 10,000 outcomes)
 
-**1-Year Goal:**
-```
-Projected Value = Starting × (1 + Return)
-Probability = 100% if Projected ≥ Goal, else 0%
-```
+**Goal Tab** answers: *"What are my odds of hitting $1,000,000?"*
+- Answer: 83% (8,300 out of 10,000 futures reached it)
 
-**Multi-Year Goal:**
-```
-Run 10,000 Monte Carlo simulations:
-1. Each simulation uses Year 1 return (e.g., 6.9%)
-2. Each simulation uses Years 2+ return (e.g., 10%)
-3. Each simulation adds random volatility (±18% for stocks)
-4. Count how many reach your goal
-5. Probability = Success Count / 10,000
-```
+**Both can be true!** 
+
+Think of it like this:
+- *"What's the most likely temperature tomorrow?"* → 75°F
+- *"What are the odds it's above 70°F?"* → 90%
+
+Different questions, different answers.
 
 ---
 
-## Examples
+## Part 7: Common Confusions
 
-### Example 1: Conservative 1-Year Goal
+### "Why isn't it 100% if I'm way over my goal?"
 
-**Scenario:**
-- Portfolio: $500,000 in SPY
-- Goal: $503,000 in 1 year
-- SPY Expected Return: 6.9%
+**For 1 year:** It IS 100% (we use simple math)
 
-**Portfolio Tab:**
-- Ending Value: $500k × 1.069 = **$534,500**
+**For 10 years:** It's NOT 100% because:
+- Bad luck early on can derail you
+- The market might crash in Year 2
+- Even though the *average* is good, some paths are unlucky
 
-**Goal Tab:**
-- Bull (9.9%): $549,500 → **100%** ✓
-- Expected (6.9%): $534,500 → **100%** ✓
-- Bear (-2.1%): $489,500 → **0%** ✗
-
-**Interpretation:** Very likely to hit your goal!
+**Real example:**
+- You need $1M
+- Middle result: $1.68M (way over!)
+- But 1,700 out of 10,000 futures still missed it (bad timing)
+- So it's 83%, not 100%
 
 ---
 
-### Example 2: Aggressive 10-Year Goal
+### "What does 'Expected Scenario' mean?"
 
-**Scenario:**
-- Portfolio: $750,000 in SPY
-- Goal: $2,000,000 in 10 years
-- SPY Year 1: 6.9%, Years 2-10: 10%
+**Think of it as the middle guess.**
 
-**Portfolio Tab (Expected):**
-- Ending Value: $750k × (1.084)^10 = **$1,680,000**
+If 10,000 futures play out:
+- 5,000 do better than "expected"
+- 5,000 do worse than "expected"
+- Expected = the middle (50th place)
 
-**Goal Tab:**
-- Expected Value: **$1,680,000**
-- Probability: **42%** (4,200 out of 10,000 simulations reached $2M)
-
-**Interpretation:** 
-- Median outcome falls short by $320k
-- You have less than 50/50 odds
-- Consider: Lower goal, add contributions, or extend timeline
+Not the average, not the best, not the worst. **The middle.**
 
 ---
 
-### Example 3: TIME Portfolio vs Your Portfolio
+### "Why three scenarios (Bull/Expected/Bear)?"
 
-**Your Portfolio: 100% SPY**
-- Year 1: 6.9% (INDEX VALS)
-- Years 2-10: 10% (long-term)
-- 10-Year Expected: **8.4%** (Monte Carlo median)
+**Because the future has a range of possibilities:**
 
-**TIME Portfolio: 30 Stocks**
-- Year 1: 13.7% (weighted average of FactSet targets)
-- Years 2-10: 10% (long-term)
-- 10-Year Expected: **9.0%** (Monte Carlo median)
+- **Bear** = Things go poorly (5th best out of 100) → Pessimistic
+- **Expected** = Normal outcome (50th best out of 100) → Realistic  
+- **Bull** = Things go well (95th best out of 100) → Optimistic
 
-**Why TIME is higher:**
-- Better Year 1 (13.7% vs 6.9%)
-- This advantage compounds over 10 years
-- TIME has more individual stock upside
+**Example:**
+- Bear: $900k (bad luck)
+- Expected: $1.68M (normal)
+- Bull: $2.5M (great luck)
+
+All three are *possible*. Expected is most *likely*.
 
 ---
 
-## Key Differences: Portfolio Tab vs Goal Tab
+## Part 8: What You Need to Remember
 
-| Feature | Portfolio Tab | Goal Tab |
-|---------|--------------|----------|
-| **Shows** | Dollar amounts | Probabilities |
-| **Focus** | "How much will I have?" | "Will I reach my goal?" |
-| **1-Year** | Simple math | Simple math |
-| **Multi-Year** | Monte Carlo median | Monte Carlo probability |
-| **Use Case** | Compare portfolios | Track specific goals |
+### The 4 Key Rules:
 
-**Both tabs use the same underlying data and calculations!**
-
----
-
-## Important Notes
-
-### No Inflation Adjustment
-
-All returns are **nominal** (actual dollars you'll see):
-- Year 1: Uses real target prices from analysts
-- Years 2+: Uses 10% (historical nominal average)
-- Your dollars won't be adjusted for inflation
-
-### Volatility Matters
-
-For multi-year projections, we use **18% volatility** for stocks:
-- Some years: +40% returns
-- Some years: -20% returns
-- This is realistic based on history
-
-### Monthly Contributions
-
-If you add monthly contributions:
+**1. For 1 year:** We use simple math
 ```
-Each month: Add contribution, then apply monthly return
-Over 10 years with $1,000/month = +$120,000 in contributions
-Plus growth on those contributions!
+Your Money × Growth = Future Money
 ```
 
+**2. For 10+ years:** We play out 10,000 possible futures
+```
+Some futures lucky ✓
+Some futures unlucky ✗
+Your % = Winners ÷ 10,000
+```
+
+**3. Year 1 is specific:** We use real analyst predictions
+
+**4. Years 2+ are averages:** We use 100-year history (10% for stocks)
+
 ---
 
-## Questions?
+## Final Thoughts
 
-**Q: Why does Goal show 83% but projected value exceeds goal?**  
-A: The 83% accounts for market volatility. Even though the median is above your goal, 17% of simulation paths (the unlucky ones) fell short.
+**These are ESTIMATES, not guarantees.**
 
-**Q: Why does Portfolio Tab show different % than Goal Tab?**  
-A: Portfolio shows the **median return** across all simulations. Goal shows the **probability of reaching a specific target**. Different questions, different answers!
+Just like a weather forecast:
+- ☀️ 80% chance of sun doesn't mean it WON'T rain
+- 📈 83% chance of hitting your goal doesn't mean you WILL hit it
 
-**Q: Can I trust these projections?**  
-A: These are **estimates** based on historical data and professional analyst forecasts. Markets are unpredictable. Past performance ≠ future results.
+**We're showing you the odds based on history and expert predictions.**
+
+The stock market is unpredictable. Past performance doesn't guarantee future results.
+
+**But this is the best forecast we can give you.** 🎯
 
 ---
 
 *Last Updated: December 2024*
-

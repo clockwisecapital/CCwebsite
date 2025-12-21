@@ -429,8 +429,11 @@ export async function POST(request: NextRequest) {
     });
     
     // For multi-year portfolios (2+), use Monte Carlo median instead of deterministic expected return
-    const userFinalExpectedReturn = timeHorizon >= 2 ? userPortfolioMC.median : userExpectedReturn;
-    console.log(`📊 User Portfolio Final Expected Return (${timeHorizon}yr): ${(userFinalExpectedReturn * 100).toFixed(1)}%${timeHorizon >= 2 ? ' (MC median)' : ' (deterministic)'}`);
+    // IMPORTANT: Monte Carlo median is cumulative, so annualize it for display
+    const userFinalExpectedReturn = timeHorizon >= 2 
+      ? annualizeReturn(userPortfolioMC.median, timeHorizon)
+      : userExpectedReturn;
+    console.log(`📊 User Portfolio Final Expected Return (${timeHorizon}yr): ${(userFinalExpectedReturn * 100).toFixed(1)}%${timeHorizon >= 2 ? ' (MC median, annualized)' : ' (deterministic)'}`);
 
     // 8. Build TIME Portfolio Analysis (use cache if available)
     let timePositions: PositionAnalysis[];
@@ -588,19 +591,32 @@ export async function POST(request: NextRequest) {
     
     // For multi-year portfolios (2+), use Monte Carlo median instead of deterministic expected return
     // Apply this logic whether using cache or fresh calculation
-    const timeFinalExpectedReturn = timeHorizon >= 2 ? timePortfolioMC.median : timeExpectedReturn;
-    console.log(`📊 TIME Portfolio Final Expected Return (${timeHorizon}yr): ${(timeFinalExpectedReturn * 100).toFixed(1)}%${timeHorizon >= 2 ? ' (MC median)' : ' (deterministic)'}`);
+    // IMPORTANT: Monte Carlo median is cumulative, so annualize it for display
+    const timeFinalExpectedReturn = timeHorizon >= 2 
+      ? annualizeReturn(timePortfolioMC.median, timeHorizon)
+      : timeExpectedReturn;
+    console.log(`📊 TIME Portfolio Final Expected Return (${timeHorizon}yr): ${(timeFinalExpectedReturn * 100).toFixed(1)}%${timeHorizon >= 2 ? ' (MC median, annualized)' : ' (deterministic)'}`);
 
     // Calculate TIME portfolio value (same as user's for comparison)
     const timePortfolioValue = portfolioValue;
 
     // 9. Build response
+    // IMPORTANT: Annualize Monte Carlo upside/downside for UI display
+    // Monte Carlo returns are cumulative over timeHorizon, but we display as "Annualized" in the UI
+    const userAnnualizedUpside = annualizeReturn(userPortfolioMC.upside, timeHorizon);
+    const userAnnualizedDownside = annualizeReturn(userPortfolioMC.downside, timeHorizon);
+    const timeAnnualizedUpside = annualizeReturn(timePortfolioMC.upside, timeHorizon);
+    const timeAnnualizedDownside = annualizeReturn(timePortfolioMC.downside, timeHorizon);
+    
+    console.log(`📊 User Portfolio - Annualized Bull: ${(userAnnualizedUpside * 100).toFixed(1)}%, Bear: ${(userAnnualizedDownside * 100).toFixed(1)}%`);
+    console.log(`📊 TIME Portfolio - Annualized Bull: ${(timeAnnualizedUpside * 100).toFixed(1)}%, Bear: ${(timeAnnualizedDownside * 100).toFixed(1)}%`);
+    
     const comparison: PortfolioComparison = {
       userPortfolio: {
         totalValue: portfolioValue,
         expectedReturn: userFinalExpectedReturn,
-        upside: userPortfolioMC.upside,     // Portfolio-level (diversified)
-        downside: userPortfolioMC.downside, // Portfolio-level (diversified)
+        upside: userAnnualizedUpside,     // Annualized from cumulative MC
+        downside: userAnnualizedDownside, // Annualized from cumulative MC
         positions: userPositions,
         topPositions: userTopPositions,
         isUsingProxy: isUsingProxy,
@@ -609,8 +625,8 @@ export async function POST(request: NextRequest) {
       timePortfolio: {
         totalValue: timePortfolioValue,
         expectedReturn: timeFinalExpectedReturn,
-        upside: timePortfolioMC.upside,     // Portfolio-level (diversified)
-        downside: timePortfolioMC.downside, // Portfolio-level (diversified)
+        upside: timeAnnualizedUpside,     // Annualized from cumulative MC
+        downside: timeAnnualizedDownside, // Annualized from cumulative MC
         positions: timePositions,
         topPositions: timeTopPositions
       },
@@ -642,6 +658,24 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Convert a cumulative return over N years to an annualized return
+ * Formula: (1 + totalReturn)^(1/years) - 1
+ */
+function annualizeReturn(cumulativeReturn: number, years: number): number {
+  if (years <= 1) {
+    return cumulativeReturn; // Already annualized
+  }
+  
+  // Handle negative returns (losses)
+  const growth = 1 + cumulativeReturn;
+  const annualized = Math.pow(growth, 1 / years) - 1;
+  
+  console.log(`📊 Annualizing return: ${(cumulativeReturn * 100).toFixed(1)}% over ${years}yr → ${(annualized * 100).toFixed(1)}% annualized`);
+  
+  return annualized;
 }
 
 /**

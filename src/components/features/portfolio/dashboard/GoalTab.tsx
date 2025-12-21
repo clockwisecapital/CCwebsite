@@ -29,10 +29,8 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }:
 
 
   const handleNextSlide = () => {
-    if (currentSlide < 1) {
-      setCurrentSlide(currentSlide + 1);
-    } else if (onNext) {
-      // Last slide - navigate to Portfolio Tab
+    // Only one slide now - go directly to Portfolio Tab
+    if (onNext) {
       onNext();
     }
   };
@@ -104,11 +102,11 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }:
       {/* SECTION 2: Carousel - PowerPoint Style Slides */}
       <CarouselContainer
         currentSlide={currentSlide}
-        totalSlides={2}
+        totalSlides={1}
         onSlideChange={setCurrentSlide}
         onNext={handleNextSlide}
         onPrev={handlePrevSlide}
-        nextButtonText={currentSlide === 1 ? 'Go to Portfolio Analysis' : 'Next'}
+        nextButtonText="Go to Portfolio Analysis"
       >
         {/* SLIDE 1: Probability of Reaching Your Goal */}
         <CarouselSlide isActive={currentSlide === 0} direction={getSlideDirection(0)}>
@@ -117,17 +115,17 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }:
           
           {/* Main Probability Display */}
         <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-6">
-          <div className="text-center mb-6">
-            <div className="text-sm text-gray-300 mb-2">Expected Probability (Median)</div>
-            <div className={`text-4xl sm:text-5xl md:text-6xl font-bold text-${medianColor}-600 mb-2`}>
-              {formatPercent(goalAnalysis.probabilityOfSuccess.median)}
+          <div className="text-center">
+            <div className="text-2xl md:text-3xl font-bold text-gray-100 mb-4">
+              You hit your goal {formatPercent(goalAnalysis.probabilityOfSuccess.median)} of the time
             </div>
             <div className={`inline-flex items-center px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold bg-${medianColor}-100 text-${medianColor}-800`}>
               {getStatusText(goalAnalysis.probabilityOfSuccess.median)} Probability
             </div>
           </div>
 
-          {/* Probability Range */}
+          {/* COMMENTED OUT: Probability Scenario Cards */}
+          {/* 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-700 text-center">
               <div className="text-xs text-gray-300 mb-2 h-auto sm:h-8 flex items-center justify-center">Bull Scenario</div>
@@ -153,6 +151,7 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }:
               <div className="text-xs text-gray-400 mt-1">5th percentile</div>
             </div>
           </div>
+          */}
         </div>
 
         {/* Visual Progress Bar */}
@@ -175,7 +174,8 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }:
         </div>
         </CarouselSlide>
 
-        {/* SLIDE 2: Projected Portfolio Values */}
+        {/* COMMENTED OUT: SLIDE 2 - Projected Portfolio Values */}
+        {/*
         <CarouselSlide isActive={currentSlide === 1} direction={getSlideDirection(1)}>
           <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-100 mb-4">Projected Portfolio Values</h2>
           <p className="text-sm text-gray-400 mb-6">
@@ -238,7 +238,6 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }:
           </div>
         </div>
 
-        {/* Visual Comparison */}
         <div className="bg-gray-700/50 rounded-lg p-4 border border-gray-700">
           <div className="space-y-3">
             <div>
@@ -261,6 +260,7 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }:
           </div>
         </div>
         </CarouselSlide>
+        */}
       </CarouselContainer>
 
       {/* SECTION 3: Your Financial Goal Details - Always Visible */}
