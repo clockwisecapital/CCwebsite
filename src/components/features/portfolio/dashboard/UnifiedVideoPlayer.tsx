@@ -279,7 +279,7 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady }: Unifi
                 </div>
                 <p className="text-white text-sm font-medium">
                   {status === 'pending' && 'Preparing your video...'}
-                  {status === 'processing' && 'Kronos is recording...'}
+                  {status === 'processing' && 'Kronos is thinking...'}
                 </p>
                 <p className="text-xs text-teal-300 mt-2">
                   This usually takes 30-60 seconds

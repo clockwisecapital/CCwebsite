@@ -271,7 +271,7 @@ export default function PortfolioDashboard() {
     if (isAnalyzing) {
       return {
         id: 'kronos-thinking',
-        title: 'Kronos is recording... This usually takes 30-60 seconds',
+        title: 'Kronos is thinking... This usually takes 30-60 seconds',
         videoSrc: getVideoPath('/kronos-thinking.mp4')
       };
     }

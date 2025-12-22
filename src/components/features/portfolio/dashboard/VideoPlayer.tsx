@@ -200,7 +200,7 @@ export default function VideoPlayer({ videoId, onVideoReady }: VideoPlayerProps)
           </div>
           <p className="text-white font-medium">
             {status === 'pending' && 'Preparing your video...'}
-            {status === 'processing' && 'Kronos is recording...'}
+            {status === 'processing' && 'Kronos is thinking...'}
           </p>
           <p className="text-sm text-teal-300 mt-2">
             This usually takes 30-60 seconds
