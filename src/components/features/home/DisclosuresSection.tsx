@@ -18,17 +18,6 @@ const DisclosuresSection: React.FC = () => (
         regularly and adhere to rigorous standards to ensure the integrity of our processes and the trust of our
         clients.
       </p>
-
-      <p className="leading-relaxed">
-        Clockwise Capital subscribes to QuantStreet Capital’s model portfolios; Clockwise is a client of QuantStreet.
-        Clockwise and QuantStreet also work together to offer outside chief investment officer (OCIO) services to other
-        asset managers. This relationship may create a conflict of interest by incentivizing the parties to promote
-        each other. QuantStreet develops model portfolios that integrate certain Clockwise strategies in exchange for
-        10% of the fee that Clockwise charges applicable clients. Clockwise and QuantStreet also share fees, as
-        determined on a case-by-case basis, when clients retain them to provide OCIO services. Since each of the
-        parties receives a financial benefit when clients use the model portfolios and OCIO services, the parties are
-        incentivized to promote each other. This may create a conflict of interest.
-      </p>
     </div>
   </section>
 );

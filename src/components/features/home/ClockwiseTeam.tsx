@@ -98,7 +98,7 @@ const ClockwiseTeam = () => {
                         alt={member.name}
                         fill
                         sizes="160px"
-                        className={`object-cover bg-white filter grayscale ${member.name === 'Kronos' ? 'object-[center_30%]' : 'object-center'}`}
+                        className={`bg-white filter grayscale ${member.name === 'Kronos' ? 'object-cover object-center scale-[1.55] translate-y-10 translate-x-2' : 'object-cover object-center'}`}
                         priority
                       />
                     </div>

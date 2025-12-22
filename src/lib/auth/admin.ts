@@ -110,7 +110,7 @@ export function getUserFirm(payload: AdminTokenPayload | null): string | null {
  * List of advisory firms (for validation and UI)
  */
 export const ADVISORY_FIRMS = [
-  'LFP Advisors',
+  'LPF Advisors',
   'Legado Wealth Management',
   'The Financial Gym'
 ] as const

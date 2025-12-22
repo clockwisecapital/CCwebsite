@@ -90,7 +90,7 @@ CREATE POLICY "Allow all operations on client_assignments" ON client_assignments
 -- Passwords are hashed using bcrypt (cost factor 10)
 -- Default passwords (CHANGE IN PRODUCTION):
 --   clockwise: Clockwise2025!
---   lfpadvisors: LFPAdvisors2025!
+--   lfpadvisors: LPFAdvisors2025!
 --   legado: Legado2025!
 --   financialgym: FinancialGym2025!
 -- ============================================================================
@@ -109,8 +109,8 @@ VALUES
   ('lfpadvisors', 
    '$2a$10$placeholder.hash.for.lfp.advisors.account', 
    'advisor', 
-   'LFP Advisors', 
-   'LFP Advisors', 
+   'LPF Advisors', 
+   'LPF Advisors', 
    NULL,
    true),
   ('legado', 

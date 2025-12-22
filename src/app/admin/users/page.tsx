@@ -532,7 +532,7 @@ export default function AdminUsersPage() {
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
                         <option value="">Select firm...</option>
-                        <option value="LFP Advisors">LFP Advisors</option>
+                        <option value="LPF Advisors">LPF Advisors</option>
                         <option value="Legado Wealth Management">Legado Wealth Management</option>
                         <option value="The Financial Gym">The Financial Gym</option>
                       </select>

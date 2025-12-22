@@ -19,7 +19,7 @@ const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'clockwise
 // These are used when the database has placeholder hashes
 const DEFAULT_PASSWORDS: Record<string, string> = {
   'clockwise': 'Clockwise2025!',
-  'lfpadvisors': 'LFPAdvisors2025!',
+  'lpfadvisors': 'LPFAdvisors2025!',
   'legado': 'Legado2025!',
   'financialgym': 'FinancialGym2025!'
 }

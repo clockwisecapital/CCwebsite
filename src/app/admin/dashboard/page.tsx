@@ -34,7 +34,7 @@ import { sortPortfolioObjects } from '@/lib/portfolio-order'
 
 // Advisory firms list
 const ADVISORY_FIRMS = [
-  'LFP Advisors',
+  'LPF Advisors',
   'Legado Wealth Management',
   'The Financial Gym'
 ] as const
