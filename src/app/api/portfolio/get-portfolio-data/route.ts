@@ -436,6 +436,54 @@ export async function POST(request: NextRequest) {
       : userExpectedReturn;
     console.log(`📊 User Portfolio Final Expected Return (${timeHorizon}yr): ${(userFinalExpectedReturn * 100).toFixed(1)}%${timeHorizon >= 2 ? ' (MC median, cumulative)' : ' (deterministic)'}`);
 
+    // For 1-year timeframes, use INDEX VALS scenario returns (bull/bear) instead of Monte Carlo
+    let userFinalUpside: number;
+    let userFinalDownside: number;
+    
+    if (timeHorizon === 1) {
+      // Calculate weighted average of bull/bear scenarios from INDEX VALS CSV
+      // For stocks without INDEX VALS, use a conservative ±15% spread around expected return
+      let bullWeightedReturn = 0;
+      let bearWeightedReturn = 0;
+      let totalWeight = 0;
+      
+      for (const position of userPositions) {
+        if (position.ticker === 'CASH') continue;
+        
+        const weight = position.weight / 100; // Convert to decimal
+        const scenarios = indexScenarioReturns.get(position.ticker);
+        
+        if (scenarios) {
+          // Use INDEX VALS bull/bear for ETFs (Row 7 and Row 12 from CSV)
+          bullWeightedReturn += weight * scenarios.bull;
+          bearWeightedReturn += weight * scenarios.bear;
+          totalWeight += weight;
+        } else {
+          // For individual stocks without INDEX VALS: use expected return ± 15% spread
+          // This is more realistic for 1-year scenarios than Monte Carlo extremes
+          const expectedReturn = position.expectedReturn || LONG_TERM_NOMINAL.stocks; // Fallback to 10%
+          const conservativeBull = expectedReturn * 1.15;  // +15% above expected
+          const conservativeBear = expectedReturn * 0.85;  // -15% below expected
+          
+          bullWeightedReturn += weight * conservativeBull;
+          bearWeightedReturn += weight * conservativeBear;
+          totalWeight += weight;
+        }
+      }
+      
+      userFinalUpside = totalWeight > 0 ? bullWeightedReturn : userPortfolioMC.upside;
+      userFinalDownside = totalWeight > 0 ? bearWeightedReturn : userPortfolioMC.downside;
+      
+      console.log(`📊 User Portfolio 1-Year Scenarios (from INDEX VALS):`, {
+        bull: (userFinalUpside * 100).toFixed(1) + '%',
+        bear: (userFinalDownside * 100).toFixed(1) + '%'
+      });
+    } else {
+      // Multi-year: Use Monte Carlo as before
+      userFinalUpside = userPortfolioMC.upside;
+      userFinalDownside = userPortfolioMC.downside;
+    }
+
     // 8. Build TIME Portfolio Analysis (use cache if available)
     let timePositions: PositionAnalysis[];
     let timeTopPositions: PositionAnalysis[];
@@ -599,20 +647,32 @@ export async function POST(request: NextRequest) {
       : timeExpectedReturn;
     console.log(`📊 TIME Portfolio Final Expected Return (${timeHorizon}yr): ${(timeFinalExpectedReturn * 100).toFixed(1)}%${timeHorizon >= 2 ? ' (MC median, cumulative)' : ' (deterministic)'}`);
 
+    // For TIME Portfolio: ALWAYS use Monte Carlo (no INDEX VALS logic)
+    // TIME is a diversified 30-stock portfolio, so portfolio-level MC is most appropriate
+    // This keeps it simple and consistent regardless of timeframe
+    const timeFinalUpside = timePortfolioMC.upside;
+    const timeFinalDownside = timePortfolioMC.downside;
+    
+    console.log(`📊 TIME Portfolio Scenarios (from Monte Carlo):`, {
+      bull: (timeFinalUpside * 100).toFixed(1) + '%',
+      bear: (timeFinalDownside * 100).toFixed(1) + '%'
+    });
+
     // Calculate TIME portfolio value (same as user's for comparison)
     const timePortfolioValue = portfolioValue;
 
     // 9. Build response
-    // Use Monte Carlo upside (95th percentile) and downside (5th percentile) directly
-    console.log(`📊 User Portfolio - Bull (95th percentile): ${(userPortfolioMC.upside * 100).toFixed(1)}%, Bear (5th percentile): ${(userPortfolioMC.downside * 100).toFixed(1)}%`);
-    console.log(`📊 TIME Portfolio - Bull (95th percentile): ${(timePortfolioMC.upside * 100).toFixed(1)}%, Bear (5th percentile): ${(timePortfolioMC.downside * 100).toFixed(1)}%`);
+    // User Portfolio: INDEX VALS for 1yr (if available), Monte Carlo for multi-year
+    // TIME Portfolio: Always Monte Carlo (portfolio-level best/worst year percentiles)
+    console.log(`📊 User Portfolio - Bull: ${(userFinalUpside * 100).toFixed(1)}%, Bear: ${(userFinalDownside * 100).toFixed(1)}%`);
+    console.log(`📊 TIME Portfolio - Bull: ${(timeFinalUpside * 100).toFixed(1)}%, Bear: ${(timeFinalDownside * 100).toFixed(1)}%`);
     
     const comparison: PortfolioComparison = {
       userPortfolio: {
         totalValue: portfolioValue,
         expectedReturn: userFinalExpectedReturn,
-        upside: userPortfolioMC.upside,     // 95th percentile from Monte Carlo
-        downside: userPortfolioMC.downside, // 5th percentile from Monte Carlo
+        upside: userFinalUpside,     // INDEX VALS bull for 1yr, Monte Carlo 95th for multi-year
+        downside: userFinalDownside, // INDEX VALS bear for 1yr, Monte Carlo 5th for multi-year
         positions: userPositions,
         topPositions: userTopPositions,
         isUsingProxy: isUsingProxy,
@@ -621,8 +681,8 @@ export async function POST(request: NextRequest) {
       timePortfolio: {
         totalValue: timePortfolioValue,
         expectedReturn: timeFinalExpectedReturn,
-        upside: timePortfolioMC.upside,     // 95th percentile from Monte Carlo
-        downside: timePortfolioMC.downside, // 5th percentile from Monte Carlo
+        upside: timeFinalUpside,     // Always Monte Carlo 95th percentile (best year)
+        downside: timeFinalDownside, // Always Monte Carlo 5th percentile (worst year)
         positions: timePositions,
         topPositions: timeTopPositions
       },

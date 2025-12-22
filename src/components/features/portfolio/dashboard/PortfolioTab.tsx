@@ -62,7 +62,7 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
             <div className="flex-1 min-w-0">
               <div className="text-sm md:text-lg font-bold text-blue-300 mb-1 md:mb-2">Portfolio Comparison</div>
               <p className="text-xs md:text-base text-gray-300 leading-relaxed">
-                Compare your portfolio&apos;s expected performance against the Clockwise TIME portfolio. Returns blend 12-month analyst price targets with long-term inflation-adjusted asset class averages over your {timeHorizon}-year horizon.
+                Compare your portfolio&apos;s expected performance against the Clockwise TIME portfolio. Returns blend 12-month analyst price targets with long-term nominal asset class averages over your {timeHorizon}-year horizon.
               </p>
             </div>
           </div>
