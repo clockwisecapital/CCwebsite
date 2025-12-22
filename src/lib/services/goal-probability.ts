@@ -9,6 +9,13 @@
 import type { MonteCarloResult } from '@/types/portfolio';
 import type { IntakeFormData } from '@/components/features/portfolio/dashboard/PortfolioDashboard';
 
+/**
+ * Cap probability at 99% maximum (never show 100% certainty to client)
+ */
+function capProbability(probability: number): number {
+  return Math.min(probability, 0.99);
+}
+
 // Long-term historical average returns (REAL - inflation-adjusted)
 // Based on 100+ years of historical data (Ibbotson/Morningstar)
 export const LONG_TERM_AVERAGES = {
@@ -183,7 +190,7 @@ function runGoalMonteCarloSimulation(
   }
 
   results.sort((a, b) => a - b);
-  const probabilityOfSuccess = successCount / simulations;
+  const probabilityOfSuccess = capProbability(successCount / simulations);
   
   // Calculate probability at each percentile
   // At 5th percentile: what % of outcomes at that level reach the goal
@@ -192,13 +199,13 @@ function runGoalMonteCarloSimulation(
   const p95Index = Math.floor(simulations * 0.95);
   
   const probabilityAtPercentiles = {
-    p5: results[p5Index] >= goalAmount ? 
+    p5: capProbability(results[p5Index] >= goalAmount ? 
         (simulations - p5Index) / simulations : // If 5th percentile succeeds, count from there up
-        0.05, // If not, very low probability
-    p50: probabilityOfSuccess, // Median = overall probability
-    p95: results[p95Index] >= goalAmount ? 
-        Math.min(0.99, 0.90 + (results[p95Index] - goalAmount) / goalAmount * 0.09) : // High probability if 95th succeeds
-        (simulations - p95Index) / simulations
+        0.05), // If not, very low probability
+    p50: probabilityOfSuccess, // Median = overall probability (already capped)
+    p95: capProbability(results[p95Index] >= goalAmount ? 
+        0.90 + (results[p95Index] - goalAmount) / goalAmount * 0.09 : // High probability if 95th succeeds
+        (simulations - p95Index) / simulations)
   };
 
   return {
@@ -380,9 +387,10 @@ function calculate12MonthScenarios(
   
   // For 1-year goals: ALL scenarios are deterministic (no Monte Carlo)
   // If projected value >= goal, probability = 1.0, otherwise 0.0
-  const bullProbability = bullValue >= input.goalAmount ? 1.0 : 0.0;
-  const expectedProbability = expectedValue >= input.goalAmount ? 1.0 : 0.0;
-  const bearProbability = bearValue >= input.goalAmount ? 1.0 : 0.0;
+  // NOTE: Cap at 99% (never show 100% certainty)
+  const bullProbability = capProbability(bullValue >= input.goalAmount ? 1.0 : 0.0);
+  const expectedProbability = capProbability(expectedValue >= input.goalAmount ? 1.0 : 0.0);
+  const bearProbability = capProbability(bearValue >= input.goalAmount ? 1.0 : 0.0);
   
   const probabilityOfSuccess = {
     median: expectedProbability,
@@ -556,10 +564,11 @@ function calculateGoalProbabilityWithMonteCarlo(input: GoalProbabilityInput): Go
     bearProbability = simulationResult.probabilityAtPercentiles.p5;
   }
 
+  // Cap all probabilities at 99% (never show 100% certainty)
   const probabilityOfSuccess = {
-    median: expectedProbability,
-    downside: bearProbability,
-    upside: bullProbability
+    median: capProbability(expectedProbability),
+    downside: capProbability(bearProbability),
+    upside: capProbability(bullProbability)
   };
   
   console.log(`🎯 Goal Probability Calculation:`, {
@@ -569,9 +578,9 @@ function calculateGoalProbabilityWithMonteCarlo(input: GoalProbabilityInput): Go
     year1Expected: (year1Expected * 100).toFixed(1) + '%',
     longTermReturn: (longTermReturn * 100).toFixed(1) + '%',
     volatility: (estimatedVolatility * 100).toFixed(1) + '%',
-    expectedProbability: (expectedProbability * 100).toFixed(1) + '%',
-    bullProbability: (bullProbability * 100).toFixed(1) + '%',
-    bearProbability: (bearProbability * 100).toFixed(1) + '%',
+    expectedProbability: (probabilityOfSuccess.median * 100).toFixed(1) + '%',
+    bullProbability: (probabilityOfSuccess.upside * 100).toFixed(1) + '%',
+    bearProbability: (probabilityOfSuccess.downside * 100).toFixed(1) + '%',
     projectedMedian: expectedValue.toFixed(0),
     projectedBear: bearValue.toFixed(0),
     projectedBull: bullValue.toFixed(0)
