@@ -7,13 +7,11 @@ import { Meteors } from "@/components/ui/meteors";
 import MissionSection from "@/components/features/home/MissionSection";
 import InvestmentOptions from "@/components/features/home/InvestmentOptions";
 import ClockwiseMedia from "@/components/features/home/ClockwiseMedia";
-import AdvisorOptions from "@/components/features/home/AdvisorOptions";
+import GuidanceSection from "@/components/features/home/GuidanceSection";
 import ClockwiseTeam from "@/components/features/home/ClockwiseTeam";
 import ReviewsSection from "@/components/features/home/ReviewsSection";
-import DisclosuresSection from "@/components/features/home/DisclosuresSection";
 import NavigatingTurbulentTimes from "@/components/features/home/NavigatingTurbulentTimes";
 import EconomicExplainers from "@/components/features/home/EconomicExplainers";
-import TimedPopup from "@/components/ui/TimedPopup";
 
 // AnimatedText component removed as unused
 
@@ -124,15 +122,17 @@ export default function Home() {
                 <span>Score My Portfolio</span>
               </span>
             </button>
-            <button 
-              onClick={() => router.push('/contact')} 
-              className="group relative overflow-hidden bg-transparent hover:bg-white/10 text-white border-2 border-white font-sans font-bold py-4 px-8 rounded-lg shadow-lg transition-all duration-300 hover:scale-105"
+            <a 
+              href="https://calendly.com/clockwisecapital/appointments"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative overflow-hidden bg-transparent hover:bg-white/10 text-white border-2 border-white font-sans font-bold py-4 px-8 rounded-lg shadow-lg transition-all duration-300 hover:scale-105 inline-block"
             >
               <span className="absolute top-0 left-0 w-full h-full transform -translate-x-full bg-white/5 skew-x-12 group-hover:translate-x-full transition-transform duration-700 ease-out"></span>
               <span className="relative flex items-center justify-center space-x-2">
                 <span>Talk to an Advisor</span>
               </span>
-            </button>
+            </a>
           </div>
           
           {/* Feature badges at bottom */}
@@ -163,7 +163,7 @@ export default function Home() {
       </section>
       
       {/* Partners Section with dark aesthetic */}
-      <section className="relative bg-[#1A1F2E] py-16">
+      <section className="relative bg-[#0a1119] py-16">
         <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center">
             {/* Animated heading with reveal effect */}
@@ -202,34 +202,28 @@ export default function Home() {
        <NavigatingTurbulentTimes />
           <EconomicExplainers />
 
-      {/* Portfolio Optionss Section with matching gray background */}
-      <div className="w-full bg-[#E5E7EA]">
+      {/* Portfolio Options & Guidance Section with dark background */}
+      <div className="w-full">
         <InvestmentOptions />
-        <AdvisorOptions />
-        {/* Customer Reviews moved below advisor options */}
+        <GuidanceSection />
+      </div>
+
+      {/* Reviews Section with matching gray background */}
+      <div className="w-full bg-[#E5E7EA]">
         <ReviewsSection />
       </div>
 
       {/* AI Chatbot Widget - now using Gleap, removed placeholder */}
       {/* Gleap is now integrated in the root layout and will appear on all pages */}
 
-      {/* Timed help popup */}
-      <TimedPopup />
+      {/* Media section */}
+      <ClockwiseMedia />
 
-      {/* Introduction Section removed completely to avoid white space */}
-
-      {/* Media and Mission & Team sections */}
-      <div className="w-full bg-[#E5E7EA]">
-        <ClockwiseMedia />
-      </div>
+      {/* Team Section */}
+      <ClockwiseTeam />
 
       {/* Mission Section */}
       <MissionSection />
-
-      <ClockwiseTeam />
-
-      {/* Disclosures */}
-      <DisclosuresSection />
     </main>
   );
 }

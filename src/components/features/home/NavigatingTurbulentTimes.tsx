@@ -146,7 +146,7 @@ const NavigatingTurbulentTimes: React.FC = () => {
   return (
     <section
       id="learn"
-      className="relative w-full bg-gradient-to-b from-[#0A0F1E] to-[#1A1F2E] text-gray-200 py-20 md:py-28"
+      className="relative w-full bg-[#0e171e] text-gray-200 py-20 md:py-28"
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}

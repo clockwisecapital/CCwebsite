@@ -9,6 +9,7 @@ interface Card3DProps {
   icon?: React.ReactNode;
   number: string;
   id: string;
+  badge?: string;
   onOpenModal?: (id: string) => void;
 }
 
@@ -17,6 +18,7 @@ const Card3D: React.FC<Card3DProps> = ({
   description, 
   icon, 
   number,
+  badge,
   id,
   onOpenModal
 }) => {
@@ -32,9 +34,9 @@ const Card3D: React.FC<Card3DProps> = ({
       <div 
         className={`
           relative h-full rounded-xl overflow-hidden backdrop-blur-md
-          bg-white/10 border border-white/20
+          bg-gradient-to-br from-[#1A2332] to-[#0F1419] border border-white/10
           transition-all duration-500 ease-out
-          group min-h-[420px] w-full mx-auto
+          group min-h-[420px] w-full mx-auto hover:border-[#1FAAA3]/50
           ${isHovered ? 'shadow-xl shadow-[#1FAAA3]/20' : 'shadow-lg shadow-black/5'}
         `}
         style={{
@@ -58,7 +60,7 @@ const Card3D: React.FC<Card3DProps> = ({
         {/* Glow effect on hover */}
         <div 
           className={`
-            absolute inset-0 bg-gradient-to-br from-[#1FAAA3]/30 via-transparent to-[#E3B23C]/20
+            absolute inset-0 bg-gradient-to-br from-[#1FAAA3]/20 via-transparent to-transparent
             opacity-0 group-hover:opacity-100 transition-opacity duration-700
           `}
         />
@@ -73,6 +75,19 @@ const Card3D: React.FC<Card3DProps> = ({
         >
           {number}
         </div>
+
+        {/* Badge */}
+        {badge && (
+          <div 
+            className="absolute top-8 left-1/2 px-4 py-2 bg-[#1FAAA3] text-white text-xs font-bold rounded-full whitespace-nowrap uppercase tracking-wide"
+            style={{
+              transform: 'translateX(-50%) translateZ(25px)',
+              transformStyle: 'preserve-3d',
+            }}
+          >
+            {badge}
+          </div>
+        )}
         
         {/* Card content */}
         <div 
@@ -96,7 +111,7 @@ const Card3D: React.FC<Card3DProps> = ({
           )}
           
           <h3 
-            className="text-xl md:text-2xl font-medium text-white mb-4 group-hover:text-[#E3B23C] transition-colors duration-300 whitespace-pre-line"
+            className="text-xl md:text-2xl font-medium text-white mb-4 transition-colors duration-300 whitespace-pre-line"
             style={{
               transform: isHovered ? 'translateZ(50px)' : 'translateZ(15px)',
               transformStyle: 'preserve-3d',

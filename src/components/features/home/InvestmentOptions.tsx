@@ -12,6 +12,7 @@ type InvestmentOption = {
   title: string;
   description: string;
   icon: React.ReactNode;
+  badge?: string;
 };
 
 const investmentOptions: InvestmentOption[] = [
@@ -31,6 +32,7 @@ const investmentOptions: InvestmentOption[] = [
     number: '02',
     title: 'Clockwise Diversified\nGrowth Portfolios',
     description: 'Investment Minimum: $50k+\n\n— Clockwise Adaptive Portfolios leverage AI & human experts to broadly diversify ETF portfolios for maximum risk-adjusted growth that rebalance on a monthly basis to align with investors\' unique risk preferences and goal time horizons.',
+    badge: 'Most Popular',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -55,26 +57,21 @@ const InvestmentOptions = () => {
 
 
   return (
-    <section id="grow" className="py-16 relative overflow-hidden">
-      {/* Dark blue gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#0A1F35] via-[#1A3A5F] to-[#0A1F35] z-0" />
-      
+    <section id="grow" className="py-20 md:py-28 relative overflow-hidden bg-[#0e171e]">
       {/* Subtle animated background patterns */}
       <div className="absolute inset-0 opacity-10 z-0">
-        <div className="absolute top-0 left-0 w-full h-full bg-[url('/images/grid-pattern.svg')] bg-repeat opacity-5" />
         <div className="absolute top-1/4 left-1/3 w-64 h-64 rounded-full bg-[#1FAAA3] blur-[100px] animate-pulse-slow" />
-        <div className="absolute bottom-1/3 right-1/4 w-80 h-80 rounded-full bg-[#E3B23C] blur-[120px] animate-pulse-slow" style={{ animationDelay: '2s' }} />
+        <div className="absolute bottom-1/3 right-1/4 w-80 h-80 rounded-full bg-[#1FAAA3] blur-[120px] animate-pulse-slow" style={{ animationDelay: '2s' }} />
       </div>
       
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Section header */}
-        <div className="text-center mb-12">
-          <p className="text-teal-300 uppercase tracking-wide mb-2">0% Management Fee Portfolios</p>
-          <h2 className="text-3xl md:text-4xl font-sans font-medium text-white mb-4">
+        <div className="text-center mb-16">
+          <p className="text-[#1FAAA3] uppercase tracking-wide mb-3 text-sm font-medium">Solutions</p>
+          <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
             Portfolio Options
           </h2>
-          <div className="w-24 h-1 bg-gradient-to-r from-[#1FAAA3] to-[#E3B23C] rounded-full mx-auto mb-6"></div>
-          <p className="text-white/70 max-w-2xl mx-auto">
+          <p className="text-gray-400 max-w-3xl mx-auto text-lg">
             Explore our range of investment products designed to help you navigate economic and technology cycles with confidence.
           </p>
         </div>
@@ -88,6 +85,7 @@ const InvestmentOptions = () => {
                 description={card.description}
                 icon={card.icon}
                 number={card.number}
+                badge={card.badge}
                 id={card.id}
               />
             </div>

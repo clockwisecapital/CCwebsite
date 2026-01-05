@@ -19,6 +19,15 @@ const ClockwiseTeam = () => {
   
   const teamMembers: TeamMember[] = [
     {
+      name: 'Kronos',
+      title: 'AI Portfolio Manager',
+      imageSrc: '/team/kronos.png',
+      bio: 'Kronos is Clockwise Capital\'s proprietary AI Portfolio Manager, engineered to bring adaptive intelligence, discipline, and transparency to modern investing. Built on the Adaptive Investment Framework, Kronos analyzes market cycles, macroeconomic trends, valuation regimes, and risk dynamics in real time—continuously adjusting portfolio positioning to reflect the shifting forces that drive long-term returns. At the core of Kronos is a singular mission: help investors compound wealth more intelligently across every phase of the market cycle. By integrating machine learning, quantitative research, and human investment expertise, Kronos powers the strategy behind TIME: Clockwise Core Equity & Innovation ETF and Clockwise Adaptive Portfolios, ensuring allocations evolve with changing market conditions rather than relying on static models, incapable of adapting to the speed of change. Kronos is designed not just to react to markets, but to anticipate them—detecting shifts in growth, value, momentum, and defensive factors, and rebalancing portfolios to maximize durability and opportunity. With an emphasis on explainability and rigorous methodology, Kronos gives investors access to institutional-grade adaptive strategy in a transparent, accessible format. Kronos represents the future of portfolio management: always learning, always adapting, and always aligned with long-term investor outcomes.',
+      social: {
+        linkedin: 'https://www.linkedin.com/in/kronos-clockwise-79aab7397/'
+      }
+    },
+    {
       name: 'Eli Mikel, CFP®, CRPC®',
       title: 'Chief Growth Officer',
       imageSrc: '/team/Eli-clockwise.png',
@@ -46,15 +55,6 @@ const ClockwiseTeam = () => {
       social: {
         linkedin: 'https://linkedin.com'
       }
-    },
-    {
-      name: 'Kronos',
-      title: 'AI Portfolio Manager',
-      imageSrc: '/team/kronos.png',
-      bio: 'Kronos is Clockwise Capital\'s proprietary AI Portfolio Manager, engineered to bring adaptive intelligence, discipline, and transparency to modern investing. Built on the Adaptive Investment Framework, Kronos analyzes market cycles, macroeconomic trends, valuation regimes, and risk dynamics in real time—continuously adjusting portfolio positioning to reflect the shifting forces that drive long-term returns. At the core of Kronos is a singular mission: help investors compound wealth more intelligently across every phase of the market cycle. By integrating machine learning, quantitative research, and human investment expertise, Kronos powers the strategy behind TIME: Clockwise Core Equity & Innovation ETF and Clockwise Adaptive Portfolios, ensuring allocations evolve with changing market conditions rather than relying on static models, incapable of adapting to the speed of change. Kronos is designed not just to react to markets, but to anticipate them—detecting shifts in growth, value, momentum, and defensive factors, and rebalancing portfolios to maximize durability and opportunity. With an emphasis on explainability and rigorous methodology, Kronos gives investors access to institutional-grade adaptive strategy in a transparent, accessible format. Kronos represents the future of portfolio management: always learning, always adapting, and always aligned with long-term investor outcomes.',
-      social: {
-        linkedin: 'https://www.linkedin.com/in/kronos-clockwise-79aab7397/'
-      }
     }
   ];
 
@@ -63,7 +63,7 @@ const ClockwiseTeam = () => {
   return (
     <div id="team">
       <AnimatedSection 
-      className="py-24 relative overflow-hidden bg-gradient-to-br from-[#0A1F35] to-[#0A1F35]/90"
+      className="py-24 relative overflow-hidden bg-[#0e171e]"
       animation="fade-right"
     >
       <div className="container mx-auto px-4">

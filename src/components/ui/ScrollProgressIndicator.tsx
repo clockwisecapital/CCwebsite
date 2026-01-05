@@ -55,24 +55,16 @@ const ScrollProgressIndicator: React.FC<ScrollProgressIndicatorProps> = ({
         position === 'right' ? 'right-4 md:right-8' : 'left-4 md:left-8'
       } flex flex-col items-center`}
     >
-      {/* Main progress bar */}
-      <div className="h-48 w-1 bg-gray-300 rounded-full relative">
-        <div 
-          className="absolute bottom-0 w-full bg-gradient-to-t from-[#1FAAA3] to-[#1A3A5F] rounded-full transition-all duration-300 ease-out"
-          style={{ height: `${scrollProgress}%` }}
-        />
-      </div>
-
       {/* Section indicators */}
       {sections.length > 0 && (
-        <div className="mt-4 flex flex-col items-center space-y-3">
+        <div className="flex flex-col items-center space-y-3">
           {sections.map((section, index) => (
             <div key={index} className="flex items-center">
               <div 
                 className={`w-3 h-3 rounded-full transition-all duration-300 ${
                   index <= activeSection 
                     ? 'bg-[#1FAAA3] scale-110' 
-                    : 'bg-gray-300'
+                    : 'bg-gray-400/50'
                 }`}
               />
               {showLabels && (

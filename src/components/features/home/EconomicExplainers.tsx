@@ -44,7 +44,8 @@ const approachSteps = [
     id: 3,
     number: "3",
     title: "Talk to an Advisor",
-    description: "A fiduciary helps you implement changes that fit your goals."
+    description: "A fiduciary helps you implement changes that fit your goals.",
+    link: "https://calendly.com/clockwisecapital/appointments"
   }
 ];
 
@@ -53,10 +54,10 @@ const EconomicExplainers: React.FC = () => {
   const [showDetails, setShowDetails] = useState<boolean>(false);
   
   return (
-  <section className="relative w-full overflow-hidden py-20 md:py-28">
+  <section className="relative w-full overflow-hidden py-20 md:py-28 bg-[#0a1119]">
     {/* Background video */}
     <video
-      className="absolute inset-0 w-full h-full object-cover"
+      className="absolute inset-0 w-full h-full object-cover opacity-20"
       autoPlay
       loop
       muted
@@ -64,7 +65,7 @@ const EconomicExplainers: React.FC = () => {
       src="/navigationsection/social_u9354481378_Cinematic_beach_scene_split_ocean_view_left_surfe_556968b1-f947-41d8-b525-2ef2881f11b9_3.mp4"
     />
     {/* Dark overlay for readability */}
-    <div className="absolute inset-0 bg-black/70" />
+    <div className="absolute inset-0 bg-[#0a1119]/80" />
     
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
       
