@@ -84,7 +84,10 @@ export const refreshTimePortfolioCache = inngest.createFunction(
     id: "refresh-time-portfolio-cache",
     retries: 2,
   },
-  { cron: "0 */6 * * *" }, // Every 6 hours
+  [
+    { cron: "0 1,7,13,19 * * *" }, // 8pm, 2am, 8am, 2pm EST (1am, 7am, 1pm, 7pm UTC) - off-peak hours
+    { event: "app/refresh.time-portfolio" } // Manual trigger support
+  ],
   async ({ step }) => {
     const startTime = Date.now();
     console.log("🔄 Starting TIME portfolio cache refresh...");
@@ -256,7 +259,10 @@ export const refreshVolatilityCache = inngest.createFunction(
     id: "refresh-volatility-cache",
     retries: 2,
   },
-  { cron: "0 0 * * *" }, // Daily at midnight
+  [
+    { cron: "0 6 * * *" }, // Daily at 1am EST (6am UTC) - off-peak hours
+    { event: "app/refresh.volatility" } // Manual trigger support
+  ],
   async ({ step }) => {
     const startTime = Date.now();
     console.log("🔄 Starting volatility cache refresh...");

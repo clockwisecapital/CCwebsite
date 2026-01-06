@@ -481,6 +481,77 @@ export default function PortfolioDashboard() {
                   </div>
                 </div>
 
+                {/* Portfolio Oversight Suggested - Moved to Top */}
+                {intakeData && (
+                  <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+                    <div className="border-b border-gray-700 bg-gray-700 px-6 py-4">
+                      <h3 className="text-lg font-semibold text-gray-100">Portfolio Oversight Suggested</h3>
+                      <p className="text-sm text-gray-400 mt-1">Recommended Clockwise Portfolios Based on Your Risk Profile</p>
+                    </div>
+                    <div className="p-6">
+                      <div className="flex items-start gap-3 mb-4">
+                        <svg className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        <div>
+                          <p className="text-sm font-semibold text-blue-300 mb-1">
+                            Based on your {intakeData.riskTolerance === 'high' ? 'Aggressive' : intakeData.riskTolerance === 'medium' ? 'Moderate' : 'Conservative'} risk tolerance, we recommend:
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Portfolio Options */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {(() => {
+                          let portfolio1 = '';
+                          let portfolio2 = '';
+                          
+                          if (intakeData.riskTolerance === 'high') {
+                            portfolio1 = 'Max Growth';
+                            portfolio2 = 'Growth';
+                          } else if (intakeData.riskTolerance === 'medium') {
+                            portfolio1 = 'Growth';
+                            portfolio2 = 'Moderate';
+                          } else {
+                            portfolio1 = 'Moderate';
+                            portfolio2 = 'Income';
+                          }
+                          
+                          return (
+                            <>
+                              <div className="bg-gradient-to-br from-blue-900/40 to-blue-800/40 border border-blue-700 rounded-lg p-5">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                  </svg>
+                                  <h4 className="text-lg font-bold text-blue-300">{portfolio1}</h4>
+                                </div>
+                                <p className="text-sm text-gray-300">Clockwise {portfolio1} Portfolio</p>
+                              </div>
+                              
+                              <div className="bg-gradient-to-br from-teal-900/40 to-teal-800/40 border border-teal-700 rounded-lg p-5">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                  </svg>
+                                  <h4 className="text-lg font-bold text-teal-300">{portfolio2}</h4>
+                                </div>
+                                <p className="text-sm text-gray-300">Clockwise {portfolio2} Portfolio</p>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                      
+                      <div className="mt-4 text-center">
+                        <p className="text-xs text-gray-400">
+                          Schedule a consultation to learn more about these portfolios
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Portfolio Intelligence Results */}
                 {analysisResult && (
                   <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
@@ -562,19 +633,6 @@ export default function PortfolioDashboard() {
                             ));
                           })()}
                         </ul>
-                      </div>
-
-                      {/* Professional Oversight Notice */}
-                      <div className="mt-6 p-4 bg-blue-900/20 border border-blue-800 rounded-lg">
-                        <div className="flex items-start gap-3">
-                          <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <div>
-                            <p className="text-sm font-semibold text-blue-300 mb-1">Professional oversight suggested</p>
-                            <p className="text-xs text-blue-400">Clockwise portfolio solutions available</p>
-                          </div>
-                        </div>
                       </div>
                     </div>
                   </div>
