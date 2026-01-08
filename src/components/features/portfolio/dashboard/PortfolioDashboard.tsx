@@ -352,11 +352,14 @@ export default function PortfolioDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-900">
+      {/* Unified Video Player - appears at top on mobile, bottom-right on desktop */}
+      <UnifiedVideoPlayer currentVideo={currentVideo} />
+
       {/* Gradient header for all tabs */}
-      <div className="bg-gradient-to-r from-teal-600 to-blue-600 pt-20 pb-16"></div>
+      <div className="bg-gradient-to-r from-teal-600 to-blue-600 pt-8 pb-8 md:pt-20 md:pb-16"></div>
 
       {/* Dashboard Container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 -mt-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8 -mt-12 md:-mt-20">
         {/* Tab Navigation */}
         <div className="bg-gray-800 rounded-lg shadow-sm">
           <div className="border-b border-gray-700">
@@ -643,9 +646,6 @@ export default function PortfolioDashboard() {
           </div>
         </div>
       </div>
-
-      {/* Unified Video Player */}
-      <UnifiedVideoPlayer currentVideo={currentVideo} />
     </div>
   );
 }
