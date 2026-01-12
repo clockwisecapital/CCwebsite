@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import IntakeTab from './IntakeTab';
 import ReviewTab from './ReviewTab';
+import ScenarioTestingTab from './ScenarioTestingTab';
 import UnifiedVideoPlayer, { type VideoConfig } from './UnifiedVideoPlayer';
 import { getVideoPath } from '@/hooks/useAvatarVariant';
 
@@ -64,7 +65,7 @@ export interface AnalysisResult {
 }
 
 export default function PortfolioDashboard() {
-  const [activeTab, setActiveTab] = useState<'intake' | 'review' | 'analyze'>('intake');
+  const [activeTab, setActiveTab] = useState<'intake' | 'review' | 'analyze' | 'scenarios'>('intake');
   const [intakeData, setIntakeData] = useState<IntakeFormData | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -424,6 +425,29 @@ export default function PortfolioDashboard() {
                   <span className="text-xs sm:text-sm">Analysis</span>
                 </span>
               </button>
+
+              <button
+                onClick={() => intakeData && setActiveTab('scenarios')}
+                disabled={!intakeData}
+                className={`
+                  flex-1 px-3 sm:px-6 md:px-8 py-3 md:py-4 text-xs sm:text-sm font-medium border-b-2 transition-colors
+                  ${activeTab === 'scenarios'
+                    ? 'border-teal-500 text-teal-400'
+                    : intakeData
+                      ? 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                      : 'border-transparent text-gray-600 cursor-not-allowed'
+                  }
+                `}
+              >
+                <span className="flex items-center justify-center gap-1 sm:gap-2">
+                  <span className={`flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full text-xs font-bold ${
+                    intakeData ? 'bg-teal-900/30 text-teal-400' : 'bg-gray-700 text-gray-500'
+                  }`}>
+                    4
+                  </span>
+                  <span className="text-xs sm:text-sm">Scenarios</span>
+                </span>
+              </button>
             </nav>
           </div>
 
@@ -452,6 +476,14 @@ export default function PortfolioDashboard() {
                 onPortfolioSlideChange={setPortfolioSlide}
                 onMarketSlideChange={setMarketSlide}
                 cyclesLoading={cyclesLoading}
+              />
+            )}
+
+            {activeTab === 'scenarios' && intakeData && (
+              <ScenarioTestingTab
+                portfolioData={intakeData.portfolio}
+                onNext={() => setActiveTab('analyze')}
+                onBack={() => setActiveTab('review')}
               />
             )}
             

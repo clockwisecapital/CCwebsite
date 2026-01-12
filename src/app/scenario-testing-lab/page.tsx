@@ -44,14 +44,16 @@ export default function ScenarioTestingLab() {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <button 
-              onClick={() => router.push('/kronos')}
+              onClick={() => router.push('/scenario-testing/questions')}
               className="group relative px-10 py-5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-lg rounded-xl transition-all duration-300 shadow-2xl hover:shadow-teal-600/40 hover:scale-105 hover:-translate-y-0.5 min-w-[280px] sm:min-w-[320px]"
             >
-              <span className="relative z-10">Scenario Test My Portfolio</span>
+              <span className="relative z-10">Explore Questions</span>
               <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-teal-600 to-teal-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </button>
-            <button className="group px-10 py-5 bg-white hover:bg-gray-50 text-blue-900 font-bold text-lg rounded-xl transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 hover:-translate-y-0.5 border-2 border-transparent hover:border-teal-500/20 min-w-[280px] sm:min-w-[320px]">
-              Watch Demo
+            <button 
+              onClick={() => router.push('/kronos')}
+              className="group px-10 py-5 bg-white hover:bg-gray-50 text-blue-900 font-bold text-lg rounded-xl transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 hover:-translate-y-0.5 border-2 border-transparent hover:border-teal-500/20 min-w-[280px] sm:min-w-[320px]">
+              Test My Portfolio
             </button>
           </div>
 
@@ -149,11 +151,11 @@ export default function ScenarioTestingLab() {
                 Your portfolio is slightly behind TIME ETF cycle alignment.
               </p>
               <button 
-                onClick={() => router.push('/kronos')}
+                onClick={() => router.push('/scenario-testing/questions')}
                 className="group relative px-8 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm rounded-xl transition-all duration-300 shadow-2xl hover:scale-105 hover:-translate-y-1"
               >
                 <span className="relative z-10 flex items-center justify-center gap-3">
-                  Get Detailed Analysis
+                  Explore Scenarios
                   <span className="inline-block group-hover:translate-x-2 transition-transform duration-300">→</span>
                 </span>
               </button>
@@ -328,11 +330,11 @@ export default function ScenarioTestingLab() {
 
           {/* CTA Button */}
           <button 
-            onClick={() => router.push('/kronos')}
+            onClick={() => router.push('/scenario-testing/questions')}
             className="group relative px-10 py-4 bg-teal-600 hover:bg-teal-700 text-white font-bold text-base md:text-lg rounded-xl transition-all duration-300 shadow-2xl hover:scale-110 hover:-translate-y-2"
           >
             <span className="relative z-10 flex items-center justify-center gap-4">
-              Start Testing Your Portfolio
+              Browse Scenarios & Test Portfolio
               <span className="inline-block group-hover:translate-x-3 transition-transform duration-300 text-2xl">→</span>
             </span>
           </button>
