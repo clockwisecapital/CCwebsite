@@ -584,12 +584,168 @@ export interface Database {
         }
         Relationships: []
       }
+      users: {
+        Row: {
+          id: string
+          email: string
+          first_name: string | null
+          last_name: string | null
+          created_at: string
+          updated_at: string
+          last_login: string | null
+          preferences: Json | null
+          metadata: Json | null
+        }
+        Insert: {
+          id: string
+          email: string
+          first_name?: string | null
+          last_name?: string | null
+          created_at?: string
+          updated_at?: string
+          last_login?: string | null
+          preferences?: Json | null
+          metadata?: Json | null
+        }
+        Update: {
+          id?: string
+          email?: string
+          first_name?: string | null
+          last_name?: string | null
+          created_at?: string
+          updated_at?: string
+          last_login?: string | null
+          preferences?: Json | null
+          metadata?: Json | null
+        }
+        Relationships: []
+      }
+      portfolios: {
+        Row: {
+          id: string
+          user_id: string | null
+          conversation_id: string | null
+          name: string
+          description: string | null
+          portfolio_data: Json
+          intake_data: Json
+          analysis_results: Json | null
+          portfolio_score: number | null
+          goal_probability: number | null
+          risk_score: number | null
+          cycle_score: number | null
+          is_public: boolean
+          created_at: string
+          updated_at: string
+          tested_at: string
+          metadata: Json | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          conversation_id?: string | null
+          name?: string
+          description?: string | null
+          portfolio_data: Json
+          intake_data: Json
+          analysis_results?: Json | null
+          portfolio_score?: number | null
+          goal_probability?: number | null
+          risk_score?: number | null
+          cycle_score?: number | null
+          is_public?: boolean
+          created_at?: string
+          updated_at?: string
+          tested_at?: string
+          metadata?: Json | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          conversation_id?: string | null
+          name?: string
+          description?: string | null
+          portfolio_data?: Json
+          intake_data?: Json
+          analysis_results?: Json | null
+          portfolio_score?: number | null
+          goal_probability?: number | null
+          risk_score?: number | null
+          cycle_score?: number | null
+          is_public?: boolean
+          created_at?: string
+          updated_at?: string
+          tested_at?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolios_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolios_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      portfolio_rankings: {
+        Row: {
+          id: string
+          portfolio_id: string
+          rank: number | null
+          score: number
+          period: string
+          category: string | null
+          calculated_at: string
+        }
+        Insert: {
+          id?: string
+          portfolio_id: string
+          rank?: number | null
+          score: number
+          period: string
+          category?: string | null
+          calculated_at?: string
+        }
+        Update: {
+          id?: string
+          portfolio_id?: string
+          rank?: number | null
+          score?: number
+          period?: string
+          category?: string | null
+          calculated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_rankings_portfolio_id_fkey"
+            columns: ["portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "portfolios"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      link_conversation_to_user: {
+        Args: {
+          p_conversation_id: string
+          p_user_id: string
+          p_email: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       message_role: 'user' | 'assistant'
@@ -636,6 +792,18 @@ export type AdminUserUpdate = Database['public']['Tables']['admin_users']['Updat
 export type ClientAssignment = Database['public']['Tables']['client_assignments']['Row']
 export type ClientAssignmentInsert = Database['public']['Tables']['client_assignments']['Insert']
 export type ClientAssignmentUpdate = Database['public']['Tables']['client_assignments']['Update']
+
+export type User = Database['public']['Tables']['users']['Row']
+export type UserInsert = Database['public']['Tables']['users']['Insert']
+export type UserUpdate = Database['public']['Tables']['users']['Update']
+
+export type Portfolio = Database['public']['Tables']['portfolios']['Row']
+export type PortfolioInsert = Database['public']['Tables']['portfolios']['Insert']
+export type PortfolioUpdate = Database['public']['Tables']['portfolios']['Update']
+
+export type PortfolioRanking = Database['public']['Tables']['portfolio_rankings']['Row']
+export type PortfolioRankingInsert = Database['public']['Tables']['portfolio_rankings']['Insert']
+export type PortfolioRankingUpdate = Database['public']['Tables']['portfolio_rankings']['Update']
 
 // Application-specific types
 export interface SessionData {
