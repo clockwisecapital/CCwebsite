@@ -8,6 +8,7 @@ import UnifiedVideoPlayer, { type VideoConfig } from './UnifiedVideoPlayer';
 import { getVideoPath } from '@/hooks/useAvatarVariant';
 import CreatePasswordModal from '@/components/features/auth/CreatePasswordModal';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { supabase } from '@/lib/supabase/client';
 
 export interface IntakeFormData {
   // Personal
@@ -80,11 +81,120 @@ export default function PortfolioDashboard() {
   const [cyclesLoading, setCyclesLoading] = useState(false); // Track if market cycles are still loading
   const [showCreatePasswordModal, setShowCreatePasswordModal] = useState(false);
   const [portfolioSaved, setPortfolioSaved] = useState(false);
+  const [savedPortfolioId, setSavedPortfolioId] = useState<string | null>(null);
+  const [loadingPortfolio, setLoadingPortfolio] = useState(false);
   
   // Track carousel slides for video sync
   const [goalSlide, setGoalSlide] = useState(0);
   const [portfolioSlide, setPortfolioSlide] = useState(0);
   const [marketSlide, setMarketSlide] = useState(0);
+
+  // Reusable function to save portfolio to database
+  const savePortfolio = async (userId: string) => {
+    if (!conversationId || !intakeData || !analysisResult) {
+      console.warn('Cannot save portfolio: missing required data');
+      return;
+    }
+
+    try {
+      // Get the current session to include auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      
+      const response = await fetch('/api/portfolios/save', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          userId,
+          conversationId,
+          intakeData,
+          analysisResult,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPortfolioSaved(true);
+        setSavedPortfolioId(data.portfolio?.id || null);
+        console.log('✅ Portfolio saved successfully!', data.portfolio?.id);
+      } else {
+        const error = await response.json();
+        console.error('❌ Failed to save portfolio:', error);
+      }
+    } catch (error) {
+      console.error('❌ Portfolio save error:', error);
+    }
+  };
+
+  // Effect to load portfolio from sessionStorage if requested
+  useEffect(() => {
+    const loadPortfolioId = sessionStorage.getItem('loadPortfolioId');
+    if (loadPortfolioId && user && !intakeData) {
+      setLoadingPortfolio(true);
+      
+      // Fetch portfolio data
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        const headers: HeadersInit = {};
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+        
+        try {
+          const response = await fetch(`/api/portfolios/${loadPortfolioId}`, { headers });
+          const data = await response.json();
+          
+          if (response.ok && data.portfolio) {
+            const portfolio = data.portfolio;
+            
+            // Convert saved portfolio to intake form format
+            const loadedIntakeData: IntakeFormData = {
+              firstName: portfolio.intake_data?.firstName || user.user_metadata?.first_name,
+              lastName: portfolio.intake_data?.lastName || user.user_metadata?.last_name,
+              email: portfolio.intake_data?.email || user.email,
+              age: portfolio.intake_data?.age,
+              experienceLevel: portfolio.intake_data?.experienceLevel || 'Intermediate',
+              riskTolerance: portfolio.intake_data?.riskTolerance || 'medium',
+              portfolio: portfolio.portfolio_data || portfolio.intake_data?.portfolio,
+              specificHoldings: portfolio.intake_data?.specificHoldings || [],
+              goalAmount: portfolio.intake_data?.goalAmount,
+              goalDescription: portfolio.intake_data?.goalDescription,
+              timeHorizon: portfolio.intake_data?.timeHorizon,
+              monthlyContribution: portfolio.intake_data?.monthlyContribution,
+            };
+            
+            setIntakeData(loadedIntakeData);
+            
+            // Show success notification
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-24 right-4 z-50 bg-teal-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3';
+            notification.innerHTML = `
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              <span>Portfolio "${portfolio.name}" loaded! Ready to re-test.</span>
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 4000);
+            
+            console.log('✅ Portfolio loaded successfully:', portfolio.name);
+          } else {
+            console.error('❌ Failed to load portfolio:', data.error);
+            alert('Failed to load portfolio. Please try again.');
+          }
+        } catch (error) {
+          console.error('❌ Error loading portfolio:', error);
+          alert('Error loading portfolio. Please try again.');
+        } finally {
+          setLoadingPortfolio(false);
+          sessionStorage.removeItem('loadPortfolioId');
+        }
+      });
+    }
+  }, [user, intakeData]);
 
   // Effect to scroll to top when switching tabs
   useEffect(() => {
@@ -128,8 +238,13 @@ export default function PortfolioDashboard() {
       updateEmailOnBackend(conversationId, emailData);
       setActiveTab('review');
       
-      // Show create password modal after a short delay if user is not authenticated and hasn't saved yet
-      if (!user && !portfolioSaved) {
+      // Handle portfolio saving based on authentication status
+      if (user && !portfolioSaved) {
+        // User is authenticated: automatically save portfolio
+        console.log('🔐 User authenticated, auto-saving portfolio...');
+        savePortfolio(user.id);
+      } else if (!user && !portfolioSaved) {
+        // User is not authenticated: show create password modal
         setTimeout(() => {
           setShowCreatePasswordModal(true);
         }, 2000); // 2 second delay to let user see results first
@@ -272,26 +387,8 @@ export default function PortfolioDashboard() {
   };
 
   const handlePasswordCreated = async (userId: string) => {
-    // Save the portfolio to the database
-    if (!conversationId || !intakeData || !analysisResult) return;
-
-    try {
-      await fetch('/api/portfolios/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          conversationId,
-          intakeData,
-          analysisResult,
-        }),
-      });
-      
-      setPortfolioSaved(true);
-      console.log('Portfolio saved successfully!');
-    } catch (error) {
-      console.error('Failed to save portfolio:', error);
-    }
+    // Save the portfolio after user creates password
+    await savePortfolio(userId);
   };
 
   // Determine current video based on app state and carousel slides
@@ -506,11 +603,26 @@ export default function PortfolioDashboard() {
           {/* Tab Content */}
           <div className="p-6">
             {activeTab === 'intake' && (
-              <IntakeTab
-                onSubmit={handleIntakeSubmit}
-                initialData={intakeData}
-                isAnalyzing={isAnalyzing}
-              />
+              <>
+                {loadingPortfolio ? (
+                  <div className="flex flex-col items-center justify-center py-20">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full 
+                      bg-teal-500/20 border-2 border-teal-500/30 mb-4">
+                      <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent 
+                        rounded-full animate-spin" />
+                    </div>
+                    <p className="text-gray-400 text-lg">Loading your portfolio...</p>
+                    <p className="text-gray-500 text-sm mt-2">Preparing your data for analysis</p>
+                  </div>
+                ) : (
+                  <IntakeTab
+                    onSubmit={handleIntakeSubmit}
+                    initialData={intakeData}
+                    isAnalyzing={isAnalyzing}
+                    authenticatedUser={user}
+                  />
+                )}
+              </>
             )}
             
             {activeTab === 'review' && analysisResult && intakeData && (
@@ -528,6 +640,7 @@ export default function PortfolioDashboard() {
                 onPortfolioSlideChange={setPortfolioSlide}
                 onMarketSlideChange={setMarketSlide}
                 cyclesLoading={cyclesLoading}
+                portfolioId={savedPortfolioId || undefined}
               />
             )}
 

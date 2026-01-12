@@ -3,14 +3,16 @@
 import { useState, useEffect, useRef } from 'react';
 import type { IntakeFormData } from './PortfolioDashboard';
 import { parseCSV, validateCSVFile, type ParseResult } from '@/lib/utils/csvParser';
+import type { User } from '@supabase/supabase-js';
 
 interface IntakeTabProps {
   onSubmit: (data: IntakeFormData) => void;
   initialData?: IntakeFormData | null;
   isAnalyzing: boolean;
+  authenticatedUser?: User | null;
 }
 
-export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: IntakeTabProps) {
+export default function IntakeTab({ onSubmit, initialData, isAnalyzing, authenticatedUser }: IntakeTabProps) {
   const [formData, setFormData] = useState<IntakeFormData>({
     experienceLevel: 'Intermediate',
     riskTolerance: 'medium',
@@ -63,6 +65,19 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing }: Intake
       }
     }
   }, [initialData]);
+
+  // Auto-fill user data if authenticated
+  useEffect(() => {
+    if (authenticatedUser && !formData.email) {
+      // Only auto-fill if the fields are empty
+      setFormData(prev => ({
+        ...prev,
+        email: authenticatedUser.email || prev.email,
+        firstName: authenticatedUser.user_metadata?.first_name || prev.firstName,
+        lastName: authenticatedUser.user_metadata?.last_name || prev.lastName,
+      }));
+    }
+  }, [authenticatedUser, formData.email]);
 
   const formatNumberWithCommas = (value: string): string => {
     const numericValue = value.replace(/,/g, '');

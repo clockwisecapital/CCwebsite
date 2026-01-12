@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createServerSupabaseClient();
+    const supabase = await createServerSupabaseClient();
 
     // Look up actual conversation UUID from session_id if needed
     let actualConversationId = null;

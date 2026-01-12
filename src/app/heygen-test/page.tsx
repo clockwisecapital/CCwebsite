@@ -111,8 +111,8 @@ export default function HeyGenTestPage() {
 
       avatarInstanceRef.current = avatar;
       
-      // Set up event listeners
-      avatar.on('connected', () => {
+      // Set up event listeners (using 'as any' to bypass strict typing)
+      (avatar as any).on('connected', () => {
         console.log('Avatar connected!');
         setIsConnected(true);
         setStatus('connected');
@@ -124,19 +124,19 @@ export default function HeyGenTestPage() {
         }
       });
 
-      avatar.on('disconnected', (reason: any) => {
+      (avatar as any).on('disconnected', (reason: any) => {
         console.log('Avatar disconnected:', reason);
         setIsConnected(false);
         setStatus('disconnected');
       });
 
-      avatar.on('error', (error: any) => {
+      (avatar as any).on('error', (error: any) => {
         console.error('Avatar error:', error);
         setError(error?.message || 'Avatar connection error');
         setStatus('error');
       });
 
-      avatar.on('message', (msg: any) => {
+      (avatar as any).on('message', (msg: any) => {
         console.log('Avatar message:', msg);
       });
       

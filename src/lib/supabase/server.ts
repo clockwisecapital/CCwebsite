@@ -6,7 +6,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-// import { cookies } from 'next/headers' // Not used currently
+import { cookies, headers } from 'next/headers'
 import type { Database } from './types.js'
 
 // Validate environment variables
@@ -19,7 +19,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 /**
- * Create Supabase client for Server Components
+ * Create Supabase client for Server Components and API Routes
  * 
  * Used in:
  * - Server Components
@@ -31,18 +31,36 @@ if (!supabaseUrl || !supabaseAnonKey) {
  * - Automatic token refresh
  * - RLS enforcement with user context
  */
-export const createServerSupabaseClient = () => {
-  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
+export const createServerSupabaseClient = async () => {
+  const cookieStore = await cookies()
+  const headersList = await headers()
+  
+  // Extract the access token from cookies or Authorization header
+  const accessToken = cookieStore.get('sb-access-token')?.value || 
+                      headersList.get('authorization')?.replace('Bearer ', '')
+  
+  const client = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: true,
-      persistSession: true,
+      persistSession: false, // API routes don't need session persistence
     },
     global: {
       headers: {
         'X-Client-Info': 'clockwise-capital-server',
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       },
     },
   })
+  
+  // If we have an access token, set it on the auth object
+  if (accessToken) {
+    await client.auth.setSession({
+      access_token: accessToken,
+      refresh_token: cookieStore.get('sb-refresh-token')?.value || '',
+    })
+  }
+  
+  return client
 }
 
 /**
@@ -78,7 +96,7 @@ export const createAdminSupabaseClient = () => {
  * Utility function to get user from server-side context
  */
 export const getServerUser = async () => {
-  const supabase = createServerSupabaseClient()
+  const supabase = await createServerSupabaseClient()
   
   try {
     const { data: { user }, error } = await supabase.auth.getUser()

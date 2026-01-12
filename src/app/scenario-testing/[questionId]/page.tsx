@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { supabase } from '@/lib/supabase/client';
 import ScenarioHeader from '@/components/features/scenario-testing/ScenarioHeader';
 import PortfolioCard from '@/components/features/scenario-testing/PortfolioCard';
 import { getQuestionById, getPortfoliosByQuestionId } from '@/lib/scenarioTestingData';
@@ -9,9 +11,40 @@ import { getQuestionById, getPortfoliosByQuestionId } from '@/lib/scenarioTestin
 export default function TopPortfoliosPage() {
   const router = useRouter();
   const params = useParams();
+  const { user } = useAuth();
   const questionId = params.questionId as string;
   
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<string | null>(null);
+  const [selectedPortfolioName, setSelectedPortfolioName] = useState<string | null>(null);
+  
+  useEffect(() => {
+    // Check if portfolio is selected for testing
+    const portfolioId = sessionStorage.getItem('scenarioTestPortfolioId');
+    if (portfolioId && user) {
+      setSelectedPortfolioId(portfolioId);
+      fetchPortfolioName(portfolioId);
+    }
+  }, [user]);
+  
+  const fetchPortfolioName = async (portfolioId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: HeadersInit = {};
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      
+      const response = await fetch(`/api/portfolios/${portfolioId}`, { headers });
+      const data = await response.json();
+      
+      if (response.ok && data.portfolio) {
+        setSelectedPortfolioName(data.portfolio.name);
+      }
+    } catch (error) {
+      console.error('Failed to fetch portfolio name:', error);
+    }
+  };
 
   const question = getQuestionById(questionId);
   const portfolios = getPortfoliosByQuestionId(questionId);
@@ -39,9 +72,12 @@ export default function TopPortfoliosPage() {
   }
 
   const handlePortfolioClick = (portfolioId: string) => {
-    // For now, just navigate back to Kronos or show a placeholder
-    // In future, this would navigate to comparison view
-    router.push(`/kronos`);
+    // Store the leaderboard portfolio ID to show in comparison view
+    sessionStorage.setItem('scenarioLeaderboardPortfolioId', portfolioId);
+    sessionStorage.removeItem('scenarioTestPortfolioId'); // Clear user portfolio if set
+    
+    // Navigate to results to show leaderboard portfolio vs TIME
+    router.push(`/scenario-testing/${questionId}/results`);
   };
 
   return (
@@ -145,30 +181,61 @@ export default function TopPortfoliosPage() {
             </div>
           )}
 
-          {/* Submit Portfolio CTA */}
+          {/* Test Scenario CTA */}
           {portfolios.length > 0 && (
-            <div className="flex justify-center pt-12">
-              <button
-                onClick={() => router.push('/kronos')}
-                className="px-10 py-4 bg-teal-600 hover:bg-teal-700 text-white font-bold 
-                  rounded-xl transition-all duration-300 shadow-xl hover:scale-105 
-                  flex items-center gap-3"
-              >
-                Submit Portfolio
-                <svg 
-                  className="w-5 h-5" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
+            <div className="flex flex-col items-center gap-4 pt-12">
+              {selectedPortfolioId && selectedPortfolioName ? (
+                <div className="w-full max-w-2xl">
+                  <div className="bg-gradient-to-r from-blue-900/30 to-cyan-900/30 border-2 border-blue-500/30 rounded-xl p-6 mb-6">
+                    <div className="text-center">
+                      <p className="text-gray-400 text-sm mb-1">Ready to test</p>
+                      <p className="text-white font-bold text-lg">{selectedPortfolioName}</p>
+                      <p className="text-gray-400 text-sm mt-1">against this scenario</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4 justify-center">
+                    <button
+                      onClick={() => router.push(`/scenario-testing/${questionId}/results`)}
+                      className="px-10 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 
+                        hover:from-blue-700 hover:to-cyan-700 text-white font-bold 
+                        rounded-xl transition-all duration-300 shadow-xl hover:scale-105 
+                        flex items-center gap-3"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                          d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Run Scenario Test
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedPortfolioId(null);
+                        setSelectedPortfolioName(null);
+                        sessionStorage.removeItem('scenarioTestPortfolioId');
+                      }}
+                      className="px-6 py-4 bg-gray-800 hover:bg-gray-700 border border-gray-700 
+                        text-gray-400 hover:text-white font-semibold rounded-xl transition-colors"
+                    >
+                      Change Portfolio
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => router.push('/scenario-testing/questions')}
+                  className="px-10 py-4 bg-teal-600 hover:bg-teal-700 text-white font-bold 
+                    rounded-xl transition-all duration-300 shadow-xl hover:scale-105 
+                    flex items-center gap-3"
                 >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M9 5l7 7-7 7" 
-                  />
-                </svg>
-              </button>
+                  Select Portfolio to Test
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              )}
             </div>
           )}
         </div>

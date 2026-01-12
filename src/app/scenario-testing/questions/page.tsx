@@ -1,16 +1,93 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { supabase } from '@/lib/supabase/client';
 import QuestionCard from '@/components/features/scenario-testing/QuestionCard';
 import { SCENARIO_QUESTIONS } from '@/lib/scenarioTestingData';
 
 export default function QuestionsPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'questions' | 'portfolios'>('questions');
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<string | null>(null);
+  const [selectedPortfolioName, setSelectedPortfolioName] = useState<string | null>(null);
+  const [userPortfolios, setUserPortfolios] = useState<Array<{ id: string; name: string; created_at: string }>>([]);
+  const [loadingPortfolios, setLoadingPortfolios] = useState(false);
+
+  // Fetch user portfolios on mount
+  useEffect(() => {
+    if (user) {
+      fetchUserPortfolios();
+    }
+    
+    // Check if coming from Kronos with a portfolio
+    const portfolioId = sessionStorage.getItem('scenarioTestPortfolioId');
+    if (portfolioId) {
+      setSelectedPortfolioId(portfolioId);
+      // Fetch portfolio name
+      fetchPortfolioName(portfolioId);
+    }
+  }, [user]);
+
+  const fetchUserPortfolios = async () => {
+    if (!user) return;
+    
+    setLoadingPortfolios(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: HeadersInit = {};
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      
+      const response = await fetch('/api/portfolios/list', { headers });
+      const data = await response.json();
+      
+      if (response.ok && data.portfolios) {
+        setUserPortfolios(data.portfolios.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          created_at: p.created_at
+        })));
+      }
+    } catch (error) {
+      console.error('Failed to fetch portfolios:', error);
+    } finally {
+      setLoadingPortfolios(false);
+    }
+  };
+
+  const fetchPortfolioName = async (portfolioId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: HeadersInit = {};
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      
+      const response = await fetch(`/api/portfolios/${portfolioId}`, { headers });
+      const data = await response.json();
+      
+      if (response.ok && data.portfolio) {
+        setSelectedPortfolioName(data.portfolio.name);
+      }
+    } catch (error) {
+      console.error('Failed to fetch portfolio name:', error);
+    }
+  };
 
   const handleQuestionClick = (questionId: string) => {
-    router.push(`/scenario-testing/${questionId}`);
+    // Store selected portfolio for scenario testing
+    if (selectedPortfolioId) {
+      sessionStorage.setItem('scenarioTestPortfolioId', selectedPortfolioId);
+      // If portfolio is selected, go directly to results/comparison view
+      router.push(`/scenario-testing/${questionId}/results`);
+    } else {
+      // No portfolio selected, go to leaderboard
+      router.push(`/scenario-testing/${questionId}`);
+    }
   };
 
   return (
@@ -76,13 +153,95 @@ export default function QuestionsPage() {
         {/* Content Area */}
         {activeTab === 'questions' && (
           <div className="space-y-6">
+            {/* Portfolio Selector */}
+            {user && (
+              <div className="bg-gradient-to-r from-blue-900/30 to-cyan-900/30 border-2 border-blue-500/30 rounded-xl p-6">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                      <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Select Portfolio to Test
+                    </h3>
+                    {selectedPortfolioName ? (
+                      <p className="text-sm text-gray-400">
+                        Testing: <span className="text-blue-400 font-semibold">{selectedPortfolioName}</span>
+                      </p>
+                    ) : (
+                      <p className="text-sm text-gray-400">Choose a portfolio to test against scenarios</p>
+                    )}
+                  </div>
+                  <div className="flex gap-3 w-full md:w-auto">
+                    <select
+                      value={selectedPortfolioId || ''}
+                      onChange={(e) => {
+                        const portfolioId = e.target.value;
+                        setSelectedPortfolioId(portfolioId);
+                        const portfolio = userPortfolios.find(p => p.id === portfolioId);
+                        setSelectedPortfolioName(portfolio?.name || null);
+                        if (portfolioId) {
+                          sessionStorage.setItem('scenarioTestPortfolioId', portfolioId);
+                        } else {
+                          sessionStorage.removeItem('scenarioTestPortfolioId');
+                        }
+                      }}
+                      disabled={loadingPortfolios}
+                      className="flex-1 md:w-64 px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg 
+                        text-white font-medium hover:bg-gray-750 transition-colors 
+                        focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer
+                        disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="">Select a portfolio...</option>
+                      {userPortfolios.map((portfolio) => (
+                        <option key={portfolio.id} value={portfolio.id}>
+                          {portfolio.name}
+                        </option>
+                      ))}
+                    </select>
+                    {selectedPortfolioId && (
+                      <button
+                        onClick={() => {
+                          setSelectedPortfolioId(null);
+                          setSelectedPortfolioName(null);
+                          sessionStorage.removeItem('scenarioTestPortfolioId');
+                        }}
+                        className="px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg 
+                          text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+                        title="Clear selection"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {!selectedPortfolioId && userPortfolios.length === 0 && !loadingPortfolios && (
+                  <div className="mt-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                    <p className="text-sm text-gray-400">
+                      No portfolios found. <button 
+                        onClick={() => router.push('/kronos')}
+                        className="text-blue-400 hover:text-blue-300 font-semibold underline"
+                      >
+                        Create one now
+                      </button>
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Section Header */}
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-white mb-2">
                 Top Questions (ranked by streak)
               </h2>
               <p className="text-gray-400">
-                Click a question to open the winning portfolio
+                {selectedPortfolioName 
+                  ? `Click any scenario to test "${selectedPortfolioName}" and see the comparison`
+                  : 'Click a question to browse top portfolios or select your own above to test'}
               </p>
               <div className="flex items-center justify-end mt-2">
                 <span className="text-sm font-semibold text-teal-400">Highest Score</span>

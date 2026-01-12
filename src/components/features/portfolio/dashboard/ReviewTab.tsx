@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import type { IntakeFormData, AnalysisResult } from './PortfolioDashboard';
 import CycleTab from './CycleTab';
 import PortfolioTab from './PortfolioTab';
@@ -19,10 +20,12 @@ interface ReviewTabProps {
   onPortfolioSlideChange: (slide: number) => void;
   onMarketSlideChange: (slide: number) => void;
   cyclesLoading?: boolean; // True while market cycles are still loading
+  portfolioId?: string; // ID of saved portfolio for scenario testing
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId: _conversationId, videoId: _videoId, onReset, onBack, onNavigateToAnalyze, cycleAnalysisTab, onCycleAnalysisTabChange, onGoalSlideChange, onPortfolioSlideChange, onMarketSlideChange, cyclesLoading = false }: ReviewTabProps) {
+export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId: _conversationId, videoId: _videoId, onReset, onBack, onNavigateToAnalyze, cycleAnalysisTab, onCycleAnalysisTabChange, onGoalSlideChange, onPortfolioSlideChange, onMarketSlideChange, cyclesLoading = false, portfolioId }: ReviewTabProps) {
+  const router = useRouter();
   const handleNext = () => {
     if (cycleAnalysisTab === 'goal') {
       onCycleAnalysisTabChange('portfolio');
@@ -196,12 +199,49 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                 )
               )}
               {cycleAnalysisTab === 'portfolio' && (
-                <PortfolioTab 
-                  portfolioComparison={analysisResult.portfolioComparison}
-                  onNext={handleNext}
-                  onBack={handleBack}
-                  onSlideChange={onPortfolioSlideChange}
-                />
+                <>
+                  <PortfolioTab 
+                    portfolioComparison={analysisResult.portfolioComparison}
+                    onNext={handleNext}
+                    onBack={handleBack}
+                    onSlideChange={onPortfolioSlideChange}
+                  />
+                  
+                  {/* Scenario Testing CTA */}
+                  <div className="mt-8 p-6 bg-gradient-to-r from-blue-900/30 to-cyan-900/30 border-2 border-blue-500/30 rounded-xl">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                      <div className="flex-1 text-center md:text-left">
+                        <h3 className="text-xl font-bold text-white mb-2 flex items-center justify-center md:justify-start gap-2">
+                          <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                          </svg>
+                          Ready for Scenario Testing?
+                        </h3>
+                        <p className="text-gray-400 text-sm">
+                          Test your portfolio against historical scenarios and see how it performs in different market conditions
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (portfolioId) {
+                            sessionStorage.setItem('scenarioTestPortfolioId', portfolioId);
+                          }
+                          router.push('/scenario-testing/questions');
+                        }}
+                        className="px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 
+                          hover:from-blue-700 hover:to-cyan-700 text-white font-bold 
+                          rounded-xl transition-all duration-300 shadow-lg hover:scale-105 
+                          flex items-center gap-2 whitespace-nowrap"
+                      >
+                        Test Scenarios
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </>
               )}
               {cycleAnalysisTab === 'goal' && (
                 <GoalTab 

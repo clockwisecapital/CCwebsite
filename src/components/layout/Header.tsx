@@ -107,6 +107,17 @@ export default function Header(): React.JSX.Element {
             Team
           </Link>
 
+          {/* My Portfolios Link - Only for authenticated users */}
+          {user && (
+            <Link 
+              href="/dashboard" 
+              className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
+            >
+              <span className="absolute bottom-0 left-0 h-0.5 bg-[#E3B23C] w-0 group-hover:w-full transition-all duration-300"></span>
+              My Portfolios
+            </Link>
+          )}
+
           {/* User Auth Button */}
           {user ? (
             <button 
@@ -246,6 +257,17 @@ export default function Header(): React.JSX.Element {
             </svg>
             <span className="text-sm">Ask AI</span>
           </button> */}
+
+          {/* My Portfolios Link (Mobile) - Only for authenticated users */}
+          {user && (
+            <Link
+              href="/dashboard"
+              className="mt-4 text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              My Portfolios
+            </Link>
+          )}
 
           {/* User Auth Button (Mobile) */}
           {user ? (
