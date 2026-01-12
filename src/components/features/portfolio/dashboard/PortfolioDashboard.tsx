@@ -6,6 +6,8 @@ import ReviewTab from './ReviewTab';
 import ScenarioTestingTab from './ScenarioTestingTab';
 import UnifiedVideoPlayer, { type VideoConfig } from './UnifiedVideoPlayer';
 import { getVideoPath } from '@/hooks/useAvatarVariant';
+import CreatePasswordModal from '@/components/features/auth/CreatePasswordModal';
+import { useAuth } from '@/lib/auth/AuthContext';
 
 export interface IntakeFormData {
   // Personal
@@ -65,6 +67,7 @@ export interface AnalysisResult {
 }
 
 export default function PortfolioDashboard() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'intake' | 'review' | 'analyze' | 'scenarios'>('intake');
   const [intakeData, setIntakeData] = useState<IntakeFormData | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
@@ -75,6 +78,8 @@ export default function PortfolioDashboard() {
   const [videoId, setVideoId] = useState<string | null>(null);
   const [cycleAnalysisTab, setCycleAnalysisTab] = useState<'market' | 'portfolio' | 'goal'>('goal');
   const [cyclesLoading, setCyclesLoading] = useState(false); // Track if market cycles are still loading
+  const [showCreatePasswordModal, setShowCreatePasswordModal] = useState(false);
+  const [portfolioSaved, setPortfolioSaved] = useState(false);
   
   // Track carousel slides for video sync
   const [goalSlide, setGoalSlide] = useState(0);
@@ -122,8 +127,15 @@ export default function PortfolioDashboard() {
       // Analysis is complete, update email and show results
       updateEmailOnBackend(conversationId, emailData);
       setActiveTab('review');
+      
+      // Show create password modal after a short delay if user is not authenticated and hasn't saved yet
+      if (!user && !portfolioSaved) {
+        setTimeout(() => {
+          setShowCreatePasswordModal(true);
+        }, 2000); // 2 second delay to let user see results first
+      }
     }
-  }, [emailData, analysisComplete, analysisResult, conversationId]);
+  }, [emailData, analysisComplete, analysisResult, conversationId, user, portfolioSaved]);
 
   const handleIntakeSubmit = async (data: IntakeFormData) => {
     setIntakeData(data);
@@ -255,6 +267,31 @@ export default function PortfolioDashboard() {
     setAnalysisComplete(false);
     setVideoId(null);
     setCycleAnalysisTab('goal');
+    setShowCreatePasswordModal(false);
+    setPortfolioSaved(false);
+  };
+
+  const handlePasswordCreated = async (userId: string) => {
+    // Save the portfolio to the database
+    if (!conversationId || !intakeData || !analysisResult) return;
+
+    try {
+      await fetch('/api/portfolios/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          conversationId,
+          intakeData,
+          analysisResult,
+        }),
+      });
+      
+      setPortfolioSaved(true);
+      console.log('Portfolio saved successfully!');
+    } catch (error) {
+      console.error('Failed to save portfolio:', error);
+    }
   };
 
   // Determine current video based on app state and carousel slides
@@ -353,11 +390,26 @@ export default function PortfolioDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-900">
+      {/* Unified Video Player - appears at top on mobile, bottom-right on desktop */}
+      <UnifiedVideoPlayer currentVideo={currentVideo} />
+
+      {/* Create Password Modal */}
+      {emailData && !user && (
+        <CreatePasswordModal
+          isOpen={showCreatePasswordModal}
+          onClose={() => setShowCreatePasswordModal(false)}
+          email={emailData.email}
+          firstName={emailData.firstName}
+          lastName={emailData.lastName}
+          onSuccess={handlePasswordCreated}
+        />
+      )}
+
       {/* Gradient header for all tabs */}
-      <div className="bg-gradient-to-r from-teal-600 to-blue-600 pt-20 pb-16"></div>
+      <div className="bg-gradient-to-r from-teal-600 to-blue-600 pt-8 pb-8 md:pt-20 md:pb-16"></div>
 
       {/* Dashboard Container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 -mt-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8 -mt-12 md:-mt-20">
         {/* Tab Navigation */}
         <div className="bg-gray-800 rounded-lg shadow-sm">
           <div className="border-b border-gray-700">
@@ -675,9 +727,6 @@ export default function PortfolioDashboard() {
           </div>
         </div>
       </div>
-
-      {/* Unified Video Player */}
-      <UnifiedVideoPlayer currentVideo={currentVideo} />
     </div>
   );
 }

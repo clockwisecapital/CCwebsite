@@ -163,7 +163,7 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady }: Unifi
 
   if (isMinimized) {
     return (
-      <div className="fixed z-50 bottom-4 left-1/2 -translate-x-1/2 md:left-auto md:right-8 md:translate-x-0">
+      <div className="sticky top-4 z-50 flex justify-end px-4 md:fixed md:top-auto md:bottom-4 md:left-auto md:right-8 md:px-0">
         <button
           onClick={() => setIsMinimized(false)}
           className="bg-gradient-to-br from-teal-600 to-blue-600 text-white rounded-full p-4 shadow-2xl hover:shadow-teal-500/50 transition-all hover:scale-110 group"
@@ -182,8 +182,8 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady }: Unifi
   }
 
   return (
-    <div className="fixed z-50 bottom-4 left-1/2 -translate-x-1/2 md:left-auto md:right-4 md:translate-x-0 md:bottom-4 w-[calc(100%-2rem)] max-w-[320px] md:max-w-[360px] lg:max-w-[400px]">
-      <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl shadow-2xl border border-teal-500/30 overflow-hidden">
+    <div className="sticky top-0 z-[9998] w-full md:fixed md:z-50 md:top-auto md:bottom-4 md:left-auto md:right-4 md:w-auto md:max-w-[360px] lg:md:max-w-[400px]">
+      <div className="bg-gradient-to-br from-gray-900 to-gray-800 md:rounded-xl shadow-2xl border-b md:border border-teal-500/30 overflow-hidden">
         {/* Header with title and controls */}
         <div className="bg-gradient-to-r from-teal-600 to-blue-600 px-3 py-2 flex items-center justify-between">
           <div className="flex items-center gap-1.5 flex-1 min-w-0">

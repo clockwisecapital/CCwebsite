@@ -8,6 +8,7 @@ import './fonts.css';
 import Footer from '../components/layout/Footer';
 import Header from '../components/layout/Header';
 import ScrollProgressIndicator from '../components/ui/ScrollProgressIndicator';
+import { AuthProvider } from '@/lib/auth/AuthContext';
 import React from 'react';
 
 // Only load IBM Plex Serif through next/font
@@ -63,16 +64,18 @@ export default function RootLayout({
     <html lang="en">
       <head />
       <body className={`${inter.variable} ${ibmPlexSerif.variable} font-sans min-h-screen flex flex-col relative`}>
-        <Header />
-        <ScrollProgressIndicator 
-          sections={['Home', 'ETF', 'Portfolios', 'Hedge Fund', 'Media', 'Partners', 'Team']} 
-          position="right" 
-          showLabels={false}
-        />
-        <div>
-          {children}
-        </div>
-        <Footer />
+        <AuthProvider>
+          <Header />
+          <ScrollProgressIndicator 
+            sections={['Home', 'ETF', 'Portfolios', 'Hedge Fund', 'Media', 'Partners', 'Team']} 
+            position="right" 
+            showLabels={false}
+          />
+          <div>
+            {children}
+          </div>
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

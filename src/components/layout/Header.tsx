@@ -4,12 +4,16 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useAuth } from '@/lib/auth/AuthContext';
+import SignInModal from '@/components/features/auth/SignInModal';
 import { HiArrowRightOnRectangle } from 'react-icons/hi2';
 
 export default function Header(): React.JSX.Element {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [showSignInModal, setShowSignInModal] = useState(false);
   const { isAdmin, logout } = useAdmin();
+  const { user, signOut } = useAuth();
 
 
   useEffect(() => {
@@ -103,6 +107,27 @@ export default function Header(): React.JSX.Element {
             Team
           </Link>
 
+          {/* User Auth Button */}
+          {user ? (
+            <button 
+              onClick={signOut}
+              className="ml-3 relative overflow-hidden bg-teal-600 text-white px-4 py-2 rounded-md font-sans font-medium group transition-all duration-300 hover:bg-teal-700"
+              title="Sign Out"
+            >
+              <span className="relative flex items-center space-x-2">
+                <span className="text-sm">Sign Out</span>
+                <HiArrowRightOnRectangle className="h-4 w-4" />
+              </span>
+            </button>
+          ) : (
+            <button 
+              onClick={() => setShowSignInModal(true)}
+              className="ml-3 relative overflow-hidden bg-gradient-to-r from-teal-600 to-blue-600 text-white px-4 py-2 rounded-md font-sans font-medium group transition-all duration-300 hover:from-teal-700 hover:to-blue-700"
+            >
+              <span className="relative text-sm">Sign In</span>
+            </button>
+          )}
+
           {/* Admin Logout Button - Only visible to logged-in admins */}
           {isAdmin && (
             <button 
@@ -117,6 +142,15 @@ export default function Header(): React.JSX.Element {
             </button>
           )}
         </nav>
+
+        {/* Sign In Modal */}
+        <SignInModal 
+          isOpen={showSignInModal}
+          onClose={() => setShowSignInModal(false)}
+          onSuccess={() => {
+            setShowSignInModal(false);
+          }}
+        />
 
         {/* Mobile Menu Button */}
         <div className="md:hidden">
@@ -212,6 +246,30 @@ export default function Header(): React.JSX.Element {
             </svg>
             <span className="text-sm">Ask AI</span>
           </button> */}
+
+          {/* User Auth Button (Mobile) */}
+          {user ? (
+            <button 
+              className="mt-2 px-3 py-1.5 text-base font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-full transition-all duration-300 flex items-center gap-1.5"
+              onClick={() => {
+                setIsMenuOpen(false);
+                signOut();
+              }}
+            >
+              <span className="text-sm">Sign Out</span>
+              <HiArrowRightOnRectangle className="h-3.5 w-3.5" />
+            </button>
+          ) : (
+            <button 
+              className="mt-2 px-3 py-1.5 text-base font-medium text-white bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 rounded-full transition-all duration-300"
+              onClick={() => {
+                setIsMenuOpen(false);
+                setShowSignInModal(true);
+              }}
+            >
+              <span className="text-sm">Sign In</span>
+            </button>
+          )}
 
           {/* Admin Logout Button (Mobile) - Only visible to logged-in admins */}
           {isAdmin && (
