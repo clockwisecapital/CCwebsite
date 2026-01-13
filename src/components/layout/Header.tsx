@@ -107,14 +107,14 @@ export default function Header(): React.JSX.Element {
             Team
           </Link>
 
-          {/* My Portfolios Link - Only for authenticated users */}
+          {/* My Account Link - Only for authenticated users */}
           {user && (
             <Link 
-              href="/dashboard" 
+              href="/account" 
               className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
             >
               <span className="absolute bottom-0 left-0 h-0.5 bg-[#E3B23C] w-0 group-hover:w-full transition-all duration-300"></span>
-              My Portfolios
+              My Account
             </Link>
           )}
 
@@ -258,14 +258,14 @@ export default function Header(): React.JSX.Element {
             <span className="text-sm">Ask AI</span>
           </button> */}
 
-          {/* My Portfolios Link (Mobile) - Only for authenticated users */}
+          {/* My Account Link (Mobile) - Only for authenticated users */}
           {user && (
             <Link
-              href="/dashboard"
+              href="/account"
               className="mt-4 text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
               onClick={() => setIsMenuOpen(false)}
             >
-              My Portfolios
+              My Account
             </Link>
           )}
 

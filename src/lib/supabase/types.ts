@@ -733,6 +733,265 @@ export interface Database {
           }
         ]
       }
+      scenario_questions: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          description: string | null
+          question_text: string
+          historical_period: Json
+          tags: string[]
+          likes_count: number
+          comments_count: number
+          tests_count: number
+          views_count: number
+          is_active: boolean
+          is_featured: boolean
+          is_pinned: boolean
+          created_at: string
+          updated_at: string
+          last_activity_at: string
+          metadata: Json
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          description?: string | null
+          question_text: string
+          historical_period?: Json
+          tags?: string[]
+          likes_count?: number
+          comments_count?: number
+          tests_count?: number
+          views_count?: number
+          is_active?: boolean
+          is_featured?: boolean
+          is_pinned?: boolean
+          created_at?: string
+          updated_at?: string
+          last_activity_at?: string
+          metadata?: Json
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          description?: string
+          question_text?: string
+          historical_period?: Json
+          tags?: string[]
+          likes_count?: number
+          comments_count?: number
+          tests_count?: number
+          views_count?: number
+          is_active?: boolean
+          is_featured?: boolean
+          is_pinned?: boolean
+          created_at?: string
+          updated_at?: string
+          last_activity_at?: string
+          metadata?: Json
+        }
+        Relationships: []
+      }
+      question_likes: {
+        Row: {
+          id: string
+          question_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          question_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          question_id?: string
+          user_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_likes_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "scenario_questions"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      question_comments: {
+        Row: {
+          id: string
+          question_id: string
+          user_id: string
+          parent_comment_id: string | null
+          content: string
+          likes_count: number
+          is_edited: boolean
+          is_deleted: boolean
+          created_at: string
+          updated_at: string
+          metadata: Json
+        }
+        Insert: {
+          id?: string
+          question_id: string
+          user_id: string
+          parent_comment_id?: string | null
+          content: string
+          likes_count?: number
+          is_edited?: boolean
+          is_deleted?: boolean
+          created_at?: string
+          updated_at?: string
+          metadata?: Json
+        }
+        Update: {
+          id?: string
+          question_id?: string
+          user_id?: string
+          parent_comment_id?: string | null
+          content?: string
+          likes_count?: number
+          is_edited?: boolean
+          is_deleted?: boolean
+          created_at?: string
+          updated_at?: string
+          metadata?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_comments_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "scenario_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "question_comments"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      comment_likes: {
+        Row: {
+          id: string
+          comment_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          comment_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          comment_id?: string
+          user_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_likes_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "question_comments"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      question_tests: {
+        Row: {
+          id: string
+          question_id: string
+          portfolio_id: string
+          user_id: string
+          score: number
+          expected_return: number
+          upside: number
+          downside: number
+          comparison_data: Json
+          is_public: boolean
+          created_at: string
+          metadata: Json
+        }
+        Insert: {
+          id?: string
+          question_id: string
+          portfolio_id: string
+          user_id: string
+          score: number
+          expected_return: number
+          upside: number
+          downside: number
+          comparison_data?: Json
+          is_public?: boolean
+          created_at?: string
+          metadata?: Json
+        }
+        Update: {
+          id?: string
+          question_id?: string
+          portfolio_id?: string
+          user_id?: string
+          score?: number
+          expected_return?: number
+          upside?: number
+          downside?: number
+          comparison_data?: Json
+          is_public?: boolean
+          created_at?: string
+          metadata?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_tests_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "scenario_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_tests_portfolio_id_fkey"
+            columns: ["portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "portfolios"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      user_follows: {
+        Row: {
+          id: string
+          follower_id: string
+          following_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          follower_id: string
+          following_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          follower_id?: string
+          following_id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -804,6 +1063,30 @@ export type PortfolioUpdate = Database['public']['Tables']['portfolios']['Update
 export type PortfolioRanking = Database['public']['Tables']['portfolio_rankings']['Row']
 export type PortfolioRankingInsert = Database['public']['Tables']['portfolio_rankings']['Insert']
 export type PortfolioRankingUpdate = Database['public']['Tables']['portfolio_rankings']['Update']
+
+export type ScenarioQuestion = Database['public']['Tables']['scenario_questions']['Row']
+export type ScenarioQuestionInsert = Database['public']['Tables']['scenario_questions']['Insert']
+export type ScenarioQuestionUpdate = Database['public']['Tables']['scenario_questions']['Update']
+
+export type QuestionLike = Database['public']['Tables']['question_likes']['Row']
+export type QuestionLikeInsert = Database['public']['Tables']['question_likes']['Insert']
+export type QuestionLikeUpdate = Database['public']['Tables']['question_likes']['Update']
+
+export type QuestionComment = Database['public']['Tables']['question_comments']['Row']
+export type QuestionCommentInsert = Database['public']['Tables']['question_comments']['Insert']
+export type QuestionCommentUpdate = Database['public']['Tables']['question_comments']['Update']
+
+export type CommentLike = Database['public']['Tables']['comment_likes']['Row']
+export type CommentLikeInsert = Database['public']['Tables']['comment_likes']['Insert']
+export type CommentLikeUpdate = Database['public']['Tables']['comment_likes']['Update']
+
+export type QuestionTest = Database['public']['Tables']['question_tests']['Row']
+export type QuestionTestInsert = Database['public']['Tables']['question_tests']['Insert']
+export type QuestionTestUpdate = Database['public']['Tables']['question_tests']['Update']
+
+export type UserFollow = Database['public']['Tables']['user_follows']['Row']
+export type UserFollowInsert = Database['public']['Tables']['user_follows']['Insert']
+export type UserFollowUpdate = Database['public']['Tables']['user_follows']['Update']
 
 // Application-specific types
 export interface SessionData {
