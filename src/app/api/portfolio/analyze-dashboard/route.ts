@@ -173,9 +173,26 @@ export async function POST(request: NextRequest) {
         
         console.log(`📍 Fetching portfolio data from: ${baseUrl}/api/portfolio/get-portfolio-data`);
 
+        // Forward authentication headers for internal API call
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json'
+        };
+        
+        // Forward authorization header if present
+        const authHeader = request.headers.get('authorization');
+        if (authHeader) {
+          headers['Authorization'] = authHeader;
+        }
+        
+        // Forward cookies for session-based auth
+        const cookieHeader = request.headers.get('cookie');
+        if (cookieHeader) {
+          headers['Cookie'] = cookieHeader;
+        }
+
         const portfolioDataResponse = await fetch(`${baseUrl}/api/portfolio/get-portfolio-data`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(requestBody)
         });
 
