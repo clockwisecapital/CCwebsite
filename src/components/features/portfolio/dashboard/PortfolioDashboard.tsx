@@ -67,8 +67,12 @@ export interface AnalysisResult {
   portfolioComparison?: import('@/types/portfolio').PortfolioComparison; // Portfolio comparison data
 }
 
+// LocalStorage key for persisting dashboard state
+const DASHBOARD_STATE_KEY = 'kronos-dashboard-state';
+
 export default function PortfolioDashboard() {
   const { user } = useAuth();
+  const [stateLoaded, setStateLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<'intake' | 'review' | 'analyze' | 'scenarios'>('intake');
   const [intakeData, setIntakeData] = useState<IntakeFormData | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
@@ -88,6 +92,71 @@ export default function PortfolioDashboard() {
   const [goalSlide, setGoalSlide] = useState(0);
   const [portfolioSlide, setPortfolioSlide] = useState(0);
   const [marketSlide, setMarketSlide] = useState(0);
+
+  // Load saved state from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedState = localStorage.getItem(DASHBOARD_STATE_KEY);
+      if (savedState) {
+        const parsed = JSON.parse(savedState);
+        console.log('📥 Restoring dashboard state from localStorage');
+        
+        // Restore all state
+        if (parsed.activeTab) setActiveTab(parsed.activeTab);
+        if (parsed.intakeData) setIntakeData(parsed.intakeData);
+        if (parsed.analysisResult) setAnalysisResult(parsed.analysisResult);
+        if (parsed.conversationId) setConversationId(parsed.conversationId);
+        if (parsed.emailData) setEmailData(parsed.emailData);
+        if (parsed.analysisComplete !== undefined) setAnalysisComplete(parsed.analysisComplete);
+        if (parsed.videoId) setVideoId(parsed.videoId);
+        if (parsed.cycleAnalysisTab) setCycleAnalysisTab(parsed.cycleAnalysisTab);
+        if (parsed.portfolioSaved !== undefined) setPortfolioSaved(parsed.portfolioSaved);
+        if (parsed.savedPortfolioId) setSavedPortfolioId(parsed.savedPortfolioId);
+      }
+    } catch (error) {
+      console.error('Failed to load dashboard state:', error);
+    } finally {
+      setStateLoaded(true);
+    }
+  }, []);
+
+  // Save state to localStorage whenever it changes (but only after initial load)
+  useEffect(() => {
+    if (!stateLoaded) return; // Don't save until we've loaded initial state
+    
+    try {
+      const stateToSave = {
+        activeTab,
+        intakeData,
+        analysisResult,
+        conversationId,
+        emailData,
+        analysisComplete,
+        videoId,
+        cycleAnalysisTab,
+        portfolioSaved,
+        savedPortfolioId,
+        timestamp: Date.now(),
+      };
+      
+      localStorage.setItem(DASHBOARD_STATE_KEY, JSON.stringify(stateToSave));
+      console.log('💾 Dashboard state saved to localStorage');
+    } catch (error) {
+      console.error('Failed to save dashboard state:', error);
+    }
+  }, [
+    stateLoaded,
+    activeTab,
+    intakeData,
+    analysisResult,
+    conversationId,
+    emailData,
+    analysisComplete,
+    videoId,
+    cycleAnalysisTab,
+    portfolioSaved,
+    savedPortfolioId,
+  ]);
 
   // Reusable function to save portfolio to database
   const savePortfolio = async (userId: string) => {
@@ -133,8 +202,16 @@ export default function PortfolioDashboard() {
   // Effect to load portfolio from sessionStorage if requested
   useEffect(() => {
     const loadPortfolioId = sessionStorage.getItem('loadPortfolioId');
-    if (loadPortfolioId && user && !intakeData) {
+    if (loadPortfolioId && user && !intakeData && stateLoaded) {
       setLoadingPortfolio(true);
+      
+      // Clear existing localStorage state since we're loading a specific portfolio
+      try {
+        localStorage.removeItem(DASHBOARD_STATE_KEY);
+        console.log('🗑️ Cleared localStorage for fresh portfolio load');
+      } catch (error) {
+        console.error('Failed to clear dashboard state:', error);
+      }
       
       // Fetch portfolio data
       supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -194,7 +271,7 @@ export default function PortfolioDashboard() {
         }
       });
     }
-  }, [user, intakeData]);
+  }, [user, intakeData, stateLoaded]);
 
   // Effect to scroll to top when switching tabs
   useEffect(() => {
@@ -374,6 +451,7 @@ export default function PortfolioDashboard() {
   };
 
   const handleReset = () => {
+    // Clear all state
     setActiveTab('intake');
     setIntakeData(null);
     setAnalysisResult(null);
@@ -384,6 +462,15 @@ export default function PortfolioDashboard() {
     setCycleAnalysisTab('goal');
     setShowCreatePasswordModal(false);
     setPortfolioSaved(false);
+    setSavedPortfolioId(null);
+    
+    // Clear localStorage
+    try {
+      localStorage.removeItem(DASHBOARD_STATE_KEY);
+      console.log('🗑️ Dashboard state cleared from localStorage');
+    } catch (error) {
+      console.error('Failed to clear dashboard state:', error);
+    }
   };
 
   const handlePasswordCreated = async (userId: string) => {
@@ -647,6 +734,7 @@ export default function PortfolioDashboard() {
             {activeTab === 'scenarios' && intakeData && (
               <ScenarioTestingTab
                 portfolioData={intakeData.portfolio}
+                portfolioId={savedPortfolioId || undefined}
                 onNext={() => setActiveTab('analyze')}
                 onBack={() => setActiveTab('review')}
               />

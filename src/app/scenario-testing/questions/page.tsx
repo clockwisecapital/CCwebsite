@@ -9,6 +9,7 @@ import CreateQuestionModal from '@/components/features/community/CreateQuestionM
 import TestResultsModal, { type TestResultData } from '@/components/features/community/TestResultsModal';
 import { FiPlus, FiTrendingUp, FiClock, FiThumbsUp, FiMessageSquare, FiUsers, FiTarget, FiBriefcase, FiFileText, FiBarChart2, FiCheckCircle, FiChevronRight, FiGlobe, FiCheck } from 'react-icons/fi';
 import type { ScenarioQuestionWithAuthor, FeedFilter, CreateScenarioQuestionInput } from '@/types/community';
+import type { PortfolioComparison } from '@/types/portfolio';
 
 export default function CommunityFeedPage() {
   const router = useRouter();
@@ -33,6 +34,7 @@ export default function CommunityFeedPage() {
   // Test Results Modal
   const [showTestResults, setShowTestResults] = useState(false);
   const [testResults, setTestResults] = useState<TestResultData | null>(null);
+  const [portfolioComparison, setPortfolioComparison] = useState<PortfolioComparison | null>(null);
   const [isRunningTest, setIsRunningTest] = useState(false);
 
   // Fetch questions or portfolios based on active feed
@@ -318,7 +320,202 @@ export default function CommunityFeedPage() {
         }
       };
 
+      // Mock portfolio comparison data
+      const mockComparison: PortfolioComparison = {
+        userPortfolio: {
+          totalValue: 100000,
+          expectedReturn: 0.124,
+          upside: 0.285,
+          downside: -0.065,
+          isUsingProxy: false,
+          positions: [],
+          topPositions: [
+            {
+              ticker: 'AAPL',
+              name: 'Apple Inc.',
+              weight: 25,
+              currentPrice: 185.50,
+              targetPrice: 210.00,
+              expectedReturn: 0.132,
+              assetClass: 'Technology',
+              monteCarlo: {
+                ticker: 'AAPL',
+                median: 0.132,
+                upside: 0.320,
+                downside: -0.080,
+                volatility: 0.28,
+                simulations: 5000
+              }
+            },
+            {
+              ticker: 'MSFT',
+              name: 'Microsoft Corp.',
+              weight: 20,
+              currentPrice: 375.00,
+              targetPrice: 420.00,
+              expectedReturn: 0.120,
+              assetClass: 'Technology',
+              monteCarlo: {
+                ticker: 'MSFT',
+                median: 0.120,
+                upside: 0.290,
+                downside: -0.070,
+                volatility: 0.25,
+                simulations: 5000
+              }
+            },
+            {
+              ticker: 'GOOGL',
+              name: 'Alphabet Inc.',
+              weight: 18,
+              currentPrice: 140.00,
+              targetPrice: 162.00,
+              expectedReturn: 0.157,
+              assetClass: 'Technology',
+              monteCarlo: {
+                ticker: 'GOOGL',
+                median: 0.157,
+                upside: 0.340,
+                downside: -0.090,
+                volatility: 0.30,
+                simulations: 5000
+              }
+            },
+            {
+              ticker: 'NVDA',
+              name: 'NVIDIA Corp.',
+              weight: 15,
+              currentPrice: 495.00,
+              targetPrice: 620.00,
+              expectedReturn: 0.253,
+              assetClass: 'Technology',
+              monteCarlo: {
+                ticker: 'NVDA',
+                median: 0.253,
+                upside: 0.480,
+                downside: -0.120,
+                volatility: 0.42,
+                simulations: 5000
+              }
+            },
+            {
+              ticker: 'SPY',
+              name: 'S&P 500 ETF',
+              weight: 22,
+              currentPrice: 458.00,
+              targetPrice: 505.00,
+              expectedReturn: 0.103,
+              assetClass: 'Broad Market',
+              monteCarlo: {
+                ticker: 'SPY',
+                median: 0.103,
+                upside: 0.240,
+                downside: -0.055,
+                volatility: 0.18,
+                simulations: 5000
+              }
+            }
+          ]
+        },
+        timePortfolio: {
+          totalValue: 100000,
+          expectedReturn: 0.158,
+          upside: 0.315,
+          downside: -0.042,
+          positions: [],
+          topPositions: [
+            {
+              ticker: 'AAPL',
+              name: 'Apple Inc.',
+              weight: 8,
+              currentPrice: 185.50,
+              targetPrice: 210.00,
+              expectedReturn: 0.132,
+              assetClass: 'Technology',
+              monteCarlo: {
+                ticker: 'AAPL',
+                median: 0.132,
+                upside: 0.320,
+                downside: -0.080,
+                volatility: 0.28,
+                simulations: 5000
+              }
+            },
+            {
+              ticker: 'NVDA',
+              name: 'NVIDIA Corp.',
+              weight: 6.5,
+              currentPrice: 495.00,
+              targetPrice: 620.00,
+              expectedReturn: 0.253,
+              assetClass: 'Technology',
+              monteCarlo: {
+                ticker: 'NVDA',
+                median: 0.253,
+                upside: 0.480,
+                downside: -0.120,
+                volatility: 0.42,
+                simulations: 5000
+              }
+            },
+            {
+              ticker: 'XLE',
+              name: 'Energy Select Sector',
+              weight: 5.2,
+              currentPrice: 88.50,
+              targetPrice: 102.00,
+              expectedReturn: 0.152,
+              assetClass: 'Energy',
+              monteCarlo: {
+                ticker: 'XLE',
+                median: 0.152,
+                upside: 0.380,
+                downside: -0.110,
+                volatility: 0.32,
+                simulations: 5000
+              }
+            },
+            {
+              ticker: 'GLD',
+              name: 'Gold ETF',
+              weight: 4.8,
+              currentPrice: 188.00,
+              targetPrice: 205.00,
+              expectedReturn: 0.090,
+              assetClass: 'Commodities',
+              monteCarlo: {
+                ticker: 'GLD',
+                median: 0.090,
+                upside: 0.180,
+                downside: -0.035,
+                volatility: 0.16,
+                simulations: 5000
+              }
+            },
+            {
+              ticker: 'TLT',
+              name: 'Treasury Bond ETF',
+              weight: 4.5,
+              currentPrice: 92.50,
+              targetPrice: 98.00,
+              expectedReturn: 0.059,
+              assetClass: 'Bonds',
+              monteCarlo: {
+                ticker: 'TLT',
+                median: 0.059,
+                upside: 0.120,
+                downside: -0.025,
+                volatility: 0.10,
+                simulations: 5000
+              }
+            }
+          ]
+        },
+        timeHorizon: 1
+      };
+
       setTestResults(mockResults);
+      setPortfolioComparison(mockComparison);
       setShowTestResults(true);
     } catch (error) {
       console.error('Error running test:', error);
@@ -1011,6 +1208,7 @@ export default function CommunityFeedPage() {
           isOpen={showTestResults}
           onClose={() => setShowTestResults(false)}
           results={testResults}
+          portfolioComparison={portfolioComparison || undefined}
         />
       )}
 
