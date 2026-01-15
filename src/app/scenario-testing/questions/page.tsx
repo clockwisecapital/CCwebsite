@@ -755,11 +755,16 @@ export default function CommunityFeedPage() {
 
       {/* Loading Overlay for Testing */}
       {isRunningTest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="loading-test-title"
+        >
           <div className="bg-gray-900 rounded-2xl border border-teal-500/50 p-8 max-w-md text-center">
             <div className="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full 
               animate-spin mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">Running Portfolio Test</h3>
+            <h3 id="loading-test-title" className="text-xl font-bold text-white mb-2">Running Portfolio Test</h3>
             <p className="text-sm text-gray-400 mb-4">
               Analyzing your portfolio allocation...
             </p>

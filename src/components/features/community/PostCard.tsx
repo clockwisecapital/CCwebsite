@@ -53,6 +53,7 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
   // Format author name
   const getAuthorName = () => {
     const author = question.author;
+    if (!author) return 'Anonymous';
     if (author.first_name && author.last_name) {
       return `${author.first_name} ${author.last_name}`;
     }
@@ -176,7 +177,7 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
           <div className="min-w-0">
             <p className="text-sm font-semibold text-white truncate">{getAuthorName()}</p>
             <div className="flex items-center gap-2 text-xs text-gray-400">
-              <span>@{question.author?.email?.split('@')[0] || 'investor'}</span>
+              <span>@{(question.author && question.author.email) ? question.author.email.split('@')[0] : 'investor'}</span>
               <span>•</span>
               <span className="inline-flex items-center gap-1">
                 <FiClock className="w-3 h-3" />

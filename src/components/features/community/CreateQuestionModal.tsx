@@ -118,17 +118,23 @@ export default function CreateQuestionModal({ isOpen, onClose, onSubmit }: Creat
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-question-modal-title"
+    >
       <div className="bg-gray-900 rounded-2xl border border-gray-700 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-700">
-          <h2 className="text-2xl font-bold text-white">Create Scenario Question</h2>
+          <h2 id="create-question-modal-title" className="text-2xl font-bold text-white">Create Scenario Question</h2>
           <button
             onClick={() => {
               resetForm();
               onClose();
             }}
             className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+            aria-label="Close modal"
           >
             <FiX className="w-6 h-6" />
           </button>

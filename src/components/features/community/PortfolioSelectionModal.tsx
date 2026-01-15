@@ -118,16 +118,22 @@ export default function PortfolioSelectionModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-start pt-20 bg-black/80 backdrop-blur-sm p-4">
+    <div 
+      className="fixed inset-0 z-50 flex flex-col items-center justify-start pt-20 bg-black/80 backdrop-blur-sm p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="portfolio-selection-modal-title"
+    >
       <div className="bg-gradient-to-br from-[#0a0e1a] via-[#0f1420] to-[#0a0e1a] rounded-2xl border border-teal-600/50 w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-teal-600/30">
-          <h2 className="text-2xl font-bold text-white">
+          <h2 id="portfolio-selection-modal-title" className="text-2xl font-bold text-white">
             {step === 'select' ? 'Select Your Portfolio' : 'Create New Portfolio'}
           </h2>
           <button
             onClick={onClose}
             className="p-2 text-gray-400 hover:text-white transition-colors"
+            aria-label="Close modal"
           >
             <FiX className="w-6 h-6" />
           </button>

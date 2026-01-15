@@ -36,6 +36,7 @@ export default function CommentCard({ comment, onReply, isReply = false }: Comme
   // Format author name
   const getAuthorName = () => {
     const author = comment.author;
+    if (!author) return 'Anonymous';
     if (author.first_name && author.last_name) {
       return `${author.first_name} ${author.last_name}`;
     }

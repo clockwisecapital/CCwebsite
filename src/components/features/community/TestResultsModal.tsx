@@ -70,13 +70,19 @@ export default function TestResultsModal({ isOpen, onClose, results, portfolioCo
   const minValue = Math.min(...performanceData.map(d => d.value));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="test-results-modal-title"
+    >
       <div className="bg-[#0f1420] rounded-2xl border border-gray-800/50 shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="relative px-8 pt-8 pb-6">
           <button
             onClick={onClose}
             className="absolute top-6 right-6 p-2 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-colors"
+            aria-label="Close modal"
           >
             <FiX className="w-5 h-5" />
           </button>
@@ -85,7 +91,7 @@ export default function TestResultsModal({ isOpen, onClose, results, portfolioCo
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-blue-500 flex items-center justify-center">
               <FiBarChart2 className="w-5 h-5 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-white">Test Results</h2>
+            <h2 id="test-results-modal-title" className="text-2xl font-bold text-white">Test Results</h2>
           </div>
           <p className="text-sm text-gray-400 ml-[52px]">Portfolio Performance Analysis</p>
           

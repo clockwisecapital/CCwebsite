@@ -6,6 +6,11 @@
 import { NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
 
+// Verify JWT_SECRET is configured
+if (!process.env.JWT_SECRET) {
+  console.warn('⚠️  WARNING: JWT_SECRET environment variable is not set. Using default (insecure in production)');
+}
+
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'clockwise-admin-secret-key-2025')
 
 /**
