@@ -36,6 +36,7 @@ export interface IntakeFormData {
     alternatives: number;
   };
   portfolioDescription?: string;
+  portfolioName?: string;           // User-provided portfolio name
   specificHoldings?: Array<{
     name: string;
     ticker?: string;
@@ -477,6 +478,23 @@ export default function PortfolioDashboard() {
     // Save the portfolio after user creates password
     await savePortfolio(userId);
   };
+
+  // Auto-save portfolio for authenticated users when analysis completes
+  useEffect(() => {
+    const autoSaveForAuthenticatedUser = async () => {
+      // Only auto-save if:
+      // 1. User is authenticated
+      // 2. Analysis is complete
+      // 3. We have all required data
+      // 4. Portfolio hasn't been saved yet for this session
+      if (user && analysisComplete && intakeData && analysisResult && conversationId && !portfolioSaved) {
+        console.log('📝 Auto-saving portfolio for authenticated user:', user.id);
+        await savePortfolio(user.id);
+      }
+    };
+
+    autoSaveForAuthenticatedUser();
+  }, [user, analysisComplete, intakeData, analysisResult, conversationId, portfolioSaved]);
 
   // Determine current video based on app state and carousel slides
   const currentVideo: VideoConfig = useMemo(() => {

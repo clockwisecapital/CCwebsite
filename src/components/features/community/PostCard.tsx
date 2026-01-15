@@ -7,13 +7,13 @@ import {
   FiMessageSquare, 
   FiBarChart2, 
   FiShare2,
-  FiMoreVertical,
-  FiUser,
   FiClock,
-  FiAward
+  FiAward,
+  FiSend
 } from 'react-icons/fi';
 import type { ScenarioQuestionWithAuthor } from '@/types/community';
 import { useAuth } from '@/lib/auth/AuthContext';
+import PortfolioSelectionModal from './PortfolioSelectionModal';
 
 interface PostCardProps {
   question: ScenarioQuestionWithAuthor;
@@ -28,6 +28,11 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
   const [isLiking, setIsLiking] = useState(false);
   const [localLikes, setLocalLikes] = useState(question.likes_count);
   const [isLiked, setIsLiked] = useState(question.is_liked_by_user || false);
+  const [showComments, setShowComments] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [comments, setComments] = useState<Array<{ author: string; text: string; timestamp: string }>>([]);
+  const [showPortfolioModal, setShowPortfolioModal] = useState(false);
+  const [loadingComments, setLoadingComments] = useState(false);
 
   // Format timestamp
   const getTimeAgo = (timestamp: string) => {
@@ -96,168 +101,265 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
   // Handle test button click
   const handleTestClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
-    if (onTest) {
-      onTest(question.id);
-    } else {
-      router.push(`/scenario-testing/${question.id}`);
+    if (!user) {
+      router.push('/login');
+      return;
     }
+    setShowPortfolioModal(true);
   };
 
-  // Handle card click (view question details)
-  const handleCardClick = () => {
-    router.push(`/scenario-testing/${question.id}`);
+  const handlePortfolioSelect = (portfolioId: string, portfolioName: string) => {
+    // Save to session storage for the test results page
+    sessionStorage.setItem('scenarioTestPortfolioId', portfolioId);
+    sessionStorage.setItem('scenarioTestPortfolioName', portfolioName);
+    
+    // Navigate directly to the portfolio comparison view
+    router.push(`/scenario-testing/${question.id}/top-portfolios/${portfolioId}`);
+    setShowPortfolioModal(false);
+  };
+
+  const handleTopPortfolios = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    router.push(`/scenario-testing/${question.id}/top-portfolios`);
+  };
+
+  const handleCommentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentText.trim() || !user) return;
+    
+    const now = new Date();
+    setComments(prev => [...prev, {
+      author: user.email?.split('@')[0] || 'You',
+      text: commentText,
+      timestamp: 'now'
+    }]);
+    setCommentText('');
+  };
+
+  const fetchComments = async () => {
+    if (loadingComments || comments.length > 0) return; // Don't refetch if already loaded
+    
+    setLoadingComments(true);
+    try {
+      const response = await fetch(`/api/community/questions/${question.id}/comments`);
+      const data = await response.json();
+      
+      if (response.ok && data.comments) {
+        setComments(data.comments.map((c: any) => ({
+          author: c.author_name || c.author_email?.split('@')[0] || 'Anonymous',
+          text: c.content || c.text,
+          timestamp: getTimeAgo(c.created_at)
+        })));
+      }
+    } catch (error) {
+      console.error('Failed to fetch comments:', error);
+      // Fall back to empty comments if fetch fails
+      setComments([]);
+    } finally {
+      setLoadingComments(false);
+    }
   };
 
   return (
     <div
-      onClick={handleCardClick}
-      className="bg-[#1a1f2e] rounded-xl p-6 border border-gray-800
-        hover:border-teal-500/30 hover:bg-[#1d2332]
-        transition-all duration-200 cursor-pointer group"
+      className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl border border-gray-700 
+        hover:border-teal-500/50 shadow-lg hover:shadow-xl transition-all duration-200 group"
     >
-      {/* Header: Author Info and Badges */}
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          {/* Avatar */}
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500
-            flex items-center justify-center flex-shrink-0 text-white font-bold text-lg">
-            {getAuthorName().charAt(0).toUpperCase()}
-          </div>
-          
-          {/* Author Info */}
-          <div className="flex-1 min-w-0">
-            <span className="text-white font-medium text-sm truncate block">
-              {getAuthorName()}
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 px-5 py-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-teal-500 to-blue-500 border border-teal-400/30 flex items-center justify-center">
+            <span className="text-white font-bold text-sm">
+              {getAuthorName().charAt(0).toUpperCase()}
             </span>
-            <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
-              <FiClock className="w-3 h-3" />
-              <span>{getTimeAgo(question.created_at)}</span>
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white truncate">{getAuthorName()}</p>
+            <div className="flex items-center gap-2 text-xs text-gray-400">
+              <span>@{question.author?.email?.split('@')[0] || 'investor'}</span>
+              <span>•</span>
+              <span className="inline-flex items-center gap-1">
+                <FiClock className="w-3 h-3" />
+                {getTimeAgo(question.created_at)}
+              </span>
             </div>
           </div>
         </div>
-        
-        {/* Status Badges */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {question.likes_count > 50 && (
-            <span className="px-2.5 py-1 rounded-md bg-orange-500/10 border border-orange-500/30 
-              text-orange-400 text-xs font-semibold flex items-center gap-1">
-              🔥 Hot
-            </span>
-          )}
-          {question.comments_count > 0 ? (
-            <span className="px-2.5 py-1 rounded-md bg-green-500/10 border border-green-500/30 
-              text-green-400 text-xs font-semibold flex items-center gap-1">
-              ✓ Answered
-            </span>
-          ) : (
-            <span className="px-2.5 py-1 rounded-md bg-blue-500/10 border border-blue-500/30 
-              text-blue-400 text-xs font-semibold">
-              ⭕ Open
-            </span>
-          )}
-          <button
-            onClick={(e) => e.stopPropagation()}
-            className="p-1.5 text-gray-500 hover:text-white hover:bg-gray-700/50 
-              rounded-md transition-colors"
-          >
-            <FiMoreVertical className="w-4 h-4" />
-          </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigator.clipboard.writeText(
+              `${window.location.origin}/scenario-testing/${question.id}`
+            );
+          }}
+          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-gray-300 
+            border border-gray-600 rounded-full hover:bg-gray-700 hover:border-teal-500 transition-colors"
+        >
+          <FiShare2 className="w-3.5 h-3.5" />
+          Share
+        </button>
+      </div>
+
+      {/* Question Banner */}
+      <div className="px-5 pb-4">
+        <div className="rounded-xl bg-gradient-to-r from-teal-500 via-emerald-500 to-blue-500 px-6 py-8 text-center border border-teal-400/20">
+          <p className="text-lg md:text-xl font-semibold text-white leading-snug">
+            {question.question_text || question.title}
+          </p>
         </div>
       </div>
 
-      {/* Question Content */}
-      <div className="mb-4">
-        <h3 className="text-xl font-bold text-white mb-3 group-hover:text-teal-300 
-          transition-colors leading-snug">
-          {question.title}
-        </h3>
-        
-        <p className="text-sm text-gray-400 mb-4 line-clamp-2 leading-relaxed">
-          {question.question_text}
-        </p>
+      {/* Historical Analog */}
+      {question.historical_period && Array.isArray(question.historical_period) && 
+       question.historical_period.length > 0 && (
+        <div className="px-5 pb-4">
+          <p className="text-xs text-gray-400 flex items-center gap-2">
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-teal-500/20 border border-teal-500/30">
+              <FiAward className="w-3 h-3 text-teal-400" />
+            </span>
+            Historical analog: {question.historical_period[0].start}-{question.historical_period[0].end} — {question.historical_period[0].label}
+          </p>
+        </div>
+      )}
 
-        {/* Historical Period Badge */}
-        {question.historical_period && Array.isArray(question.historical_period) && 
-         question.historical_period.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            {question.historical_period.map((period: any, index: number) => (
-              <span
-                key={index}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg 
-                  bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-medium"
-              >
-                {period.start}-{period.end} · {period.label}
-              </span>
-            ))}
+      {/* Stats */}
+      <div className="px-5 pb-4">
+        <div className="flex items-center gap-6 text-sm text-gray-400">
+          <div className="flex items-center gap-2">
+            <FiThumbsUp className="w-4 h-4 text-teal-400" />
+            <span className="font-semibold text-white">{localLikes.toLocaleString()}</span>
           </div>
-        )}
+          <div className="flex items-center gap-2">
+            <FiMessageSquare className="w-4 h-4 text-blue-400" />
+            <span className="font-semibold text-white">{question.comments_count}</span>
+            <span className="text-gray-400">comments</span>
+          </div>
+        </div>
       </div>
 
-      {/* Engagement Bar */}
-      <div className="flex items-center justify-between gap-3">
-        {/* Left: Engagement Stats - Cleaner Design */}
-        <div className="flex items-center gap-5 text-sm">
-          {/* Likes */}
+      {/* Actions */}
+      <div className="flex items-center justify-between border-t border-gray-700 px-5 py-3 bg-gray-900/50">
+        <div className="flex items-center gap-3">
           <button
             onClick={handleLikeToggle}
             disabled={isLiking}
-            className={`flex items-center gap-2 transition-colors
+            className={`flex items-center gap-2 text-sm font-semibold transition-colors
               ${isLiked 
                 ? 'text-teal-400' 
-                : 'text-gray-500 hover:text-gray-300'
+                : 'text-gray-400 hover:text-white'
               } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             <FiThumbsUp className={`w-4 h-4 ${isLiking ? 'animate-pulse' : ''}`} />
-            <span className="font-medium">{localLikes}</span>
+            Like
           </button>
-
-          {/* Comments */}
           <button
             onClick={(e) => {
               e.stopPropagation();
-              router.push(`/scenario-testing/${question.id}#comments`);
+              const newShowComments = !showComments;
+              setShowComments(newShowComments);
+              if (newShowComments) {
+                fetchComments();
+              }
             }}
-            className="flex items-center gap-2 text-gray-500 hover:text-gray-300 transition-colors"
+            className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-white transition-colors"
           >
             <FiMessageSquare className="w-4 h-4" />
-            <span className="font-medium">{question.comments_count}</span>
-          </button>
-
-          {/* Views */}
-          <div className="flex items-center gap-2 text-gray-500">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            <span className="font-medium">{question.views_count || Math.floor(Math.random() * 2000) + 100}</span>
-          </div>
-
-          {/* Share */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              navigator.clipboard.writeText(
-                `${window.location.origin}/scenario-testing/${question.id}`
-              );
-            }}
-            className="text-gray-500 hover:text-gray-300 transition-colors"
-          >
-            <FiShare2 className="w-4 h-4" />
+            Comment
           </button>
         </div>
-
-        {/* Right: Test Button */}
-        <button
-          onClick={handleTestClick}
-          className="flex items-center gap-2 px-5 py-2.5 bg-teal-500 hover:bg-teal-600 
-            text-white text-sm font-semibold rounded-lg transition-colors flex-shrink-0"
-        >
-          <FiBarChart2 className="w-4 h-4" />
-          <span>Test Portfolio</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleTestClick}
+            className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold text-gray-200 
+              border border-gray-600 rounded-lg hover:bg-gray-700 hover:border-teal-500 transition-colors"
+          >
+            <FiBarChart2 className="w-4 h-4" />
+            Test My Portfolio
+          </button>
+          <button
+            onClick={handleTopPortfolios}
+            className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold text-teal-400 
+              bg-teal-500/10 border border-teal-500/30 rounded-lg hover:bg-teal-500/20 transition-colors"
+          >
+            <FiAward className="w-4 h-4" />
+            Top Portfolios
+          </button>
+        </div>
       </div>
+
+      {/* Inline Comments */}
+      {showComments && (
+        <div className="border-t border-gray-700 px-5 py-4 bg-gray-950/50">
+          {/* Loading State */}
+          {loadingComments && (
+            <div className="text-center py-4">
+              <div className="inline-flex items-center gap-2 text-sm text-gray-400">
+                <div className="w-4 h-4 border-2 border-gray-600 border-t-teal-500 rounded-full animate-spin" />
+                Loading comments...
+              </div>
+            </div>
+          )}
+
+          {/* Comments List */}
+          {!loadingComments && comments.length > 0 && (
+            <div className="mb-4 space-y-3">
+              {comments.map((comment, idx) => (
+                <div key={idx} className="flex gap-3 p-3 bg-gray-900/50 rounded-lg border border-gray-800 hover:border-gray-700 transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-blue-500 
+                    flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">
+                    {comment.author.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-white">{comment.author}</p>
+                    <p className="text-sm text-gray-300 mt-0.5">{comment.text}</p>
+                    <p className="text-xs text-gray-500 mt-1">{comment.timestamp}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* No Comments State */}
+          {!loadingComments && comments.length === 0 && (
+            <div className="text-center py-4">
+              <p className="text-sm text-gray-400">No comments yet. Be the first to comment!</p>
+            </div>
+          )}
+
+          {/* Comment Form */}
+          <form onSubmit={handleCommentSubmit} className="flex items-end gap-2 border-t border-gray-800 pt-3">
+            <div className="flex-1">
+              <input
+                type="text"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder={user ? "Write a comment..." : "Sign in to comment..."}
+                disabled={!user}
+                className="w-full px-3 py-2 text-sm bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500
+                  focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent
+                  disabled:bg-gray-800 disabled:cursor-not-allowed disabled:text-gray-600"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={!commentText.trim() || !user}
+              className="p-2 text-teal-400 hover:bg-teal-500/10 rounded-lg 
+                disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              title={!user ? "Sign in to comment" : "Post comment"}
+            >
+              <FiSend className="w-4 h-4" />
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* Portfolio Selection Modal */}
+      <PortfolioSelectionModal
+        isOpen={showPortfolioModal}
+        onClose={() => setShowPortfolioModal(false)}
+        onPortfolioSelect={handlePortfolioSelect}
+        questionId={question.id}
+      />
     </div>
   );
 }

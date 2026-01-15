@@ -269,6 +269,11 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing, authenti
         return;
       }
     }
+    // Step 10: Portfolio Name (optional but we proceed anyway)
+    if (currentStep === 10) {
+      // Portfolio name is optional, so no validation required
+      // Just proceed to submission
+    }
 
     // When moving from step 6 to 7, parse the portfolio (but don't submit yet)
     if (currentStep === 6 && !analysisStarted) {
@@ -278,10 +283,10 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing, authenti
     }
 
     // Move to next step
-    if (currentStep < 9) {
+    if (currentStep < 10) {
       setCurrentStep(currentStep + 1);
     } else {
-      // On final step (9), submit everything and Show Analysis 
+      // On final step (10), submit everything and Show Analysis 
       // Submit regardless of portfolio parsing state - backend will handle validation
       onSubmit(formData);
     }
@@ -371,6 +376,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing, authenti
     { id: 7, title: 'First Name', field: 'firstName' },
     { id: 8, title: 'Last Name', field: 'lastName' },
     { id: 9, title: 'Email & Acknowledgment', field: 'email' },
+    { id: 10, title: 'Portfolio Name', field: 'portfolioName' },
   ];
 
   const renderStepContent = () => {
@@ -1280,6 +1286,47 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing, authenti
           </div>
         );
 
+      case 10:
+        // Portfolio Name
+        const today = new Date().toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        });
+        const defaultPortfolioName = `${formData.firstName || 'My'}'s Portfolio - ${today}`;
+        
+        return (
+          <div className="space-y-4">
+            <div className="bg-teal-900/20 border border-teal-800 rounded-2xl p-6 mb-6">
+              <p className="text-gray-200 text-lg leading-relaxed">
+                Give your portfolio a name so you can easily identify it later.
+              </p>
+            </div>
+            <div>
+              <label htmlFor="portfolioName" className="block text-sm font-medium text-gray-300 mb-2">
+                Portfolio Name (Optional)
+              </label>
+              <input
+                type="text"
+                id="portfolioName"
+                value={formData.portfolioName || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, portfolioName: e.target.value }))}
+                placeholder={defaultPortfolioName}
+                className="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
+                maxLength={50}
+              />
+              <p className="mt-2 text-xs text-gray-400">
+                {formData.portfolioName?.length || 0}/50 characters
+              </p>
+              {!formData.portfolioName && (
+                <p className="mt-2 text-xs text-gray-400">
+                  Default: &quot;{defaultPortfolioName}&quot;
+                </p>
+              )}
+            </div>
+          </div>
+        );
+
       default:
         return null;
     }
@@ -1325,7 +1372,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing, authenti
         <button
           type="button"
           onClick={handleNext}
-          disabled={isParsing || (isAnalyzing && currentStep === 9)}
+          disabled={isParsing || (isAnalyzing && currentStep === 10)}
           className="px-6 sm:px-8 py-3 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex items-center gap-2 text-sm sm:text-base"
         >
           {isParsing && currentStep === 6 ? (
@@ -1337,7 +1384,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing, authenti
               <span className="hidden sm:inline">Processing...</span>
               <span className="sm:hidden">...</span>
             </>
-          ) : currentStep === 9 ? (
+          ) : currentStep === 10 ? (
             <>
               <span className="hidden sm:inline">Show Analysis</span>
               <span className="sm:hidden">Next</span>

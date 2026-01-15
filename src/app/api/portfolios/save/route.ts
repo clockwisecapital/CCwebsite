@@ -50,12 +50,17 @@ export async function POST(request: NextRequest) {
     const cycleScore = analysisResult?.cycleScore || null;
 
     // Create portfolio record
+    const portfolioDate = new Date().toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
     const { data: portfolio, error: portfolioError } = await supabase
       .from('portfolios')
       .insert({
         user_id: userId,
         conversation_id: actualConversationId,
-        name: `${intakeData.firstName || 'My'}'s Portfolio`,
+        name: intakeData.portfolioName || `${intakeData.firstName || 'My'}'s Portfolio - ${portfolioDate}`,
         portfolio_data: intakeData.portfolio,
         intake_data: intakeData,
         analysis_results: analysisResult,
