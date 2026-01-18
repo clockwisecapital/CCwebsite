@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiArrowLeft, FiTrendingUp, FiTrendingDown, FiAward, FiCheckCircle, FiAlertCircle, FiZap } from 'react-icons/fi';
 import { useRouter, useParams } from 'next/navigation';
 
@@ -32,39 +32,72 @@ const PortfolioComparison = () => {
   const questionId = params.questionId as string;
   const portfolioId = params.portfolioId as string;
 
-  const [selectedPortfolio] = useState<PortfolioMetrics>({
-    name: 'Anti-Mag7',
-    score: 72,
-    expectedReturn: 0.068,
-    expectedBestYear: 0.284,
-    expectedWorstYear: -0.128,
-    upside: 0.352,
-    downside: -0.164,
-    topPositions: [
-      { ticker: 'SCHD', name: 'U.S. Dividend • Schwab Dividend Equity ETF', weight: 35, expectedReturn: 0.078 },
-      { ticker: 'VWO', name: 'Emerging Markets • Vanguard Emerging Markets', weight: 20, expectedReturn: 0.088 },
-      { ticker: 'XLV', name: 'Healthcare • Health Care Select SPDR', weight: 20, expectedReturn: 0.074 },
-      { ticker: 'BND', name: 'U.S. Bonds • Vanguard Total Bond Market ETF', weight: 15, expectedReturn: 0.041 },
-      { ticker: 'VEA', name: 'Intl Developed • Vanguard FTSE Developed', weight: 10, expectedReturn: 0.072 },
-    ]
-  });
+  const [selectedPortfolio, setSelectedPortfolio] = useState<PortfolioMetrics | null>(null);
+  const [timePortfolio, setTimePortfolio] = useState<PortfolioMetrics | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const timePortfolio: PortfolioMetrics = {
-    name: 'TIME Portfolio',
-    score: 88,
-    expectedReturn: 0.094,
-    expectedBestYear: 0.445,
-    expectedWorstYear: -0.171,
-    upside: 0.441,
-    downside: -0.171,
-    topPositions: [
-      { ticker: 'AAPL', name: 'U.S. Large Cap • Apple Inc', weight: 8, expectedReturn: 0.104 },
-      { ticker: 'MSFT', name: 'U.S. Large Cap • Microsoft Corp', weight: 7.5, expectedReturn: 0.112 },
-      { ticker: 'TLT', name: 'Long-Term Treasuries • iShares 20+ Year Treasury', weight: 15, expectedReturn: 0.038 },
-      { ticker: 'GLD', name: 'Commodities • Gold SPDR Shares', weight: 12.5, expectedReturn: 0.068 },
-      { ticker: 'VTI', name: 'U.S. Total Market • Vanguard Total Stock', weight: 40, expectedReturn: 0.098 },
-    ]
-  };
+  useEffect(() => {
+    const fetchComparison = async () => {
+      try {
+        // Fetch the selected portfolio's test result
+        const response = await fetch(`/api/community/questions/${questionId}/test-results`);
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          const portfolioTest = data.topPortfolios.find((p: any) => p.portfolioId === portfolioId);
+          
+          if (portfolioTest) {
+            setSelectedPortfolio({
+              name: portfolioTest.portfolioName,
+              score: portfolioTest.score,
+              expectedReturn: portfolioTest.expectedReturn,
+              expectedBestYear: portfolioTest.upside,
+              expectedWorstYear: portfolioTest.downside,
+              upside: portfolioTest.upside,
+              downside: portfolioTest.downside,
+              topPositions: portfolioTest.holdings?.slice(0, 5).map((h: any) => {
+                // Handle weight in different formats: decimal (0.40) or percentage (40)
+                let weight = h.weight || h.percentage || 0;
+                // If weight is a decimal (< 1), convert to percentage
+                if (weight > 0 && weight < 1) {
+                  weight = weight * 100;
+                }
+                return {
+                  ticker: h.ticker,
+                  name: h.name || h.ticker,
+                  weight: weight,
+                  expectedReturn: portfolioTest.expectedReturn // Simplified
+                };
+              }) || []
+            });
+          }
+          
+          // TODO: Fetch TIME portfolio score for same question
+          // For now, use placeholder
+          setTimePortfolio({
+            name: 'TIME Portfolio',
+            score: 88,
+            expectedReturn: 0.094,
+            expectedBestYear: 0.445,
+            expectedWorstYear: -0.171,
+            upside: 0.441,
+            downside: -0.171,
+            topPositions: [
+              { ticker: 'VTI', name: 'U.S. Total Market', weight: 40, expectedReturn: 0.098 },
+              { ticker: 'TLT', name: 'Long-Term Treasuries', weight: 15, expectedReturn: 0.038 },
+              { ticker: 'GLD', name: 'Gold', weight: 12.5, expectedReturn: 0.068 },
+            ]
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch comparison:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchComparison();
+  }, [questionId, portfolioId]);
 
   const getInsights = (): ComparisonInsight[] => [
     {
@@ -89,9 +122,12 @@ const PortfolioComparison = () => {
     }
   ];
 
-  const formatPercent = (value: number) => {
-    const sign = value >= 0 ? '+' : '';
-    return `${sign}${(value * 100).toFixed(1)}%`;
+  const formatPercent = (value: number, includeSign: boolean = false) => {
+    const percent = (value * 100).toFixed(1);
+    if (includeSign && value >= 0) {
+      return `+${percent}%`;
+    }
+    return `${percent}%`;
   };
 
   const getColorClass = (value: number, positive = true) => {
@@ -101,6 +137,33 @@ const PortfolioComparison = () => {
     }
     return value > 0 ? 'text-red-400' : 'text-green-400';
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#0a0e1a] via-[#0f1420] to-[#0a0e1a] pt-20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-400">Loading comparison...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!selectedPortfolio || !timePortfolio) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#0a0e1a] via-[#0f1420] to-[#0a0e1a] pt-20 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-400">Portfolio not found</p>
+          <button
+            onClick={() => router.push(`/scenario-testing/${questionId}/top-portfolios`)}
+            className="mt-4 text-teal-400 hover:text-teal-300"
+          >
+            Back to Top Portfolios
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0e1a] via-[#0f1420] to-[#0a0e1a] pt-20">
@@ -231,20 +294,26 @@ const PortfolioComparison = () => {
               {selectedPortfolio.name}
             </h3>
             <div className="space-y-3">
-              {selectedPortfolio.topPositions.map((position, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-white text-sm">{position.ticker}</p>
-                    <p className="text-xs text-gray-400 truncate">{position.name}</p>
-                  </div>
-                  <div className="text-right flex-shrink-0 ml-2">
-                    <p className="font-bold text-gray-200">{position.weight}%</p>
-                    <p className={`text-xs font-semibold ${getColorClass(position.expectedReturn)}`}>
-                      {formatPercent(position.expectedReturn)}
-                    </p>
-                  </div>
+              {selectedPortfolio.topPositions.length === 0 ? (
+                <div className="text-center py-8 text-gray-400 text-sm">
+                  No specific holdings data available
                 </div>
-              ))}
+              ) : (
+                selectedPortfolio.topPositions.map((position, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-white text-sm">{position.ticker}</p>
+                      <p className="text-xs text-gray-400 truncate">{position.name}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0 ml-2">
+                      <p className="font-bold text-gray-200">{position.weight.toFixed(1)}%</p>
+                      <p className={`text-xs font-semibold ${getColorClass(position.expectedReturn)}`}>
+                        {formatPercent(position.expectedReturn)}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 

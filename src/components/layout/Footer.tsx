@@ -16,7 +16,7 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4">Navigation</h3>
             <ul className="space-y-2">
-              <li><Link href="/#learn" className="hover:text-[#1FAAA3] transition-colors">Learn</Link></li>
+              <li><Link href="/kronos" className="hover:text-[#1FAAA3] transition-colors">Kronos</Link></li>
               <li><Link href="/#grow" className="hover:text-[#1FAAA3] transition-colors">Portfolios</Link></li>
               <li><Link href="/#plan" className="hover:text-[#1FAAA3] transition-colors">Advisors</Link></li>
               <li><Link href="/#reviews" className="hover:text-[#1FAAA3] transition-colors">Reviews</Link></li>

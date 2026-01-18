@@ -68,6 +68,15 @@ export default function CommunityFeedPage() {
       if (response.ok && data.success) {
         // Always include sample questions for demo purposes
         const realQuestions = Array.isArray(data.questions) ? data.questions : [];
+        
+        // Debug: Log real questions to see likes data
+        console.log('📊 Real questions from API:', realQuestions.map((q: ScenarioQuestionWithAuthor) => ({
+          id: q.id,
+          title: q.title.substring(0, 30),
+          likes_count: q.likes_count,
+          is_liked_by_user: q.is_liked_by_user
+        })));
+        
         const sampleQuestions = getSampleQuestions();
         // Merge and deduplicate by ID
         const allQuestions = [...realQuestions];
@@ -151,6 +160,12 @@ export default function CommunityFeedPage() {
 
   // Handle like
   const handleLike = async (questionId: string) => {
+    // Don't allow liking sample questions (they're not in the database)
+    if (questionId.startsWith('sample-')) {
+      alert('This is a demo question. Create a real question to enable likes and comments!');
+      return;
+    }
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
@@ -164,12 +179,17 @@ export default function CommunityFeedPage() {
       });
 
       if (response.ok) {
-        // Update local state
+        const data = await response.json();
+        // Update local state with the actual count from the database
         setQuestions(prev => prev.map(q => 
           q.id === questionId 
-            ? { ...q, likes_count: q.likes_count + 1, is_liked_by_user: true }
+            ? { ...q, likes_count: data.likes_count || (q.likes_count + 1), is_liked_by_user: true }
             : q
         ));
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to like question:', errorData);
+        throw new Error(errorData.error || 'Failed to like question');
       }
     } catch (error) {
       console.error('Failed to like question:', error);
@@ -179,6 +199,12 @@ export default function CommunityFeedPage() {
 
   // Handle unlike
   const handleUnlike = async (questionId: string) => {
+    // Don't allow unliking sample questions (they're not in the database)
+    if (questionId.startsWith('sample-')) {
+      alert('This is a demo question. Create a real question to enable likes and comments!');
+      return;
+    }
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const headers: HeadersInit = {};
@@ -192,12 +218,17 @@ export default function CommunityFeedPage() {
       });
 
       if (response.ok) {
-        // Update local state
+        const data = await response.json();
+        // Update local state with the actual count from the database
         setQuestions(prev => prev.map(q => 
           q.id === questionId 
-            ? { ...q, likes_count: Math.max(0, q.likes_count - 1), is_liked_by_user: false }
+            ? { ...q, likes_count: data.likes_count || Math.max(0, q.likes_count - 1), is_liked_by_user: false }
             : q
         ));
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to unlike question:', errorData);
+        throw new Error(errorData.error || 'Failed to unlike question');
       }
     } catch (error) {
       console.error('Failed to unlike question:', error);
@@ -205,9 +236,45 @@ export default function CommunityFeedPage() {
     }
   };
 
+  // Save test result to leaderboard
+  const saveTestResultToLeaderboard = async (
+    questionId: string,
+    portfolioId: string,
+    portfolioName: string,
+    result: any
+  ) => {
+    try {
+      const response = await fetch(`/api/community/questions/${questionId}/test-results`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          portfolioId,
+          portfolioName,
+          score: result.testResult.score,
+          expectedReturn: result.testResult.expectedReturn,
+          upside: result.testResult.expectedUpside,
+          downside: result.testResult.expectedDownside,
+          comparisonData: result.portfolioComparison
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('📊 Result saved to leaderboard:', data.message);
+      }
+    } catch (error) {
+      console.error('Failed to save leaderboard result:', error);
+    }
+  };
+
   // Handle test
   const handleTest = async (questionId: string) => {
-    if (!selectedPortfolioId) {
+    // Check for portfolio from sessionStorage (from PostCard modal) or state (from top dropdown)
+    const portfolioIdToUse = sessionStorage.getItem('scenarioTestPortfolioId') || selectedPortfolioId;
+    const portfolioNameFromSession = sessionStorage.getItem('scenarioTestPortfolioName');
+    
+    if (!portfolioIdToUse) {
       alert('Please select a portfolio first. Redirecting to Kronos.');
       router.push('/kronos');
       return;
@@ -217,17 +284,48 @@ export default function CommunityFeedPage() {
     const question = questions.find(q => q.id === questionId);
     if (!question) return;
 
-    const portfolioName = userPortfolios.find(p => p.id === selectedPortfolioId)?.name || 
-                         communityPortfolios.find(p => p.id === selectedPortfolioId)?.name || 
+    const portfolioName = portfolioNameFromSession ||
+                         userPortfolios.find(p => p.id === portfolioIdToUse)?.name || 
+                         communityPortfolios.find(p => p.id === portfolioIdToUse)?.name || 
                          'Unknown Portfolio';
 
     setIsRunningTest(true);
 
     try {
-      // TODO: Replace with actual API call to run portfolio test
-      // For now, show mock results to demonstrate the UX flow
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
+      // Run real Kronos scoring
+      const { runScenarioTest } = await import('@/lib/kronos/integration');
+      
+      const result = await runScenarioTest(
+        portfolioIdToUse,
+        portfolioName,
+        question.title,
+        question.title
+      );
+      
+      // Clear sessionStorage after use
+      sessionStorage.removeItem('scenarioTestPortfolioId');
+      sessionStorage.removeItem('scenarioTestPortfolioName');
 
+      // Use real Kronos results
+      setTestResults(result.testResult);
+      setPortfolioComparison(result.portfolioComparison);
+      setShowTestResults(true);
+      
+      console.log('✅ Kronos test complete:', {
+        score: result.testResult.score,
+        scenario: result.kronosResponse.scenarioName,
+        analog: result.kronosResponse.analogName
+      });
+      
+      // Save test result to leaderboard (don't await, run in background)
+      saveTestResultToLeaderboard(
+        questionId,
+        portfolioIdToUse,
+        portfolioName,
+        result
+      ).catch(err => console.error('Failed to save to leaderboard:', err));
+      
+      /* REMOVED MOCK DATA - NOW USING REAL KRONOS
       const mockResults: TestResultData = {
         score: 78.5,
         expectedReturn: 0.124,
@@ -447,9 +545,11 @@ export default function CommunityFeedPage() {
         timeHorizon: 1
       };
 
-      setTestResults(mockResults);
-      setPortfolioComparison(mockComparison);
-      setShowTestResults(true);
+      // These are now set above with real Kronos data
+      // setTestResults(mockResults);
+      // setPortfolioComparison(mockComparison);
+      // setShowTestResults(true);
+      END OF MOCK DATA */
     } catch (error) {
       console.error('Error running test:', error);
       alert('Failed to run portfolio test. Please try again.');

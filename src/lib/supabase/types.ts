@@ -347,6 +347,33 @@ export interface Database {
           }
         ]
       }
+      ticker_classifications: {
+        Row: {
+          ticker: string
+          asset_class: string
+          confidence: number
+          reasoning: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          ticker: string
+          asset_class: string
+          confidence: number
+          reasoning?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          ticker?: string
+          asset_class?: string
+          confidence?: number
+          reasoning?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       time_portfolio_cache: {
         Row: {
           id: string

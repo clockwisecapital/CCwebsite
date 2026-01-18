@@ -62,12 +62,26 @@ export default function TopPortfoliosPage() {
           headers['Authorization'] = `Bearer ${session.access_token}`;
         }
 
-        const response = await fetch(`/api/community/questions/${questionId}/tests?limit=10`, { headers });
+        const response = await fetch(`/api/community/questions/${questionId}/test-results?limit=10`, { headers });
         const data = await response.json();
-        if (response.ok && data.success) {
-          setLeaderboard(data.leaderboard || []);
+        if (response.ok && data.success && data.topPortfolios.length > 0) {
+          // Transform API response to leaderboard format
+          const transformedData: QuestionLeaderboardEntry[] = data.topPortfolios.map((p: any, index: number) => ({
+            rank: index + 1,
+            portfolio_id: p.portfolioId,
+            portfolio_name: p.portfolioName,
+            user_id: p.userId,
+            username: p.userName,
+            display_name: p.userName,
+            score: p.score,
+            expected_return: p.expectedReturn,
+            upside: p.upside,
+            downside: p.downside,
+            test_date: p.createdAt
+          }));
+          setLeaderboard(transformedData);
         } else {
-          // Use sample data if API fails
+          // Use sample data if no real data yet
           setLeaderboard(getSampleLeaderboard());
         }
       } catch (error) {

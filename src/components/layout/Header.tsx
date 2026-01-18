@@ -63,11 +63,11 @@ export default function Header(): React.JSX.Element {
         <nav className="hidden md:flex items-center space-x-7 text-white">
           {/* Main Navigation Items */}
           <Link 
-            href="/#learn" 
+            href="/kronos" 
             className="group relative text-base hover:text-[#E3B23C] font-medium transition-colors duration-300"
           >
             <span className="absolute bottom-0 left-0 h-0.5 bg-[#E3B23C] w-0 group-hover:w-full transition-all duration-300"></span>
-            Learn
+            Kronos
           </Link>
           <Link 
             href="/#grow" 
@@ -120,16 +120,25 @@ export default function Header(): React.JSX.Element {
 
           {/* User Auth Button */}
           {user ? (
-            <button 
-              onClick={signOut}
-              className="ml-3 relative overflow-hidden bg-teal-600 text-white px-4 py-2 rounded-md font-sans font-medium group transition-all duration-300 hover:bg-teal-700"
-              title="Sign Out"
-            >
-              <span className="relative flex items-center space-x-2">
-                <span className="text-sm">Sign Out</span>
-                <HiArrowRightOnRectangle className="h-4 w-4" />
-              </span>
-            </button>
+            <>
+              <Link
+                href="/scenario-testing/questions"
+                className="ml-3 relative overflow-hidden bg-gradient-to-r from-teal-600 to-blue-600 text-white px-4 py-2 rounded-md font-sans font-medium group transition-all duration-300 hover:from-teal-700 hover:to-blue-700"
+                title="Scenario Testing"
+              >
+                <span className="relative text-sm">Scenarios</span>
+              </Link>
+              <button 
+                onClick={signOut}
+                className="ml-3 relative overflow-hidden bg-teal-600 text-white px-4 py-2 rounded-md font-sans font-medium group transition-all duration-300 hover:bg-teal-700"
+                title="Sign Out"
+              >
+                <span className="relative flex items-center space-x-2">
+                  <span className="text-sm">Sign Out</span>
+                  <HiArrowRightOnRectangle className="h-4 w-4" />
+                </span>
+              </button>
+            </>
           ) : (
             <button 
               onClick={() => setShowSignInModal(true)}
@@ -194,12 +203,12 @@ export default function Header(): React.JSX.Element {
           <div className="flex flex-col space-y-4 font-sans">
             {/* Main Navigation Items */}
             <Link 
-              href="/#learn" 
+              href="/kronos" 
               className="text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
               onClick={() => setIsMenuOpen(false)}
               style={{ transitionDelay: '0ms' }}
             >
-              Learn
+              Kronos
             </Link>
             <Link 
               href="/#grow" 
@@ -271,16 +280,25 @@ export default function Header(): React.JSX.Element {
 
           {/* User Auth Button (Mobile) */}
           {user ? (
-            <button 
-              className="mt-2 px-3 py-1.5 text-base font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-full transition-all duration-300 flex items-center gap-1.5"
-              onClick={() => {
-                setIsMenuOpen(false);
-                signOut();
-              }}
-            >
-              <span className="text-sm">Sign Out</span>
-              <HiArrowRightOnRectangle className="h-3.5 w-3.5" />
-            </button>
+            <>
+              <Link
+                href="/scenario-testing/questions"
+                className="mt-2 px-3 py-1.5 text-base font-medium text-white bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 rounded-full transition-all duration-300 text-center"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <span className="text-sm">Scenarios</span>
+              </Link>
+              <button 
+                className="mt-2 px-3 py-1.5 text-base font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-full transition-all duration-300 flex items-center gap-1.5"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  signOut();
+                }}
+              >
+                <span className="text-sm">Sign Out</span>
+                <HiArrowRightOnRectangle className="h-3.5 w-3.5" />
+              </button>
+            </>
           ) : (
             <button 
               className="mt-2 px-3 py-1.5 text-base font-medium text-white bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 rounded-full transition-all duration-300"

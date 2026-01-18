@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FiX, FiTrendingUp, FiTrendingDown, FiTarget, FiCalendar, FiCheckCircle, FiBarChart2, FiActivity, FiLayers } from 'react-icons/fi';
+import { FiX, FiTrendingUp, FiTrendingDown, FiTarget, FiCalendar, FiCheckCircle, FiBarChart2, FiActivity, FiLayers, FiAward } from 'react-icons/fi';
 import type { PortfolioComparison } from '@/types/portfolio';
 
 export interface HistoricalAnalog {
@@ -53,7 +53,8 @@ export default function TestResultsModal({ isOpen, onClose, results, portfolioCo
   };
 
   const formatPercent = (value: number) => {
-    return `${(value * 100).toFixed(1)}%`;
+    const percent = (value * 100).toFixed(1);
+    return `${percent}%`;
   };
 
   // Mock performance data for the chart
@@ -71,49 +72,57 @@ export default function TestResultsModal({ isOpen, onClose, results, portfolioCo
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 pt-24 bg-black/80 backdrop-blur-md"
       role="dialog"
       aria-modal="true"
       aria-labelledby="test-results-modal-title"
+      onClick={onClose}
     >
-      <div className="bg-[#0f1420] rounded-2xl border border-gray-800/50 shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div 
+        className="bg-[#0f1420] rounded-2xl border border-gray-800/50 shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col relative"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="relative px-8 pt-8 pb-6">
+        <div className="relative px-8 pt-8 pb-6 border-b border-gray-800/50">
           <button
             onClick={onClose}
-            className="absolute top-6 right-6 p-2 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-colors"
+            className="absolute top-4 right-4 p-2.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors z-10 group"
             aria-label="Close modal"
           >
-            <FiX className="w-5 h-5" />
+            <FiX className="w-6 h-6 group-hover:rotate-90 transition-transform duration-200" />
           </button>
           
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3 mb-1">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-blue-500 flex items-center justify-center">
               <FiBarChart2 className="w-5 h-5 text-white" />
             </div>
-            <h2 id="test-results-modal-title" className="text-2xl font-bold text-white">Test Results</h2>
+            <div>
+              <h2 id="test-results-modal-title" className="text-xl font-bold text-white">Test Results</h2>
+              <p className="text-xs text-gray-400">Portfolio Performance Analysis</p>
+            </div>
           </div>
-          <p className="text-sm text-gray-400 ml-[52px]">Portfolio Performance Analysis</p>
           
           {/* Test Info */}
-          <div className="flex items-center gap-6 mt-6 ml-[52px]">
+          <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-800/30">
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Portfolio</p>
               <p className="text-sm font-semibold text-white">
                 {results.portfolioName || 'Your Portfolio'}
               </p>
             </div>
-            <div className="h-8 w-px bg-gray-800" />
-            <div>
+            <div className="h-8 w-px bg-gray-700" />
+            <div className="flex-1">
               <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Question</p>
-              <p className="text-sm font-semibold text-white">
+              <p className="text-sm font-semibold text-white truncate">
                 {results.questionTitle || 'Scenario Test'}
               </p>
             </div>
           </div>
+        </div>
 
-          {/* Tabs */}
-          <div className="flex items-center gap-2 mt-6 border-b border-gray-800/50">
+        {/* Tabs */}
+        <div className="px-8 pt-4">
+          <div className="flex items-center gap-2 border-b border-gray-800/50">
             <button
               onClick={() => setActiveTab('overview')}
               className={`px-4 py-2.5 text-sm font-semibold transition-all border-b-2 -mb-px ${
@@ -153,7 +162,7 @@ export default function TestResultsModal({ isOpen, onClose, results, portfolioCo
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-8 pb-8">
+        <div className="flex-1 overflow-y-auto px-8 py-6">
           {activeTab === 'overview' ? (
             <div className="space-y-6">
 
@@ -214,7 +223,7 @@ export default function TestResultsModal({ isOpen, onClose, results, portfolioCo
                   <div className="flex items-center gap-2 mb-2">
                     <ReturnIcon className={`w-5 h-5 ${returnColor}`} />
                     <p className={`text-3xl font-bold ${returnColor}`}>
-                      {results.expectedReturn >= 0 ? '+' : ''}{(results.expectedReturn * 100).toFixed(1)}%
+                      {formatPercent(results.expectedReturn)}
                     </p>
                   </div>
                   <p className="text-xs text-gray-600">Median outcome</p>
@@ -245,26 +254,52 @@ export default function TestResultsModal({ isOpen, onClose, results, portfolioCo
                 </div>
               </div>
 
-              {/* Portfolio Score */}
-              <div className="bg-gradient-to-br from-teal-500/5 to-blue-500/5 border border-teal-500/20 rounded-xl p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500 mb-2">Portfolio Score</p>
-                    <p className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-400">
-                      {results.score.toFixed(1)}
-                    </p>
-                    {results.confidence && (
-                      <p className="text-sm text-gray-500 mt-3">
-                        Confidence: <span className="text-teal-400 font-semibold">{results.confidence}%</span>
-                      </p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500 mb-2">View Ranking</p>
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-teal-500 to-blue-500 flex items-center justify-center">
-                      <FiTarget className="w-8 h-8 text-white" />
+              {/* Portfolio Scores Comparison */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Your Portfolio Score */}
+                <div className="bg-gradient-to-br from-blue-500/5 to-purple-500/5 border border-blue-500/20 rounded-xl p-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                      <FiTarget className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wider">Your Portfolio</p>
+                      <p className="text-sm text-white font-semibold">Score</p>
                     </div>
                   </div>
+                  <p className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+                    {results.score.toFixed(0)}
+                  </p>
+                  {results.confidence && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Confidence: <span className="text-blue-400 font-semibold">{results.confidence}%</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* TIME Portfolio Score */}
+                <div className="bg-gradient-to-br from-teal-500/5 to-blue-500/5 border border-teal-500/20 rounded-xl p-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-teal-500/10 flex items-center justify-center">
+                      <FiAward className="w-5 h-5 text-teal-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase tracking-wider">TIME Portfolio</p>
+                      <p className="text-sm text-white font-semibold">Score</p>
+                    </div>
+                  </div>
+                  <p className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-400">
+                    {portfolioComparison?.timePortfolio?.score?.toFixed(0) || 'N/A'}
+                  </p>
+                  {portfolioComparison && portfolioComparison.timePortfolio.score !== undefined && (
+                    <p className="text-xs text-teal-400 mt-2 font-semibold">
+                      {portfolioComparison.timePortfolio.score > results.score 
+                        ? `+${(portfolioComparison.timePortfolio.score - results.score).toFixed(0)} points higher`
+                        : results.score > portfolioComparison.timePortfolio.score
+                        ? `${(results.score - portfolioComparison.timePortfolio.score).toFixed(0)} points lower`
+                        : 'Same score'}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -354,7 +389,7 @@ export default function TestResultsModal({ isOpen, onClose, results, portfolioCo
                     <p className="text-xs text-gray-500 mb-2">Your Portfolio</p>
                     <div className="flex items-center gap-3">
                       <div className="text-2xl font-bold text-blue-400">
-                        {results.expectedReturn >= 0 ? '+' : ''}{(results.expectedReturn * 100).toFixed(1)}%
+                        {formatPercent(results.expectedReturn)}
                       </div>
                       <span className="text-xs text-gray-500">Total Return</span>
                     </div>
@@ -363,7 +398,14 @@ export default function TestResultsModal({ isOpen, onClose, results, portfolioCo
                     <p className="text-xs text-gray-500 mb-2">TIME Portfolio</p>
                     <div className="flex items-center gap-3">
                       <div className="text-2xl font-bold text-teal-400">
-                        +{((results.expectedReturn + 0.035) * 100).toFixed(1)}%
+                        {portfolioComparison?.timePortfolio ? 
+                          (() => {
+                            const timeReturn = portfolioComparison.timePortfolio.expectedReturn;
+                            const timePercent = (timeReturn * 100).toFixed(1);
+                            return timeReturn >= 0 ? `+${timePercent}%` : `${timePercent}%`;
+                          })()
+                          : 'N/A'
+                        }
                       </div>
                       <span className="text-xs text-gray-500">Total Return</span>
                     </div>
@@ -609,17 +651,17 @@ export default function TestResultsModal({ isOpen, onClose, results, portfolioCo
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-8 py-6 border-t border-gray-800/50">
+        <div className="flex items-center justify-between px-8 py-4 border-t border-gray-800/50 bg-gray-900/30">
           <button
             onClick={onClose}
-            className="px-6 py-2.5 bg-gray-800/50 hover:bg-gray-800 border border-gray-700 text-white 
+            className="px-5 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white 
               font-medium rounded-lg transition-colors text-sm"
           >
             Close
           </button>
           <button
-            className="px-6 py-2.5 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 
-              text-white font-semibold rounded-lg transition-all duration-300 hover:scale-105 text-sm"
+            className="px-5 py-2 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 
+              text-white font-semibold rounded-lg transition-all duration-300 hover:scale-105 text-sm shadow-lg"
           >
             View Leaderboard
           </button>

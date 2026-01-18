@@ -176,6 +176,13 @@ export async function POST(
       }
     }
     
+    // Get current comments count
+    const { data: currentQuestion } = await supabase
+      .from('scenario_questions')
+      .select('comments_count')
+      .eq('id', id)
+      .single();
+    
     // Insert comment
     const { data: comment, error: insertError } = await supabase
       .from('question_comments')
@@ -203,6 +210,16 @@ export async function POST(
         { status: 500 }
       );
     }
+    
+    // Manually increment comments_count (in case trigger doesn't work)
+    const newCommentsCount = (currentQuestion?.comments_count || 0) + 1;
+    await supabase
+      .from('scenario_questions')
+      .update({ 
+        comments_count: newCommentsCount,
+        last_activity_at: new Date().toISOString()
+      })
+      .eq('id', id);
     
     return NextResponse.json({
       success: true,

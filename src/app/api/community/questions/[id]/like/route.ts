@@ -59,6 +59,13 @@ export async function POST(
       );
     }
     
+    // Get current likes count
+    const { data: currentQuestion } = await supabase
+      .from('scenario_questions')
+      .select('likes_count')
+      .eq('id', id)
+      .single();
+    
     // Insert like
     const { error: insertError } = await supabase
       .from('question_likes')
@@ -75,12 +82,28 @@ export async function POST(
       );
     }
     
+    // Manually increment likes_count (in case trigger doesn't work)
+    const newLikesCount = (currentQuestion?.likes_count || 0) + 1;
+    await supabase
+      .from('scenario_questions')
+      .update({ 
+        likes_count: newLikesCount,
+        last_activity_at: new Date().toISOString()
+      })
+      .eq('id', id);
+    
     // Fetch updated question with new count
     const { data: updatedQuestion } = await supabase
       .from('scenario_questions')
       .select('likes_count')
       .eq('id', id)
       .single();
+    
+    console.log('✅ Question liked:', {
+      questionId: id,
+      userId: user.id,
+      newLikesCount: updatedQuestion?.likes_count
+    });
     
     return NextResponse.json({
       success: true,
@@ -120,6 +143,13 @@ export async function DELETE(
       );
     }
     
+    // Get current likes count
+    const { data: currentQuestion } = await supabase
+      .from('scenario_questions')
+      .select('likes_count')
+      .eq('id', id)
+      .single();
+    
     // Delete like
     const { error: deleteError } = await supabase
       .from('question_likes')
@@ -135,12 +165,27 @@ export async function DELETE(
       );
     }
     
+    // Manually decrement likes_count (in case trigger doesn't work)
+    const newLikesCount = Math.max(0, (currentQuestion?.likes_count || 0) - 1);
+    await supabase
+      .from('scenario_questions')
+      .update({ 
+        likes_count: newLikesCount
+      })
+      .eq('id', id);
+    
     // Fetch updated question with new count
     const { data: updatedQuestion } = await supabase
       .from('scenario_questions')
       .select('likes_count')
       .eq('id', id)
       .single();
+    
+    console.log('❌ Question unliked:', {
+      questionId: id,
+      userId: user.id,
+      newLikesCount: updatedQuestion?.likes_count
+    });
     
     return NextResponse.json({
       success: true,

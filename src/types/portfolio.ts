@@ -45,6 +45,7 @@ export interface PortfolioComparison {
     expectedReturn: number;           // Blended weighted average (Year 1 FactSet + Years 2+ long-term)
     upside: number;                   // Portfolio-level 95th percentile annual return (diversified)
     downside: number;                 // Portfolio-level 5th percentile annual return (diversified)
+    score?: number;                   // Kronos portfolio score (0-100)
     positions: PositionAnalysis[];
     topPositions: PositionAnalysis[];  // Top 5 by weight
     isUsingProxy: boolean;            // True if using representative ETFs
@@ -55,6 +56,7 @@ export interface PortfolioComparison {
     expectedReturn: number;           // Blended weighted average (Year 1 FactSet + Years 2+ long-term)
     upside: number;                   // Portfolio-level 95th percentile annual return (diversified)
     downside: number;                 // Portfolio-level 5th percentile annual return (diversified)
+    score?: number;                   // Kronos portfolio score (0-100)
     positions: PositionAnalysis[];
     topPositions: PositionAnalysis[];  // Top 5 by weight
   };

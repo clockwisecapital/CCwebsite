@@ -49,19 +49,35 @@ export async function POST(request: NextRequest) {
     const riskScore = parseFloat(analysisResult?.riskLevel || '0');
     const cycleScore = analysisResult?.cycleScore || null;
 
-    // Create portfolio record
+    // Create portfolio record with holdings data
     const portfolioDate = new Date().toLocaleDateString('en-US', { 
       year: 'numeric', 
       month: 'short', 
       day: 'numeric' 
     });
+    
+    // Build comprehensive portfolio_data with holdings
+    const portfolioData = {
+      ...intakeData.portfolio,
+      holdings: intakeData.specificHoldings || [],
+      totalValue: intakeData.portfolio.totalValue,
+      allocations: {
+        stocks: intakeData.portfolio.stocks,
+        bonds: intakeData.portfolio.bonds,
+        cash: intakeData.portfolio.cash,
+        realEstate: intakeData.portfolio.realEstate,
+        commodities: intakeData.portfolio.commodities,
+        alternatives: intakeData.portfolio.alternatives,
+      }
+    };
+    
     const { data: portfolio, error: portfolioError } = await supabase
       .from('portfolios')
       .insert({
         user_id: userId,
         conversation_id: actualConversationId,
         name: intakeData.portfolioName || `${intakeData.firstName || 'My'}'s Portfolio - ${portfolioDate}`,
-        portfolio_data: intakeData.portfolio,
+        portfolio_data: portfolioData,
         intake_data: intakeData,
         analysis_results: analysisResult,
         portfolio_score: portfolioScore,

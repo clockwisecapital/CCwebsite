@@ -8,18 +8,75 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { scorePortfolio, mapTickerToKronosAssetClass } from '@/lib/kronos/scoring';
+import { scorePortfolio, mapTickerToKronosAssetClass, mapTickerToKronosAssetClassAsync } from '@/lib/kronos/scoring';
+import { getHoldingWeights } from '@/lib/supabase/database';
 import type { Holding } from '@/lib/kronos/types';
 
-// TIME Portfolio Holdings - the benchmark for comparison
-// Total = 1.0 (40% broad market, 5% large cap, 5% large cap, 15% bonds, 35% alternatives/inflation hedge)
-const TIME_PORTFOLIO_HOLDINGS: Holding[] = [
+// Fallback TIME Portfolio Holdings - used if database fetch fails
+const FALLBACK_TIME_PORTFOLIO: Holding[] = [
   { ticker: 'VTI', weight: 0.40, assetClass: 'us-large-cap' },      // 40%
   { ticker: 'TLT', weight: 0.20, assetClass: 'long-treasuries' },   // 20%
   { ticker: 'GLD', weight: 0.15, assetClass: 'gold' },               // 15%
   { ticker: 'DBC', weight: 0.10, assetClass: 'commodities' },        // 10%
   { ticker: 'BND', weight: 0.15, assetClass: 'aggregate-bonds' }    // 15%
 ];
+
+/**
+ * Fetch the real TIME portfolio from Supabase holding_weights table
+ * Uses AI-powered ticker classification for accurate asset class mapping
+ */
+async function getTimePortfolioHoldings(): Promise<Holding[]> {
+  try {
+    console.log('📊 Fetching TIME portfolio from database...');
+    const holdingWeights = await getHoldingWeights();
+    
+    if (!holdingWeights || holdingWeights.length === 0) {
+      console.warn('⚠️ No holdings found in database, using fallback');
+      return FALLBACK_TIME_PORTFOLIO;
+    }
+    
+    console.log(`🤖 Classifying ${holdingWeights.length} tickers with AI...`);
+    
+    // Convert database format to Kronos format with AI classification
+    const holdings: Holding[] = await Promise.all(
+      holdingWeights.map(async (hw) => ({
+        ticker: hw.stockTicker,
+        weight: hw.weightings, // Already a decimal (e.g., 0.40 for 40%)
+        assetClass: await mapTickerToKronosAssetClassAsync(hw.stockTicker)
+      }))
+    );
+    
+    // Validate weights sum to approximately 1.0
+    const totalWeight = holdings.reduce((sum, h) => sum + h.weight, 0);
+    
+    if (Math.abs(totalWeight - 1.0) > 0.05) {
+      console.warn(`⚠️ TIME portfolio weights sum to ${totalWeight.toFixed(3)}, normalizing...`);
+      // Normalize weights
+      holdings.forEach(h => h.weight = h.weight / totalWeight);
+    }
+    
+    console.log(`✅ Loaded TIME portfolio: ${holdings.length} positions (total weight: ${totalWeight.toFixed(3)})`);
+    
+    // Group by asset class for summary
+    const assetClassSummary = holdings.reduce((acc, h) => {
+      acc[h.assetClass] = (acc[h.assetClass] || 0) + h.weight;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    console.log('📊 Asset class allocation:');
+    Object.entries(assetClassSummary)
+      .sort(([, a], [, b]) => b - a)
+      .forEach(([assetClass, weight]) => {
+        console.log(`   ${assetClass}: ${(weight * 100).toFixed(2)}%`);
+      });
+    
+    return holdings;
+  } catch (error) {
+    console.error('❌ Error fetching TIME portfolio from database:', error);
+    console.warn('⚠️ Using fallback TIME portfolio');
+    return FALLBACK_TIME_PORTFOLIO;
+  }
+}
 
 interface ScoreRequest {
   question: string;
@@ -33,6 +90,18 @@ interface ScoreRequest {
 
 interface ScoreResponse {
   success: boolean;
+  userHoldings?: Array<{
+    ticker: string;
+    weight: number;
+    name?: string;
+    assetClass?: string;
+  }>;
+  timeHoldings?: Array<{
+    ticker: string;
+    weight: number;
+    name?: string;
+    assetClass?: string;
+  }>;
   userPortfolio?: any;
   timePortfolio?: any;
   comparison?: {
@@ -95,12 +164,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScoreResp
       );
     }
     
-    // Convert holdings to Kronos format
-    const userHoldings: Holding[] = body.holdings.map(h => ({
-      ticker: h.ticker,
-      weight: h.weight,
-      assetClass: h.assetClass || mapTickerToKronosAssetClass(h.ticker)
-    }));
+    // Convert holdings to Kronos format with AI classification
+    const userHoldings: Holding[] = await Promise.all(
+      body.holdings.map(async (h) => ({
+        ticker: h.ticker,
+        weight: h.weight,
+        assetClass: h.assetClass || await mapTickerToKronosAssetClassAsync(h.ticker)
+      }))
+    );
     
     console.log(`\n🎯 Kronos Score API Request:`);
     console.log(`Question: "${body.question}"`);
@@ -111,6 +182,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScoreResp
     
     const response: ScoreResponse = {
       success: true,
+      userHoldings: userHoldings.map(h => ({
+        ticker: h.ticker,
+        weight: h.weight,
+        name: h.ticker,
+        assetClass: h.assetClass
+      })),
       userPortfolio: {
         score: userResult.score,
         label: userResult.label,
@@ -134,7 +211,16 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScoreResp
       console.log(`\n🤖 Scoring TIME portfolio for comparison...`);
       
       try {
-        const timeResult = await scorePortfolio(body.question, TIME_PORTFOLIO_HOLDINGS);
+        // Fetch real TIME portfolio from database
+        const timePortfolioHoldings = await getTimePortfolioHoldings();
+        const timeResult = await scorePortfolio(body.question, timePortfolioHoldings);
+        
+        response.timeHoldings = timePortfolioHoldings.map(h => ({
+          ticker: h.ticker,
+          weight: h.weight,
+          name: h.ticker,
+          assetClass: h.assetClass
+        }));
         
         response.timePortfolio = {
           score: timeResult.score,

@@ -190,6 +190,16 @@ export async function GET(request: NextRequest) {
         q.is_liked_by_user = likedQuestionIds.has(q.id);
         q.is_following_author = followedAuthorIds.has(q.user_id);
       });
+      
+      // Debug: Log likes data for authenticated users
+      console.log('👤 User:', user.id);
+      console.log('❤️ Liked question IDs:', Array.from(likedQuestionIds));
+      console.log('📋 Questions being returned:', questions.map((q: any) => ({
+        id: q.id,
+        title: q.title.substring(0, 30),
+        likes_count: q.likes_count,
+        is_liked_by_user: q.is_liked_by_user
+      })));
     }
     
     return NextResponse.json({

@@ -11,6 +11,7 @@ import {
   FiEye,
   FiMoreVertical,
 } from 'react-icons/fi';
+import ViewHoldingsModal from '../portfolio/ViewHoldingsModal';
 
 interface Portfolio {
   id: string;
@@ -46,6 +47,9 @@ export default function PortfolioCard({ portfolio, onDelete, onRename, onTest }:
   const [showMenu, setShowMenu] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(portfolio.name);
+  const [showHoldingsModal, setShowHoldingsModal] = useState(false);
+  const [holdingsData, setHoldingsData] = useState<any>(null);
+  const [loadingHoldings, setLoadingHoldings] = useState(false);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -61,8 +65,23 @@ export default function PortfolioCard({ portfolio, onDelete, onRename, onTest }:
     }).format(value);
   };
 
-  const handleView = () => {
-    router.push(`/dashboard/portfolio/${portfolio.id}`);
+  const handleView = async () => {
+    // Fetch full portfolio data with holdings
+    setLoadingHoldings(true);
+    setShowHoldingsModal(true);
+    
+    try {
+      const response = await fetch(`/api/portfolios/${portfolio.id}`);
+      const data = await response.json();
+      
+      if (data.success && data.portfolio) {
+        setHoldingsData(data.portfolio.portfolio_data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch portfolio holdings:', error);
+    } finally {
+      setLoadingHoldings(false);
+    }
   };
 
   const handleTest = () => {
@@ -321,6 +340,15 @@ export default function PortfolioCard({ portfolio, onDelete, onRename, onTest }:
           </span>
         </div>
       )}
+      
+      {/* Holdings Modal */}
+      <ViewHoldingsModal
+        isOpen={showHoldingsModal}
+        onClose={() => setShowHoldingsModal(false)}
+        portfolioName={portfolio.name}
+        holdings={holdingsData?.holdings || []}
+        totalValue={holdingsData?.totalValue || portfolio.total_value}
+      />
     </div>
   );
 }

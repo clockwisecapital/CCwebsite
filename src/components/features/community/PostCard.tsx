@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   FiThumbsUp, 
@@ -13,6 +13,7 @@ import {
 } from 'react-icons/fi';
 import type { ScenarioQuestionWithAuthor } from '@/types/community';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { supabase } from '@/lib/supabase/client';
 import PortfolioSelectionModal from './PortfolioSelectionModal';
 
 interface PostCardProps {
@@ -31,8 +32,16 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [comments, setComments] = useState<Array<{ author: string; text: string; timestamp: string }>>([]);
+  const [localCommentsCount, setLocalCommentsCount] = useState(question.comments_count);
   const [showPortfolioModal, setShowPortfolioModal] = useState(false);
   const [loadingComments, setLoadingComments] = useState(false);
+
+  // Sync local state when question prop changes (e.g., after page refresh)
+  useEffect(() => {
+    setLocalLikes(question.likes_count);
+    setIsLiked(question.is_liked_by_user || false);
+    setLocalCommentsCount(question.comments_count);
+  }, [question.id, question.likes_count, question.is_liked_by_user, question.comments_count]);
 
   // Format timestamp
   const getTimeAgo = (timestamp: string) => {
@@ -110,13 +119,18 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
   };
 
   const handlePortfolioSelect = (portfolioId: string, portfolioName: string) => {
-    // Save to session storage for the test results page
-    sessionStorage.setItem('scenarioTestPortfolioId', portfolioId);
-    sessionStorage.setItem('scenarioTestPortfolioName', portfolioName);
-    
-    // Navigate directly to the portfolio comparison view
-    router.push(`/scenario-testing/${question.id}/top-portfolios/${portfolioId}`);
+    // Close modal
     setShowPortfolioModal(false);
+    
+    // Call parent's onTest handler which runs real Kronos scoring
+    if (onTest) {
+      // Store selected portfolio info for the test
+      sessionStorage.setItem('scenarioTestPortfolioId', portfolioId);
+      sessionStorage.setItem('scenarioTestPortfolioName', portfolioName);
+      
+      // Trigger the real test (parent handles Kronos API call)
+      onTest(question.id);
+    }
   };
 
   const handleTopPortfolios = (e: React.MouseEvent) => {
@@ -124,17 +138,61 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
     router.push(`/scenario-testing/${question.id}/top-portfolios`);
   };
 
-  const handleCommentSubmit = (e: React.FormEvent) => {
+  const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentText.trim() || !user) return;
     
-    const now = new Date();
-    setComments(prev => [...prev, {
-      author: user.email?.split('@')[0] || 'You',
-      text: commentText,
-      timestamp: 'now'
-    }]);
-    setCommentText('');
+    // Don't allow commenting on sample questions (they're not in the database)
+    if (question.id.startsWith('sample-')) {
+      alert('This is a demo question. Create a real question to enable likes and comments!');
+      setCommentText('');
+      return;
+    }
+    
+    try {
+      // Get session for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      
+      // Call API to save comment
+      const response = await fetch(`/api/community/questions/${question.id}/comments`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          content: commentText.trim()
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Add comment to local state with proper structure
+        const newComment = {
+          author: data.comment.author?.first_name && data.comment.author?.last_name
+            ? `${data.comment.author.first_name} ${data.comment.author.last_name}`
+            : data.comment.author?.email?.split('@')[0] || 'You',
+          text: data.comment.content,
+          timestamp: 'just now'
+        };
+        
+        setComments(prev => [...prev, newComment]);
+        setCommentText('');
+        
+        // Update local comments count
+        setLocalCommentsCount(prev => prev + 1);
+      } else {
+        console.error('Failed to post comment:', data.error);
+        alert('Failed to post comment. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error posting comment:', error);
+      alert('Failed to post comment. Please try again.');
+    }
   };
 
   const fetchComments = async () => {
@@ -142,12 +200,21 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
     
     setLoadingComments(true);
     try {
-      const response = await fetch(`/api/community/questions/${question.id}/comments`);
+      // Get session for authentication (optional for viewing comments)
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: HeadersInit = {};
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      
+      const response = await fetch(`/api/community/questions/${question.id}/comments`, { headers });
       const data = await response.json();
       
       if (response.ok && data.comments) {
         setComments(data.comments.map((c: any) => ({
-          author: c.author_name || c.author_email?.split('@')[0] || 'Anonymous',
+          author: c.author?.first_name && c.author?.last_name
+            ? `${c.author.first_name} ${c.author.last_name}`
+            : c.author?.email?.split('@')[0] || 'Anonymous',
           text: c.content || c.text,
           timestamp: getTimeAgo(c.created_at)
         })));
@@ -232,7 +299,7 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
           </div>
           <div className="flex items-center gap-2">
             <FiMessageSquare className="w-4 h-4 text-blue-400" />
-            <span className="font-semibold text-white">{question.comments_count}</span>
+            <span className="font-semibold text-white">{localCommentsCount}</span>
             <span className="text-gray-400">comments</span>
           </div>
         </div>

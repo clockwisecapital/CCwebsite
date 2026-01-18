@@ -189,8 +189,10 @@ export async function getAssetReturns(analogId: string): Promise<AssetReturns> {
 // =====================================================================================
 
 /**
- * Map a ticker to a Kronos asset class
- * This is a simplified mapping - in production, use more sophisticated logic
+ * Map a ticker to a Kronos asset class (SYNC VERSION - for backward compatibility)
+ * 
+ * NOTE: This is the synchronous version that only uses static mappings.
+ * For AI-powered classification, use mapTickerToKronosAssetClassAsync()
  * 
  * @param ticker - Stock/ETF ticker symbol
  * @returns Kronos asset class key
@@ -198,7 +200,7 @@ export async function getAssetReturns(analogId: string): Promise<AssetReturns> {
 export function mapTickerToKronosAssetClass(ticker: string): string {
   const upperTicker = ticker.toUpperCase();
   
-  // Common ETF mappings
+  // Common ETF mappings (kept for backward compatibility)
   const etfMappings: Record<string, string> = {
     // Large Cap
     'SPY': 'us-large-cap',
@@ -249,8 +251,37 @@ export function mapTickerToKronosAssetClass(ticker: string): string {
   }
   
   // Default to us-large-cap for unknown tickers (conservative)
-  console.warn(`⚠️ Unknown ticker ${ticker}, defaulting to us-large-cap`);
+  console.warn(`⚠️ Unknown ticker ${ticker}, defaulting to us-large-cap (use mapTickerToKronosAssetClassAsync for AI classification)`);
   return 'us-large-cap';
+}
+
+/**
+ * Map a ticker to a Kronos asset class using AI classification
+ * 
+ * Uses 3-tier system:
+ * 1. Static ETF mappings (instant)
+ * 2. Database cache (fast)
+ * 3. AI classification (slower, cached after first use)
+ * 
+ * @param ticker - Stock/ETF ticker symbol
+ * @returns Promise<Kronos asset class key>
+ */
+export async function mapTickerToKronosAssetClassAsync(ticker: string): Promise<string> {
+  // Import dynamically to avoid circular dependencies
+  const { classifyTicker } = await import('./ticker-classifier');
+  
+  try {
+    const classification = await classifyTicker(ticker);
+    
+    if (classification.confidence < 0.5) {
+      console.warn(`⚠️ Low confidence (${(classification.confidence * 100).toFixed(0)}%) for ${ticker}, classified as ${classification.assetClass}`);
+    }
+    
+    return classification.assetClass;
+  } catch (error) {
+    console.error(`❌ Error classifying ${ticker}:`, error);
+    return mapTickerToKronosAssetClass(ticker); // Fallback to sync version
+  }
 }
 
 /**
