@@ -755,6 +755,9 @@ export default function PortfolioDashboard() {
                 portfolioId={savedPortfolioId || undefined}
                 onNext={() => setActiveTab('analyze')}
                 onBack={() => setActiveTab('review')}
+                email={emailData?.email}
+                firstName={emailData?.firstName}
+                lastName={emailData?.lastName}
               />
             )}
             

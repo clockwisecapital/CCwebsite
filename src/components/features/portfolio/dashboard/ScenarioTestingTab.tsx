@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { FiUsers, FiTrendingUp, FiMessageSquare, FiClock, FiTarget, FiAward, FiBarChart2 } from 'react-icons/fi';
+import { useAuth } from '@/lib/auth/AuthContext';
+import ScenarioAuthModal from '@/components/features/auth/ScenarioAuthModal';
 import type { ScenarioQuestionWithAuthor } from '@/types/community';
 
 interface ScenarioTestingTabProps {
@@ -16,12 +19,27 @@ interface ScenarioTestingTabProps {
   portfolioId?: string;
   onNext?: () => void;
   onBack?: () => void;
+  // Intake form data for autofill
+  email?: string;
+  firstName?: string;
+  lastName?: string;
 }
 
-export default function ScenarioTestingTab({ portfolioData: _portfolioData, portfolioId, onNext: _onNext, onBack: _onBack }: ScenarioTestingTabProps) {
+export default function ScenarioTestingTab({ 
+  portfolioData: _portfolioData, 
+  portfolioId, 
+  onNext: _onNext, 
+  onBack: _onBack,
+  email,
+  firstName,
+  lastName
+}: ScenarioTestingTabProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const [questions, setQuestions] = useState<ScenarioQuestionWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
   useEffect(() => {
     fetchTopQuestions();
@@ -43,80 +61,136 @@ export default function ScenarioTestingTab({ portfolioData: _portfolioData, port
     }
   };
 
+  const requireAuth = (action: () => void) => {
+    if (!user) {
+      setPendingAction(() => action);
+      setShowAuthPrompt(true);
+      return false;
+    }
+    return true;
+  };
+
   const handleQuestionClick = (questionId: string) => {
+    if (!requireAuth(() => handleQuestionClick(questionId))) return;
     router.push(`/scenario-testing/${questionId}`);
   };
 
-  const handleTestPortfolio = (questionId: string) => {
+  const handleTestPortfolio = (questionId?: string) => {
+    if (!requireAuth(() => handleTestPortfolio(questionId))) return;
+    
     if (portfolioId) {
-      // Store the portfolio ID for testing
       sessionStorage.setItem('scenarioTestPortfolioId', portfolioId);
-      // Navigate to the question page which will detect the stored portfolio and start testing
-      router.push(`/scenario-testing/${questionId}`);
+      if (questionId) {
+        router.push(`/scenario-testing/${questionId}`);
+      } else {
+        router.push('/scenario-testing/questions');
+      }
+    } else {
+      router.push('/kronos');
     }
   };
 
-  const handleExploreAll = () => {
+  const handleViewTopPortfolios = (questionId: string) => {
+    if (!requireAuth(() => handleViewTopPortfolios(questionId))) return;
+    router.push(`/scenario-testing/${questionId}/top-portfolios`);
+  };
+
+  const handleGoToCommunity = () => {
+    if (!requireAuth(() => handleGoToCommunity())) return;
     if (portfolioId) {
       sessionStorage.setItem('scenarioTestPortfolioId', portfolioId);
     }
     router.push('/scenario-testing/questions');
   };
 
+  const handleAuthSuccess = () => {
+    setShowAuthPrompt(false);
+    // Execute the pending action if there is one
+    if (pendingAction) {
+      pendingAction();
+      setPendingAction(null);
+    }
+  };
+
   return (
     <div className="space-y-6 md:space-y-8">
-      {/* Header Section */}
-      <div className="bg-gradient-to-br from-blue-900/30 to-cyan-900/30 rounded-2xl p-4 md:p-6 border border-blue-800 shadow-sm">
-        <div className="flex items-start gap-3 md:gap-4">
-          <div className="flex-shrink-0">
-            <div className="w-10 h-10 md:w-14 md:h-14 bg-teal-600 rounded-2xl flex items-center justify-center shadow-md">
-              <svg className="w-5 h-5 md:w-7 md:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-              </svg>
-            </div>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm md:text-lg font-bold text-teal-300 mb-1 md:mb-2">
+      {/* Header Section with Test Button */}
+      <div className="bg-gradient-to-br from-blue-900/30 to-cyan-900/30 rounded-2xl p-6 border border-blue-800 shadow-sm">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex-1">
+            <div className="text-xl md:text-2xl font-bold text-white mb-2 flex items-center gap-2">
+              <FiBarChart2 className="w-6 h-6 text-teal-400" />
               Scenario Testing Lab
             </div>
-            <p className="text-xs md:text-base text-gray-300 leading-relaxed">
+            <p className="text-sm md:text-base text-gray-300 leading-relaxed">
               Test your portfolio against real-world economic scenarios and see how it compares 
               to top-performing portfolios from the community.
             </p>
           </div>
         </div>
+        
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-3 mt-4">
+          <button
+            onClick={() => handleTestPortfolio()}
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-3 
+              bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg 
+              transition-all hover:scale-105 shadow-lg"
+          >
+            <FiTarget className="w-5 h-5" />
+            Test My Portfolio
+          </button>
+          <button
+            onClick={handleGoToCommunity}
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-3 
+              bg-gray-700 hover:bg-gray-600 border border-gray-600 text-white font-semibold rounded-lg 
+              transition-colors"
+          >
+            <FiUsers className="w-5 h-5" />
+            View Community
+          </button>
+        </div>
       </div>
 
       {/* Portfolio Status */}
       {portfolioId && (
-        <div className="bg-teal-900/20 border border-teal-800 rounded-lg p-4">
+        <div className="bg-gradient-to-r from-teal-900/30 to-blue-900/30 border border-teal-500/30 rounded-xl p-4 shadow-lg">
           <div className="flex items-center gap-3">
             <div className="flex-shrink-0">
-              <svg className="w-6 h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <div className="w-10 h-10 bg-teal-500/20 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-white">Your portfolio is ready for testing!</p>
-              <p className="text-xs text-gray-400 mt-1">Select any scenario below to see how your portfolio performs.</p>
+              <p className="text-sm font-bold text-white">✨ Your portfolio is ready for testing!</p>
+              <p className="text-xs text-gray-300 mt-1">Select any scenario below or visit the community to explore all questions.</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Top Questions Preview */}
+      {/* Top Trending Questions Preview */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-xl md:text-2xl font-bold text-white">
-            Top Scenario Questions
-          </h3>
+          <div>
+            <h3 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
+              <FiTrendingUp className="w-6 h-6 text-teal-400" />
+              Trending Questions
+            </h3>
+            <p className="text-xs text-gray-400 mt-1">
+              Top 3 scenarios from the community • <button onClick={handleGoToCommunity} className="text-teal-400 hover:text-teal-300 font-semibold">View all {questions.length}+</button>
+            </p>
+          </div>
           <button
-            onClick={handleExploreAll}
-            className="text-teal-400 hover:text-teal-300 text-sm font-semibold 
-              transition-colors flex items-center gap-2"
+            onClick={handleGoToCommunity}
+            className="px-4 py-2 bg-teal-600/20 hover:bg-teal-600/30 border border-teal-500/30 
+              hover:border-teal-500/50 rounded-lg text-teal-400 hover:text-teal-300 text-sm font-semibold 
+              transition-all flex items-center gap-2 group"
           >
-            View All
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            Full Community
+            <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
@@ -129,100 +203,113 @@ export default function ScenarioTestingTab({ portfolioData: _portfolioData, port
           </div>
         )}
 
-        {/* Questions List */}
+        {/* Questions List - Community Style Preview */}
         {!loading && questions.length > 0 && (
           <div className="space-y-4">
             {questions.map((question, index) => (
               <div
                 key={question.id}
-                className="bg-gray-800 rounded-xl border border-gray-700 hover:border-gray-600 
-                  transition-all p-4 md:p-6"
+                className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl border border-gray-700 
+                  hover:border-teal-500/50 shadow-lg hover:shadow-xl transition-all group"
               >
-                {/* Question Header */}
-                <div className="flex items-start gap-4 mb-4">
+                {/* Question Header with Author */}
+                <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-800/50">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-blue-500 border border-teal-400/30 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white font-bold text-sm">
+                        {question.author?.first_name?.charAt(0)?.toUpperCase() || 'A'}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-white truncate">
+                        {question.author?.first_name && question.author?.last_name 
+                          ? `${question.author.first_name} ${question.author.last_name}`
+                          : question.author?.email?.split('@')[0] || 'Anonymous'}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-gray-400">
+                        <FiClock className="w-3 h-3" />
+                        <span>{question.title}</span>
+                      </div>
+                    </div>
+                  </div>
                   <div className="flex-shrink-0">
-                    <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-blue-500 rounded-lg 
-                      flex items-center justify-center text-white font-bold text-lg">
+                    <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-blue-500 rounded-lg 
+                      flex items-center justify-center text-white font-bold text-sm">
                       {index + 1}
                     </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-lg md:text-xl font-bold text-white mb-2 leading-tight">
-                      {question.title}
-                    </h4>
-                    <p className="text-sm text-gray-400 mb-3">
-                      {question.question_text}
+                </div>
+
+                {/* Question Banner - Community Style */}
+                <div className="px-5 pt-4 pb-4">
+                  <div className="rounded-xl bg-gradient-to-r from-teal-500 via-emerald-500 to-blue-500 px-6 py-6 text-center border border-teal-400/20">
+                    <p className="text-base md:text-lg font-semibold text-white leading-snug">
+                      {question.question_text || question.title}
                     </p>
-                    
-                    {/* Author and Stats */}
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                      {question.author && (
-                        <div className="flex items-center gap-1.5">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                          <span>
-                            {question.author.display_name || question.author.username || 
-                              `${question.author.first_name || ''} ${question.author.last_name || ''}`.trim() || 'Anonymous'}
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-1.5">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                        </svg>
-                        <span>{question.likes_count}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
-                        <span>{question.comments_count}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                        <span>{question.tests_count} tests</span>
-                      </div>
+                  </div>
+                </div>
+
+                {/* Historical Analog */}
+                {question.historical_period && Array.isArray(question.historical_period) && 
+                 question.historical_period.length > 0 && (
+                  <div className="px-5 pb-4">
+                    <p className="text-xs text-gray-400 flex items-center gap-2">
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-teal-500/20 border border-teal-500/30">
+                        <FiAward className="w-3 h-3 text-teal-400" />
+                      </span>
+                      Historical analog: {question.historical_period[0].start}-{question.historical_period[0].end} — {question.historical_period[0].label}
+                    </p>
+                  </div>
+                )}
+
+                {/* Stats */}
+                <div className="px-5 pb-4">
+                  <div className="flex items-center gap-6 text-sm text-gray-400">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                      </svg>
+                      <span className="font-semibold text-white">{question.likes_count.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FiMessageSquare className="w-4 h-4 text-blue-400" />
+                      <span className="font-semibold text-white">{question.comments_count}</span>
+                      <span className="text-gray-400">comments</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FiTarget className="w-4 h-4 text-green-400" />
+                      <span className="font-semibold text-white">{question.tests_count}</span>
+                      <span className="text-gray-400">tests</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3">
-                  {portfolioId ? (
-                    <>
-                      <button
-                        onClick={() => handleTestPortfolio(question.id)}
-                        className="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold 
-                          py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                        </svg>
-                        Test My Portfolio
-                      </button>
-                      <button
-                        onClick={() => handleQuestionClick(question.id)}
-                        className="flex-1 sm:flex-none bg-gray-700 hover:bg-gray-600 text-white font-semibold 
-                          py-3 px-4 rounded-lg transition-colors"
-                      >
-                        View Details
-                      </button>
-                    </>
-                  ) : (
+                <div className="flex items-center justify-between border-t border-gray-700 px-5 py-3 bg-gray-900/50">
+                  <button
+                    onClick={() => handleQuestionClick(question.id)}
+                    className="text-sm font-semibold text-gray-400 hover:text-white transition-colors"
+                  >
+                    View Details
+                  </button>
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handleQuestionClick(question.id)}
-                      className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold 
-                        py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                      onClick={() => handleTestPortfolio(question.id)}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-teal-400 
+                        bg-teal-500/10 border border-teal-500/30 rounded-lg hover:bg-teal-500/20 transition-colors"
                     >
-                      View Question
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
+                      <FiTarget className="w-4 h-4" />
+                      Test Portfolio
                     </button>
-                  )}
+                    <button
+                      onClick={() => handleViewTopPortfolios(question.id)}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-gray-200 
+                        border border-gray-600 rounded-lg hover:bg-gray-700 hover:border-teal-500 transition-colors"
+                    >
+                      <FiAward className="w-4 h-4" />
+                      Top Portfolios
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -231,69 +318,68 @@ export default function ScenarioTestingTab({ portfolioData: _portfolioData, port
 
         {/* Empty State */}
         {!loading && questions.length === 0 && (
-          <div className="text-center py-12">
+          <div className="text-center py-12 bg-gray-900/40 rounded-xl border border-gray-700">
             <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
+              <FiMessageSquare className="w-8 h-8 text-gray-600" />
             </div>
             <p className="text-gray-400 mb-4">No scenario questions available yet.</p>
             <button
-              onClick={handleExploreAll}
-              className="text-teal-400 hover:text-teal-300 font-semibold"
+              onClick={handleGoToCommunity}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 hover:bg-teal-700 
+                text-white font-semibold rounded-lg transition-colors"
             >
-              Explore Community →
+              Explore Community
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </button>
           </div>
         )}
       </div>
 
-      {/* CTA Section */}
-      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-4 md:p-6 text-white">
-        <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">
-          Ready to Test Your Portfolio?
-        </h3>
-        <p className="text-sm md:text-base text-teal-100 mb-4 md:mb-6">
-          Explore all scenario questions and see how your portfolio performs in different market conditions.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <button
-            onClick={handleExploreAll}
-            className="flex-1 sm:flex-none px-6 md:px-8 py-3 bg-white text-teal-600 font-semibold 
-              rounded-lg hover:bg-gray-100 transition-colors text-center flex items-center 
-              justify-center gap-2 text-sm md:text-base"
-          >
-            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            Explore All Scenarios
-            <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
+
+      {/* Info Section */}
+      <div className="bg-gradient-to-br from-blue-900/20 to-teal-900/20 rounded-xl p-5 border border-blue-800/30">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0">
+            <div className="w-10 h-10 bg-teal-500/20 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+          <div className="flex-1">
+            <h4 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
+              💡 How Scenario Testing Works
+            </h4>
+            <p className="text-xs text-gray-300 leading-relaxed mb-3">
+              Each scenario represents a real historical period or economic condition. When you test your portfolio, 
+              we analyze how your allocation would have performed and compare it against optimized portfolios designed 
+              for that specific environment.
+            </p>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-teal-500/20 border border-teal-500/30 rounded-full text-teal-400 font-semibold">
+                <FiClock className="w-3 h-3" />
+                Historical Analysis
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-blue-400 font-semibold">
+                <FiTarget className="w-3 h-3" />
+                Portfolio Comparison
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Info Section */}
-      <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-        <div className="flex items-start gap-3">
-          <div className="flex-shrink-0">
-            <svg className="w-5 h-5 text-teal-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div className="flex-1">
-            <h4 className="text-sm font-semibold text-white mb-1">
-              How Scenario Testing Works
-            </h4>
-            <p className="text-xs text-gray-400 leading-relaxed">
-              Each scenario represents a real historical period or economic condition. 
-              When you test your portfolio, we analyze how your allocation would have performed 
-              and compare it against optimized portfolios designed for that specific environment.
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* Authentication Modal */}
+      <ScenarioAuthModal
+        isOpen={showAuthPrompt}
+        onClose={() => setShowAuthPrompt(false)}
+        onSuccess={handleAuthSuccess}
+        defaultEmail={email}
+        defaultFirstName={firstName}
+        defaultLastName={lastName}
+      />
     </div>
   );
 }

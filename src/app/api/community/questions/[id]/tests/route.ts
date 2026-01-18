@@ -6,6 +6,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import type { CreateQuestionTestInput } from '@/types/community';
+import { scorePortfolio } from '@/lib/kronos/scoring';
+import { extractHoldingsFromPortfolio, validateHoldings, logHoldings, type PortfolioRecord } from '@/lib/kronos/portfolio-extractor';
 
 // =====================================================================================
 // GET /api/community/questions/[id]/tests
@@ -111,10 +113,10 @@ export async function POST(
       );
     }
     
-    // Check if question exists
+    // Check if question exists and get question text
     const { data: question, error: questionError } = await supabase
       .from('scenario_questions')
-      .select('id')
+      .select('id, question_text, title')
       .eq('id', id)
       .eq('is_active', true)
       .single();
@@ -137,17 +139,10 @@ export async function POST(
       );
     }
     
-    if (typeof body.score !== 'number' || body.score < 0 || body.score > 100) {
-      return NextResponse.json(
-        { error: 'Score must be a number between 0 and 100' },
-        { status: 400 }
-      );
-    }
-    
-    // Verify portfolio belongs to user
+    // Fetch portfolio with full data for scoring
     const { data: portfolio, error: portfolioError } = await supabase
       .from('portfolios')
-      .select('id, user_id')
+      .select('id, user_id, name, portfolio_data, intake_data')
       .eq('id', body.portfolio_id)
       .single();
     
@@ -165,6 +160,97 @@ export async function POST(
       );
     }
     
+    // ==================================================================================
+    // RUN KRONOS SCORING ENGINE
+    // ==================================================================================
+    
+    let calculatedScore: number;
+    let expectedReturn: number;
+    let upside: number;
+    let downside: number;
+    let comparisonData: any = {};
+    
+    try {
+      console.log(`\n🎯 Running Kronos scoring for portfolio ${portfolio.id} on question ${id}`);
+      
+      // Extract holdings from portfolio data
+      const portfolioRecord: PortfolioRecord = {
+        id: portfolio.id,
+        name: portfolio.name || 'Portfolio',
+        portfolio_data: portfolio.portfolio_data,
+        intake_data: portfolio.intake_data
+      };
+      
+      const holdings = extractHoldingsFromPortfolio(portfolioRecord);
+      
+      // Validate holdings
+      const validation = validateHoldings(holdings);
+      if (!validation.valid) {
+        return NextResponse.json(
+          { error: `Invalid portfolio holdings: ${validation.error}` },
+          { status: 400 }
+        );
+      }
+      
+      // Log holdings for debugging
+      logHoldings(holdings);
+      
+      // Use question text for scoring
+      const questionText = question.question_text || question.title;
+      
+      // Score the portfolio
+      const scoreResult = await scorePortfolio(questionText, holdings);
+      
+      // Extract metrics from score result
+      calculatedScore = scoreResult.score;
+      expectedReturn = scoreResult.portfolioReturn;
+      
+      // Estimate upside and downside based on the results
+      // For MVP, use simplified estimates
+      const returnMagnitude = Math.abs(scoreResult.portfolioReturn);
+      upside = expectedReturn + (returnMagnitude * 0.5);  // +50% above expected
+      downside = expectedReturn - (returnMagnitude * 0.5); // -50% below expected
+      
+      // Store full score result in comparison_data
+      comparisonData = {
+        score: scoreResult.score,
+        label: scoreResult.label,
+        color: scoreResult.color,
+        scenarioId: scoreResult.scenarioId,
+        scenarioName: scoreResult.scenarioName,
+        analogId: scoreResult.analogId,
+        analogName: scoreResult.analogName,
+        analogPeriod: scoreResult.analogPeriod,
+        portfolioReturn: scoreResult.portfolioReturn,
+        benchmarkReturn: scoreResult.benchmarkReturn,
+        outperformance: scoreResult.outperformance,
+        portfolioDrawdown: scoreResult.portfolioDrawdown,
+        benchmarkDrawdown: scoreResult.benchmarkDrawdown,
+        returnScore: scoreResult.returnScore,
+        drawdownScore: scoreResult.drawdownScore,
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log(`✅ Scoring complete: ${calculatedScore}/100 (${scoreResult.label})`);
+      
+    } catch (scoringError) {
+      console.error('❌ Scoring error:', scoringError);
+      return NextResponse.json(
+        { 
+          error: 'Failed to score portfolio', 
+          details: scoringError instanceof Error ? scoringError.message : 'Unknown error'
+        },
+        { status: 500 }
+      );
+    }
+    
+    // Allow manual score override from body if provided (for testing/admin)
+    const finalScore = body.score !== undefined ? body.score : calculatedScore;
+    const finalExpectedReturn = body.expected_return !== undefined ? body.expected_return : expectedReturn;
+    const finalUpside = body.upside !== undefined ? body.upside : upside;
+    const finalDownside = body.downside !== undefined ? body.downside : downside;
+    const finalComparisonData = body.comparison_data || comparisonData;
+    
     // Check if user has already tested this portfolio on this question
     const { data: existingTest } = await supabase
       .from('question_tests')
@@ -179,11 +265,11 @@ export async function POST(
       const { data: updatedTest, error: updateError } = await supabase
         .from('question_tests')
         .update({
-          score: body.score,
-          expected_return: body.expected_return,
-          upside: body.upside,
-          downside: body.downside,
-          comparison_data: body.comparison_data,
+          score: finalScore,
+          expected_return: finalExpectedReturn,
+          upside: finalUpside,
+          downside: finalDownside,
+          comparison_data: finalComparisonData,
           is_public: body.is_public !== undefined ? body.is_public : true
         })
         .eq('id', existingTest.id)
@@ -201,6 +287,7 @@ export async function POST(
       return NextResponse.json({
         success: true,
         test: updatedTest,
+        scoreData: comparisonData,
         message: 'Test result updated successfully'
       });
     }
@@ -212,11 +299,11 @@ export async function POST(
         question_id: id,
         portfolio_id: body.portfolio_id,
         user_id: user.id,
-        score: body.score,
-        expected_return: body.expected_return,
-        upside: body.upside,
-        downside: body.downside,
-        comparison_data: body.comparison_data || {},
+        score: finalScore,
+        expected_return: finalExpectedReturn,
+        upside: finalUpside,
+        downside: finalDownside,
+        comparison_data: finalComparisonData,
         is_public: body.is_public !== undefined ? body.is_public : true
       })
       .select()
@@ -233,6 +320,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       test,
+      scoreData: comparisonData,
       message: 'Test result submitted successfully'
     }, { status: 201 });
     
