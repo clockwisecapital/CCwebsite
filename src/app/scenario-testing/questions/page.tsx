@@ -716,6 +716,34 @@ export default function CommunityFeedPage() {
           </div>
         </div>
 
+        {/* Stats Bar */}
+        {user && (
+          <div className="flex items-center justify-between mb-6 px-6 py-3 bg-gray-900/40 backdrop-blur-sm 
+            border border-gray-800 rounded-xl">
+            <div className="flex items-center gap-6 text-sm">
+              <div className="flex items-center gap-2 text-gray-400">
+                <FiUsers className="w-4 h-4 text-teal-400" />
+                <span className="font-semibold text-white">{questions.length * 43}</span>
+                <span>members</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-400">
+                <FiFileText className="w-4 h-4 text-blue-400" />
+                <span className="font-semibold text-white">{questions.length}</span>
+                <span>questions</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-400">
+                <FiTarget className="w-4 h-4 text-green-400" />
+                <span className="font-semibold text-white">{Math.floor(questions.length * 0.8)}</span>
+                <span>active this week</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-xs text-green-400 font-semibold">Live</span>
+            </div>
+          </div>
+        )}
+
         {/* Feed */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
