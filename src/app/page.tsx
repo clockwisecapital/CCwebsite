@@ -119,7 +119,7 @@ export default function Home() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <span>Score My Portfolio</span>
+                <span>Test your Portfolio</span>
               </span>
             </button>
             <a 
@@ -130,7 +130,7 @@ export default function Home() {
             >
               <span className="absolute top-0 left-0 w-full h-full transform -translate-x-full bg-white/5 skew-x-12 group-hover:translate-x-full transition-transform duration-700 ease-out"></span>
               <span className="relative flex items-center justify-center space-x-2">
-                <span>Talk to an Advisor</span>
+                <span>Talk to Advisors</span>
               </span>
             </a>
           </div>
