@@ -588,13 +588,8 @@ export default function CommunityFeedPage() {
     }
   };
 
-  // Filter tabs
   const filterTabs: Array<{ id: FeedFilter; label: string; icon: React.ComponentType<{ className?: string }> }> = [
-    { id: 'trending', label: 'Trending', icon: FiTrendingUp },
     { id: 'recent', label: 'Recent', icon: FiClock },
-    { id: 'top', label: 'Top', icon: FiThumbsUp },
-    { id: 'discussed', label: 'Discussed', icon: FiMessageSquare },
-    ...(user ? [{ id: 'following' as FeedFilter, label: 'Following', icon: FiUsers }] : [])
   ];
 
   const getSampleQuestions = (): ScenarioQuestionWithAuthor[] => ([
@@ -687,61 +682,6 @@ export default function CommunityFeedPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0e1a] via-[#0f1420] to-[#0a0e1a] pt-20">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Action Buttons */}
-        <div className="flex items-end justify-end gap-3 mb-4">
-          <div className="flex items-center gap-3 flex-shrink-0">
-            {user && (
-              <>
-                <button
-                  onClick={() => router.push('/account')}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-gray-900/60 hover:bg-gray-800 
-                    border border-gray-700/50 text-white font-medium rounded-lg transition-colors text-sm"
-                  title="My Account"
-                >
-                  <FiUsers className="w-4 h-4" />
-                  <span className="hidden md:inline">My Account</span>
-                </button>
-                <button
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-teal-500 hover:bg-teal-600 
-                    text-white font-semibold rounded-lg transition-colors text-sm"
-                >
-                  <FiPlus className="w-4 h-4" />
-                  <span className="hidden sm:inline">Create Question</span>
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Stats Bar */}
-        {user && (
-          <div className="flex items-center justify-between mb-6 px-6 py-3 bg-gray-900/40 backdrop-blur-sm 
-            border border-gray-800 rounded-xl">
-            <div className="flex items-center gap-6 text-sm">
-              <div className="flex items-center gap-2 text-gray-400">
-                <FiUsers className="w-4 h-4 text-teal-400" />
-                <span className="font-semibold text-white">{questions.length * 43}</span>
-                <span>members</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-400">
-                <FiFileText className="w-4 h-4 text-blue-400" />
-                <span className="font-semibold text-white">{questions.length}</span>
-                <span>questions</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-400">
-                <FiTarget className="w-4 h-4 text-green-400" />
-                <span className="font-semibold text-white">{Math.floor(questions.length * 0.8)}</span>
-                <span>active this week</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-xs text-green-400 font-semibold">Live</span>
-            </div>
-          </div>
-        )}
-
         {/* Filters */}
         <div className="mb-6">
           <div className="flex items-center gap-3 overflow-x-auto pb-2 border-b border-gray-800/50">
@@ -764,6 +704,15 @@ export default function CommunityFeedPage() {
                 </button>
               );
             })}
+             {user && (
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-teal-500 hover:bg-teal-600 
+                  text-white font-semibold rounded-lg transition-colors text-sm ml-auto"
+              >
+                Post Question
+              </button>
+            )}
           </div>
         </div>
 

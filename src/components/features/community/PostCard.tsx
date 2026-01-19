@@ -9,7 +9,6 @@ import {
   FiShare2,
   FiClock,
   FiAward,
-  FiSend
 } from 'react-icons/fi';
 import type { ScenarioQuestionWithAuthor } from '@/types/community';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -29,19 +28,13 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
   const [isLiking, setIsLiking] = useState(false);
   const [localLikes, setLocalLikes] = useState(question.likes_count);
   const [isLiked, setIsLiked] = useState(question.is_liked_by_user || false);
-  const [showComments, setShowComments] = useState(false);
-  const [commentText, setCommentText] = useState('');
-  const [comments, setComments] = useState<Array<{ author: string; text: string; timestamp: string }>>([]);
-  const [localCommentsCount, setLocalCommentsCount] = useState(question.comments_count);
   const [showPortfolioModal, setShowPortfolioModal] = useState(false);
-  const [loadingComments, setLoadingComments] = useState(false);
 
   // Sync local state when question prop changes (e.g., after page refresh)
   useEffect(() => {
     setLocalLikes(question.likes_count);
     setIsLiked(question.is_liked_by_user || false);
-    setLocalCommentsCount(question.comments_count);
-  }, [question.id, question.likes_count, question.is_liked_by_user, question.comments_count]);
+  }, [question.id, question.likes_count, question.is_liked_by_user]);
 
   // Format timestamp
   const getTimeAgo = (timestamp: string) => {
@@ -138,100 +131,11 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
     router.push(`/scenario-testing/${question.id}/top-portfolios`);
   };
 
-  const handleCommentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!commentText.trim() || !user) return;
-    
-    // Don't allow commenting on sample questions (they're not in the database)
-    if (question.id.startsWith('sample-')) {
-      alert('This is a demo question. Create a real question to enable likes and comments!');
-      setCommentText('');
-      return;
-    }
-    
-    try {
-      // Get session for authentication
-      const { data: { session } } = await supabase.auth.getSession();
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
-      }
-      
-      // Call API to save comment
-      const response = await fetch(`/api/community/questions/${question.id}/comments`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          content: commentText.trim()
-        })
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        // Add comment to local state with proper structure
-        const newComment = {
-          author: data.comment.author?.first_name && data.comment.author?.last_name
-            ? `${data.comment.author.first_name} ${data.comment.author.last_name}`
-            : data.comment.author?.email?.split('@')[0] || 'You',
-          text: data.comment.content,
-          timestamp: 'just now'
-        };
-        
-        setComments(prev => [...prev, newComment]);
-        setCommentText('');
-        
-        // Update local comments count
-        setLocalCommentsCount(prev => prev + 1);
-      } else {
-        console.error('Failed to post comment:', data.error);
-        alert('Failed to post comment. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error posting comment:', error);
-      alert('Failed to post comment. Please try again.');
-    }
-  };
-
-  const fetchComments = async () => {
-    if (loadingComments || comments.length > 0) return; // Don't refetch if already loaded
-    
-    setLoadingComments(true);
-    try {
-      // Get session for authentication (optional for viewing comments)
-      const { data: { session } } = await supabase.auth.getSession();
-      const headers: HeadersInit = {};
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
-      }
-      
-      const response = await fetch(`/api/community/questions/${question.id}/comments`, { headers });
-      const data = await response.json();
-      
-      if (response.ok && data.comments) {
-        setComments(data.comments.map((c: any) => ({
-          author: c.author?.first_name && c.author?.last_name
-            ? `${c.author.first_name} ${c.author.last_name}`
-            : c.author?.email?.split('@')[0] || 'Anonymous',
-          text: c.content || c.text,
-          timestamp: getTimeAgo(c.created_at)
-        })));
-      }
-    } catch (error) {
-      console.error('Failed to fetch comments:', error);
-      // Fall back to empty comments if fetch fails
-      setComments([]);
-    } finally {
-      setLoadingComments(false);
-    }
-  };
-
   return (
     <div
+      onClick={handleTopPortfolios}
       className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl border border-gray-700 
-        hover:border-teal-500/50 shadow-lg hover:shadow-xl transition-all duration-200 group"
+        hover:border-teal-500/50 shadow-lg hover:shadow-xl transition-all duration-200 group cursor-pointer"
     >
       {/* Header */}
       <div className="flex items-center justify-between gap-3 px-5 py-4">
@@ -297,11 +201,6 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
             <FiThumbsUp className="w-4 h-4 text-teal-400" />
             <span className="font-semibold text-white">{localLikes.toLocaleString()}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <FiMessageSquare className="w-4 h-4 text-blue-400" />
-            <span className="font-semibold text-white">{localCommentsCount}</span>
-            <span className="text-gray-400">comments</span>
-          </div>
         </div>
       </div>
 
@@ -319,20 +218,6 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
           >
             <FiThumbsUp className={`w-4 h-4 ${isLiking ? 'animate-pulse' : ''}`} />
             Like
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              const newShowComments = !showComments;
-              setShowComments(newShowComments);
-              if (newShowComments) {
-                fetchComments();
-              }
-            }}
-            className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-white transition-colors"
-          >
-            <FiMessageSquare className="w-4 h-4" />
-            Comment
           </button>
         </div>
         <div className="flex items-center gap-2">
@@ -354,72 +239,6 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
           </button>
         </div>
       </div>
-
-      {/* Inline Comments */}
-      {showComments && (
-        <div className="border-t border-gray-700 px-5 py-4 bg-gray-950/50">
-          {/* Loading State */}
-          {loadingComments && (
-            <div className="text-center py-4">
-              <div className="inline-flex items-center gap-2 text-sm text-gray-400">
-                <div className="w-4 h-4 border-2 border-gray-600 border-t-teal-500 rounded-full animate-spin" />
-                Loading comments...
-              </div>
-            </div>
-          )}
-
-          {/* Comments List */}
-          {!loadingComments && comments.length > 0 && (
-            <div className="mb-4 space-y-3">
-              {comments.map((comment, idx) => (
-                <div key={idx} className="flex gap-3 p-3 bg-gray-900/50 rounded-lg border border-gray-800 hover:border-gray-700 transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-blue-500 
-                    flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">
-                    {comment.author.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-white">{comment.author}</p>
-                    <p className="text-sm text-gray-300 mt-0.5">{comment.text}</p>
-                    <p className="text-xs text-gray-500 mt-1">{comment.timestamp}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* No Comments State */}
-          {!loadingComments && comments.length === 0 && (
-            <div className="text-center py-4">
-              <p className="text-sm text-gray-400">No comments yet. Be the first to comment!</p>
-            </div>
-          )}
-
-          {/* Comment Form */}
-          <form onSubmit={handleCommentSubmit} className="flex items-end gap-2 border-t border-gray-800 pt-3">
-            <div className="flex-1">
-              <input
-                type="text"
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                placeholder={user ? "Write a comment..." : "Sign in to comment..."}
-                disabled={!user}
-                className="w-full px-3 py-2 text-sm bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500
-                  focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent
-                  disabled:bg-gray-800 disabled:cursor-not-allowed disabled:text-gray-600"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={!commentText.trim() || !user}
-              className="p-2 text-teal-400 hover:bg-teal-500/10 rounded-lg 
-                disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              title={!user ? "Sign in to comment" : "Post comment"}
-            >
-              <FiSend className="w-4 h-4" />
-            </button>
-          </form>
-        </div>
-      )}
 
       {/* Portfolio Selection Modal */}
       <PortfolioSelectionModal
