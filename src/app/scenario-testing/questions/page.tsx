@@ -732,7 +732,7 @@ export default function CommunityFeedPage() {
               <div className="flex items-center gap-2 text-gray-400">
                 <FiTarget className="w-4 h-4 text-green-400" />
                 <span className="font-semibold text-white">{Math.floor(questions.length * 0.8)}</span>
-                <span>active today</span>
+                <span>active this week</span>
               </div>
             </div>
             <div className="flex items-center gap-2">
