@@ -272,7 +272,8 @@ export async function POST(request: NextRequest) {
         description: body.description?.trim() || null,
         question_text: body.question_text.trim(),
         historical_period: (body.historical_period || []) as any,
-        tags: body.tags || []
+        tags: body.tags || [],
+        metadata: body.metadata || {} // Store metadata including S&P 500 return
       })
       .select(`
         *,

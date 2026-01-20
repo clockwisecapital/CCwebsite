@@ -58,6 +58,14 @@ Guidelines:
 - Title should be clear, specific, and engaging (not just a restatement of the question)
 - Choose the historical period that best matches the economic conditions, market dynamics, or time period mentioned or implied in the question
 - Tags should be lowercase, relevant investment/economic terms (e.g., "recession", "tech-bubble", "inflation", "bonds", "growth")
+- **CRITICAL: The FIRST tag MUST be one of these 6 cycle categories: "empire", "technology", "economic", "business", "market", or "company"**
+  - "empire": Questions about geopolitical shifts, global power dynamics, international relations
+  - "technology": Questions about technological innovation, AI, tech bubbles, digital transformation
+  - "economic": Questions about macroeconomic conditions, GDP, inflation, recession, monetary policy
+  - "business": Questions about corporate performance, earnings, business cycles, sector trends
+  - "market": Questions about market dynamics, volatility, crashes, bull/bear markets, investor sentiment
+  - "company": Questions about specific companies, stock picks, individual holdings
+- The remaining 2-4 tags should be additional relevant investment/economic terms
 - If the question is about current/future scenarios, choose the most similar historical analog
 - Be concise and precise`;
 
@@ -90,6 +98,15 @@ Guidelines:
       );
     }
 
+    // Validate that the first tag is one of the 6 cycles
+    const validCycles = ['empire', 'technology', 'economic', 'business', 'market', 'company'];
+    const firstTag = aiResult.tags[0]?.toLowerCase();
+    if (!firstTag || !validCycles.includes(firstTag)) {
+      console.warn(`AI did not provide a valid cycle tag. First tag was: ${firstTag}. Defaulting to 'market'.`);
+      // Default to 'market' if no valid cycle tag provided
+      aiResult.tags = ['market', ...aiResult.tags.filter((t: string) => t.toLowerCase() !== firstTag)];
+    }
+
     // Verify the historical period exists
     const selectedPhase = phases.find(p => p.id === aiResult.historicalPeriodId);
     if (!selectedPhase) {
@@ -107,6 +124,29 @@ Guidelines:
       label: `${selectedPhase.title} (${selectedPhase.years})`
     };
 
+    // Fetch S&P 500 return for this period
+    let sp500Return = 0.10; // Default 10% if calculation fails
+    try {
+      const sp500Response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/community/questions/calculate-sp500-return`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          startYear: historicalPeriod.start,
+          endYear: historicalPeriod.end
+        })
+      });
+
+      if (sp500Response.ok) {
+        const sp500Data = await sp500Response.json();
+        if (sp500Data.success) {
+          sp500Return = sp500Data.sp500Return;
+          console.log(`📊 S&P 500 return for ${historicalPeriod.start}-${historicalPeriod.end}: ${(sp500Return * 100).toFixed(1)}%`);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch S&P 500 return, using default:', error);
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -114,7 +154,8 @@ Guidelines:
         historicalPeriod,
         historicalPeriodId: aiResult.historicalPeriodId,
         tags: aiResult.tags.slice(0, 10).map((tag: string) => tag.toLowerCase().trim()),
-        description: selectedPhase.synopsis
+        description: selectedPhase.synopsis,
+        sp500Return // Include S&P 500 return in response
       }
     });
 

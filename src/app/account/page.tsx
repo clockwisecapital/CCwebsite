@@ -506,7 +506,7 @@ export default function AccountPage() {
               tests.map((test) => (
                 <div
                   key={test.id}
-                  onClick={() => router.push(`/scenario-testing/${test.question_id}/results`)}
+                  onClick={() => router.push(`/scenario-testing/${test.question_id}/results?testId=${test.id}&portfolioId=${test.portfolio_id}`)}
                   className="bg-gray-800 rounded-xl border border-gray-700 p-6 hover:border-teal-500/50 
                     transition-colors cursor-pointer group"
                 >

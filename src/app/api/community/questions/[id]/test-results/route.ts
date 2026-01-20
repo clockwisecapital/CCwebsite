@@ -40,6 +40,11 @@ export async function POST(
     const questionId = id;
     const body: SaveTestResultRequest = await request.json();
     
+    console.log('📥 API received test result');
+    console.log('📊 Has comparisonData:', !!body.comparisonData);
+    console.log('📊 comparisonData type:', typeof body.comparisonData);
+    console.log('📊 comparisonData:', body.comparisonData);
+    
     // Validate required fields
     if (!body.portfolioId || typeof body.score !== 'number') {
       return NextResponse.json(
@@ -60,19 +65,24 @@ export async function POST(
     if (existing) {
       // Update existing test if new score is better
       if (body.score > existing.score) {
+        const updatePayload = {
+          score: body.score,
+          expected_return: body.expectedReturn,
+          upside: body.upside,
+          downside: body.downside,
+          comparison_data: body.comparisonData || {},
+          metadata: {
+            portfolio_name: body.portfolioName,
+            updated_at: new Date().toISOString()
+          }
+        };
+        
+        console.log('🔄 Updating existing test in database');
+        console.log('📊 comparison_data keys:', Object.keys(updatePayload.comparison_data || {}));
+        
         const { data, error } = await supabase
           .from('question_tests')
-          .update({
-            score: body.score,
-            expected_return: body.expectedReturn,
-            upside: body.upside,
-            downside: body.downside,
-            comparison_data: body.comparisonData || {},
-            metadata: {
-              portfolio_name: body.portfolioName,
-              updated_at: new Date().toISOString()
-            }
-          })
+          .update(updatePayload)
           .eq('id', existing.id)
           .select()
           .single();
@@ -85,6 +95,9 @@ export async function POST(
           );
         }
         
+        console.log('✅ Updated in database, returned data has comparison_data:', !!data.comparison_data);
+        console.log('📊 Returned comparison_data keys:', Object.keys(data.comparison_data || {}));
+        
         return NextResponse.json({
           success: true,
           testResult: data,
@@ -93,6 +106,7 @@ export async function POST(
         });
       } else {
         // Score not better, don't update
+        console.log('⏭️ Score not better than existing, skipping update');
         return NextResponse.json({
           success: true,
           testResult: existing,
@@ -103,22 +117,30 @@ export async function POST(
     }
     
     // Insert new test result
+    const insertPayload = {
+      question_id: questionId,
+      portfolio_id: body.portfolioId,
+      user_id: user.id,
+      score: body.score,
+      expected_return: body.expectedReturn,
+      upside: body.upside,
+      downside: body.downside,
+      comparison_data: body.comparisonData || {},
+      is_public: true,
+      metadata: {
+        portfolio_name: body.portfolioName
+      }
+    };
+    
+    console.log('💾 Inserting into database:', {
+      ...insertPayload,
+      comparison_data: insertPayload.comparison_data ? 'Present' : 'Missing'
+    });
+    console.log('📊 comparison_data keys:', Object.keys(insertPayload.comparison_data || {}));
+    
     const { data, error } = await supabase
       .from('question_tests')
-      .insert({
-        question_id: questionId,
-        portfolio_id: body.portfolioId,
-        user_id: user.id,
-        score: body.score,
-        expected_return: body.expectedReturn,
-        upside: body.upside,
-        downside: body.downside,
-        comparison_data: body.comparisonData || {},
-        is_public: true,
-        metadata: {
-          portfolio_name: body.portfolioName
-        }
-      })
+      .insert(insertPayload)
       .select()
       .single();
     
@@ -129,6 +151,9 @@ export async function POST(
         { status: 500 }
       );
     }
+    
+    console.log('✅ Saved to database, returned data has comparison_data:', !!data.comparison_data);
+    console.log('📊 Returned comparison_data keys:', Object.keys(data.comparison_data || {}));
     
     // Increment tests_count on the question
     // Note: increment_tests_count RPC function should be created in database
@@ -180,6 +205,7 @@ export async function GET(
         metadata,
         portfolio_id,
         user_id,
+        comparison_data,
         portfolios:portfolio_id (
           id,
           name,
@@ -188,7 +214,8 @@ export async function GET(
         users:user_id (
           id,
           email,
-          raw_user_meta_data
+          first_name,
+          last_name
         )
       `)
       .eq('question_id', questionId)
@@ -210,6 +237,18 @@ export async function GET(
       const portfolios = test.portfolios as any;
       const users = test.users as any;
       
+      // Build user display name
+      let userName = 'Anonymous';
+      if (users) {
+        if (users.first_name && users.last_name) {
+          userName = `${users.first_name} ${users.last_name}`;
+        } else if (users.first_name) {
+          userName = users.first_name;
+        } else if (users.email) {
+          userName = users.email.split('@')[0];
+        }
+      }
+      
       return {
         id: test.id,
         portfolioId: test.portfolio_id,
@@ -220,11 +259,9 @@ export async function GET(
         downside: test.downside,
         createdAt: test.created_at,
         userId: test.user_id,
-        userName: users?.raw_user_meta_data?.full_name || 
-                 users?.raw_user_meta_data?.username ||
-                 users?.email?.split('@')[0] ||
-                 'Anonymous',
-        holdings: portfolios?.portfolio_data?.holdings || []
+        userName,
+        holdings: portfolios?.portfolio_data?.holdings || [],
+        comparisonData: test.comparison_data || null // Include full comparison data
       };
     }) || [];
     

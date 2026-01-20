@@ -54,6 +54,7 @@ export interface CreateScenarioQuestionInput {
   question_text: string;
   historical_period?: HistoricalPeriod[];
   tags?: string[];
+  metadata?: Record<string, any>;
 }
 
 export interface UpdateScenarioQuestionInput {

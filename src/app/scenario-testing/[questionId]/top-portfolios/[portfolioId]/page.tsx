@@ -43,10 +43,41 @@ const PortfolioComparison = () => {
         const response = await fetch(`/api/community/questions/${questionId}/test-results`);
         const data = await response.json();
         
+        console.log('🔍 Head-to-Head - API Response:', { success: data.success, count: data.topPortfolios?.length });
+        
         if (response.ok && data.success) {
           const portfolioTest = data.topPortfolios.find((p: any) => p.portfolioId === portfolioId);
           
+          console.log('🔍 Looking for portfolioId:', portfolioId);
+          console.log('📊 Portfolio test found:', !!portfolioTest);
+          console.log('📊 Has comparisonData:', !!portfolioTest?.comparisonData);
+          
           if (portfolioTest) {
+            // Get user portfolio holdings from comparisonData if available
+            let userTopPositions = [];
+            if (portfolioTest.comparisonData?.userPortfolio?.topPositions) {
+              userTopPositions = portfolioTest.comparisonData.userPortfolio.topPositions.slice(0, 5).map((pos: any) => ({
+                ticker: pos.ticker,
+                name: pos.name || pos.ticker,
+                weight: pos.weight,
+                expectedReturn: pos.expectedReturn || portfolioTest.expectedReturn
+              }));
+            } else if (portfolioTest.holdings) {
+              // Fallback to holdings if no comparisonData
+              userTopPositions = portfolioTest.holdings.slice(0, 5).map((h: any) => {
+                let weight = h.weight || h.percentage || 0;
+                if (weight > 0 && weight < 1) {
+                  weight = weight * 100;
+                }
+                return {
+                  ticker: h.ticker,
+                  name: h.name || h.ticker,
+                  weight: weight,
+                  expectedReturn: portfolioTest.expectedReturn
+                };
+              });
+            }
+            
             setSelectedPortfolio({
               name: portfolioTest.portfolioName,
               score: portfolioTest.score,
@@ -55,39 +86,52 @@ const PortfolioComparison = () => {
               expectedWorstYear: portfolioTest.downside,
               upside: portfolioTest.upside,
               downside: portfolioTest.downside,
-              topPositions: portfolioTest.holdings?.slice(0, 5).map((h: any) => {
-                // Handle weight in different formats: decimal (0.40) or percentage (40)
-                let weight = h.weight || h.percentage || 0;
-                // If weight is a decimal (< 1), convert to percentage
-                if (weight > 0 && weight < 1) {
-                  weight = weight * 100;
-                }
-                return {
-                  ticker: h.ticker,
-                  name: h.name || h.ticker,
-                  weight: weight,
-                  expectedReturn: portfolioTest.expectedReturn // Simplified
-                };
-              }) || []
+              topPositions: userTopPositions
             });
+            
+            // Extract TIME portfolio data from comparison_data if available
+            if (portfolioTest.comparisonData && portfolioTest.comparisonData.timePortfolio) {
+              console.log('✅ Found TIME portfolio data in comparisonData');
+              const timeData = portfolioTest.comparisonData.timePortfolio;
+              
+              setTimePortfolio({
+                name: 'TIME Portfolio',
+                score: timeData.score || 88,
+                expectedReturn: timeData.expectedReturn || 0.094,
+                expectedBestYear: timeData.upside || 0.445,
+                expectedWorstYear: timeData.downside || -0.171,
+                upside: timeData.upside || 0.441,
+                downside: timeData.downside || -0.171,
+                topPositions: timeData.topPositions?.slice(0, 5).map((pos: any) => ({
+                  ticker: pos.ticker,
+                  name: pos.name || pos.ticker,
+                  weight: pos.weight,
+                  expectedReturn: pos.expectedReturn || 0
+                })) || [
+                  { ticker: 'VTI', name: 'U.S. Total Market', weight: 40, expectedReturn: 0.098 },
+                  { ticker: 'TLT', name: 'Long-Term Treasuries', weight: 15, expectedReturn: 0.038 },
+                  { ticker: 'GLD', name: 'Gold', weight: 12.5, expectedReturn: 0.068 },
+                ]
+              });
+            } else {
+              console.log('⚠️ No comparisonData found, using fallback');
+              // Fallback to placeholder if no comparison data
+              setTimePortfolio({
+                name: 'TIME Portfolio',
+                score: 88,
+                expectedReturn: 0.094,
+                expectedBestYear: 0.445,
+                expectedWorstYear: -0.171,
+                upside: 0.441,
+                downside: -0.171,
+                topPositions: [
+                  { ticker: 'VTI', name: 'U.S. Total Market', weight: 40, expectedReturn: 0.098 },
+                  { ticker: 'TLT', name: 'Long-Term Treasuries', weight: 15, expectedReturn: 0.038 },
+                  { ticker: 'GLD', name: 'Gold', weight: 12.5, expectedReturn: 0.068 },
+                ]
+              });
+            }
           }
-          
-          // TODO: Fetch TIME portfolio score for same question
-          // For now, use placeholder
-          setTimePortfolio({
-            name: 'TIME Portfolio',
-            score: 88,
-            expectedReturn: 0.094,
-            expectedBestYear: 0.445,
-            expectedWorstYear: -0.171,
-            upside: 0.441,
-            downside: -0.171,
-            topPositions: [
-              { ticker: 'VTI', name: 'U.S. Total Market', weight: 40, expectedReturn: 0.098 },
-              { ticker: 'TLT', name: 'Long-Term Treasuries', weight: 15, expectedReturn: 0.038 },
-              { ticker: 'GLD', name: 'Gold', weight: 12.5, expectedReturn: 0.068 },
-            ]
-          });
         }
       } catch (error) {
         console.error('Failed to fetch comparison:', error);
@@ -99,28 +143,45 @@ const PortfolioComparison = () => {
     fetchComparison();
   }, [questionId, portfolioId]);
 
-  const getInsights = (): ComparisonInsight[] => [
-    {
-      icon: <FiTrendingUp className="w-5 h-5" />,
-      text: 'TIME offers +2.6% higher expected 5-year return',
-      color: 'green'
-    },
-    {
-      icon: <FiAlertCircle className="w-5 h-5" />,
-      text: 'TIME has 4.3% more downside risk in worst-case scenarios (60% return per unit risk)',
-      color: 'orange'
-    },
-    {
-      icon: <FiZap className="w-5 h-5" />,
-      text: 'TIME captures +16.1% more upside in best-case years',
-      color: 'blue'
-    },
-    {
-      icon: <FiAward className="w-5 h-5" />,
-      text: 'TIME scores 16 points higher for this specific scenario',
-      color: 'green'
-    }
-  ];
+  const getInsights = (): ComparisonInsight[] => {
+    if (!selectedPortfolio || !timePortfolio) return [];
+    
+    const returnDiff = (timePortfolio.expectedReturn - selectedPortfolio.expectedReturn) * 100;
+    const upsideDiff = (timePortfolio.upside - selectedPortfolio.upside) * 100;
+    const downsideDiff = Math.abs(timePortfolio.downside - selectedPortfolio.downside) * 100;
+    const scoreDiff = timePortfolio.score - selectedPortfolio.score;
+    
+    return [
+      {
+        icon: <FiTrendingUp className="w-5 h-5" />,
+        text: returnDiff > 0 
+          ? `TIME offers +${returnDiff.toFixed(1)}% higher expected 5-year return`
+          : `Your portfolio offers +${Math.abs(returnDiff).toFixed(1)}% higher expected 5-year return`,
+        color: returnDiff > 0 ? 'green' : 'blue'
+      },
+      {
+        icon: <FiAlertCircle className="w-5 h-5" />,
+        text: timePortfolio.downside < selectedPortfolio.downside
+          ? `TIME has ${downsideDiff.toFixed(1)}% more downside risk in worst-case scenarios`
+          : `Your portfolio has ${downsideDiff.toFixed(1)}% more downside risk in worst-case scenarios`,
+        color: 'orange'
+      },
+      {
+        icon: <FiZap className="w-5 h-5" />,
+        text: upsideDiff > 0
+          ? `TIME captures +${upsideDiff.toFixed(1)}% more upside in best-case years`
+          : `Your portfolio captures +${Math.abs(upsideDiff).toFixed(1)}% more upside in best-case years`,
+        color: upsideDiff > 0 ? 'blue' : 'green'
+      },
+      {
+        icon: <FiAward className="w-5 h-5" />,
+        text: scoreDiff > 0
+          ? `TIME scores ${Math.abs(scoreDiff).toFixed(0)} points higher for this specific scenario`
+          : `Your portfolio scores ${Math.abs(scoreDiff).toFixed(0)} points higher for this specific scenario`,
+        color: scoreDiff > 0 ? 'green' : 'blue'
+      }
+    ];
+  };
 
   const formatPercent = (value: number, includeSign: boolean = false) => {
     const percent = (value * 100).toFixed(1);
@@ -182,17 +243,17 @@ const PortfolioComparison = () => {
           <p className="text-xs font-bold text-teal-400 uppercase tracking-wide mb-2">
             Testing Scenario: AI Supercycle • Historical Analog: 1995-2000 — Internet Boom
           </p>
-          <h1 className="text-2xl font-bold text-white">
+          <h2 className="text-2xl font-bold text-white">
             "Is AI a productivity supercycle or just another bubble?"
-          </h1>
+          </h2>
         </div>
 
         {/* Head-to-Head Comparison */}
         <div className="bg-gradient-to-r from-teal-500/10 to-blue-500/10 border border-teal-500/50 rounded-2xl p-8 mb-8">
-          <h2 className="text-2xl font-bold text-white mb-8 flex items-center gap-2">
-            <FiZap className="w-6 h-6 text-teal-400" />
+          <h3 className="text-xl font-bold text-white mb-8 flex items-center gap-2">
+            <FiZap className="w-5 h-5 text-teal-400" />
             Head-to-Head Comparison
-          </h2>
+          </h3>
 
           {/* Score Comparison */}
           <div className="grid grid-cols-2 gap-8 mb-8 pb-8 border-b border-teal-500/20">
@@ -200,24 +261,24 @@ const PortfolioComparison = () => {
             <div>
               <p className="text-gray-400 text-sm mb-2">{selectedPortfolio.name}</p>
               <div className="flex items-baseline gap-3 mb-6">
-                <span className="text-4xl font-bold text-white">{selectedPortfolio.score}</span>
-                <span className="text-gray-400">VS</span>
+                <span className="text-3xl font-bold text-white">{selectedPortfolio.score}</span>
+                <span className="text-gray-400 text-sm">VS</span>
               </div>
               {/* Metrics */}
               <div className="space-y-4">
                 <div>
                   <p className="text-xs text-gray-500 uppercase mb-1">Expected Return (5yr)</p>
-                  <p className={`text-lg font-bold ${getColorClass(selectedPortfolio.expectedReturn)}`}>
+                  <p className={`text-base font-bold ${getColorClass(selectedPortfolio.expectedReturn)}`}>
                     {formatPercent(selectedPortfolio.expectedReturn)}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 uppercase mb-1">Expected Best Year (5yr)</p>
-                  <p className="text-lg font-bold text-green-400">{formatPercent(selectedPortfolio.expectedBestYear)}</p>
+                  <p className="text-base font-bold text-green-400">{formatPercent(selectedPortfolio.expectedBestYear)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 uppercase mb-1">Expected Worst Year (5yr)</p>
-                  <p className="text-lg font-bold text-red-400">{formatPercent(selectedPortfolio.expectedWorstYear)}</p>
+                  <p className="text-base font-bold text-red-400">{formatPercent(selectedPortfolio.expectedWorstYear)}</p>
                 </div>
               </div>
             </div>
@@ -226,24 +287,24 @@ const PortfolioComparison = () => {
             <div>
               <p className="text-teal-400 text-sm mb-2 font-semibold text-right">{timePortfolio.name}</p>
               <div className="flex items-baseline gap-3 justify-end mb-6">
-                <span className="text-gray-400">vs</span>
-                <span className="text-4xl font-bold text-teal-400">{timePortfolio.score}</span>
+                <span className="text-gray-400 text-sm">vs</span>
+                <span className="text-3xl font-bold text-teal-400">{timePortfolio.score}</span>
               </div>
               {/* Metrics */}
               <div className="space-y-4">
                 <div className="text-right">
                   <p className="text-xs text-gray-500 uppercase mb-1">Expected Return (5yr)</p>
-                  <p className={`text-lg font-bold ${getColorClass(timePortfolio.expectedReturn)}`}>
+                  <p className={`text-base font-bold ${getColorClass(timePortfolio.expectedReturn)}`}>
                     {formatPercent(timePortfolio.expectedReturn)}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-gray-500 uppercase mb-1">Expected Best Year (5yr)</p>
-                  <p className="text-lg font-bold text-green-400">{formatPercent(timePortfolio.expectedBestYear)}</p>
+                  <p className="text-base font-bold text-green-400">{formatPercent(timePortfolio.expectedBestYear)}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-gray-500 uppercase mb-1">Expected Worst Year (5yr)</p>
-                  <p className="text-lg font-bold text-red-400">{formatPercent(timePortfolio.expectedWorstYear)}</p>
+                  <p className="text-base font-bold text-red-400">{formatPercent(timePortfolio.expectedWorstYear)}</p>
                 </div>
               </div>
             </div>
@@ -279,7 +340,7 @@ const PortfolioComparison = () => {
 
           {/* Summary */}
           <div className="mt-6 p-4 bg-teal-500/20 border border-teal-500/30 rounded-lg">
-            <p className="text-sm text-teal-300">
+            <p className="text-base text-teal-300">
               <span className="font-bold text-teal-400">{timePortfolio.name}</span> delivers <span className="font-bold text-green-400">+2.6% higher expected returns</span> with <span className="font-bold text-orange-400">4.3% more downside risk</span>
             </p>
           </div>
@@ -289,10 +350,10 @@ const PortfolioComparison = () => {
         <div className="grid grid-cols-2 gap-8 mb-8">
           {/* Left Portfolio */}
           <div className="bg-gray-900/50 border border-gray-700 rounded-2xl p-6">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <h4 className="text-base font-bold text-white mb-4 flex items-center gap-2">
               <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
               {selectedPortfolio.name}
-            </h3>
+            </h4>
             <div className="space-y-3">
               {selectedPortfolio.topPositions.length === 0 ? (
                 <div className="text-center py-8 text-gray-400 text-sm">
@@ -319,10 +380,10 @@ const PortfolioComparison = () => {
 
           {/* Right Portfolio (TIME) */}
           <div className="bg-teal-900/20 border border-teal-600/50 rounded-2xl p-6">
-            <h3 className="text-lg font-bold text-teal-300 mb-4 flex items-center gap-2">
+            <h4 className="text-base font-bold text-teal-300 mb-4 flex items-center gap-2">
               <div className="w-3 h-3 bg-teal-400 rounded-full"></div>
               {timePortfolio.name}
-            </h3>
+            </h4>
             <div className="space-y-3">
               {timePortfolio.topPositions.map((position, idx) => (
                 <div key={idx} className="flex items-center justify-between p-3 bg-teal-900/30 rounded-lg hover:bg-teal-900/50 transition-colors">
@@ -344,9 +405,9 @@ const PortfolioComparison = () => {
 
         {/* CTA Section */}
         <div className="bg-gradient-to-r from-teal-900/40 to-blue-900/40 border border-teal-600/50 rounded-2xl p-8 text-center">
-          <h2 className="text-2xl font-bold text-white mb-2">
+          <h3 className="text-xl font-bold text-white mb-2">
             Ready to optimize your portfolio?
-          </h2>
+          </h3>
           <p className="text-gray-300 mb-6">
             Get personalized recommendations from our advisors
           </p>

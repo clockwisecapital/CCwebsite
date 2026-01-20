@@ -244,9 +244,15 @@ export default function CommunityFeedPage() {
     result: any
   ) => {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      
       const response = await fetch(`/api/community/questions/${questionId}/test-results`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           portfolioId,
           portfolioName,
@@ -305,6 +311,16 @@ export default function CommunityFeedPage() {
       // Clear sessionStorage after use
       sessionStorage.removeItem('scenarioTestPortfolioId');
       sessionStorage.removeItem('scenarioTestPortfolioName');
+
+      // Store test results in sessionStorage in case user navigates away
+      sessionStorage.setItem('latestTestResult', JSON.stringify({
+        questionId,
+        portfolioId: portfolioIdToUse,
+        portfolioName,
+        testResult: result.testResult,
+        portfolioComparison: result.portfolioComparison,
+        kronosResponse: result.kronosResponse
+      }));
 
       // Use real Kronos results
       setTestResults(result.testResult);
@@ -681,10 +697,10 @@ export default function CommunityFeedPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0e1a] via-[#0f1420] to-[#0a0e1a] pt-20">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
         {/* Filters */}
-        <div className="mb-6">
-          <div className="flex items-center gap-3 overflow-x-auto pb-2 border-b border-gray-800/50">
+        <div className="mb-4 sm:mb-6">
+          <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-2 border-b border-gray-800/50 scrollbar-hide">
             {filterTabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeFilter === tab.id;
@@ -692,14 +708,14 @@ export default function CommunityFeedPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveFilter(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-3 font-medium text-sm
-                    transition-all duration-200 whitespace-nowrap border-b-2 -mb-[2px] ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 font-medium text-xs sm:text-sm
+                    transition-all duration-200 whitespace-nowrap border-b-2 -mb-[2px] flex-shrink-0 ${
                     isActive
                       ? 'text-white border-teal-500'
                       : 'text-gray-500 border-transparent hover:text-gray-300'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   {tab.label}
                 </button>
               );
@@ -707,10 +723,12 @@ export default function CommunityFeedPage() {
              {user && (
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-teal-500 hover:bg-teal-600 
-                  text-white font-semibold rounded-lg transition-colors text-sm ml-auto"
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-teal-500 hover:bg-teal-600 
+                  text-white font-semibold rounded-lg transition-colors text-xs sm:text-sm ml-auto flex-shrink-0"
               >
-                Post Question
+                <FiPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">Post Question</span>
+                <span className="xs:hidden">Post</span>
               </button>
             )}
           </div>
@@ -718,26 +736,27 @@ export default function CommunityFeedPage() {
 
         {/* Stats Bar */}
         {user && (
-          <div className="flex items-center justify-between mb-6 px-6 py-3 bg-gray-900/40 backdrop-blur-sm 
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6 px-3 sm:px-4 md:px-6 py-3 sm:py-3 bg-gray-900/40 backdrop-blur-sm 
             border border-gray-800 rounded-xl">
-            <div className="flex items-center gap-6 text-sm">
-              <div className="flex items-center gap-2 text-gray-400">
-                <FiUsers className="w-4 h-4 text-teal-400" />
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 md:gap-6 text-xs sm:text-sm w-full sm:w-auto">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400">
+                <FiUsers className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-400 flex-shrink-0" />
                 <span className="font-semibold text-white">{questions.length * 43}</span>
-                <span>members</span>
+                <span className="hidden xs:inline">members</span>
               </div>
-              <div className="flex items-center gap-2 text-gray-400">
-                <FiFileText className="w-4 h-4 text-blue-400" />
+              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400">
+                <FiFileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 flex-shrink-0" />
                 <span className="font-semibold text-white">{questions.length}</span>
-                <span>questions</span>
+                <span className="hidden xs:inline">questions</span>
               </div>
-              <div className="flex items-center gap-2 text-gray-400">
-                <FiTarget className="w-4 h-4 text-green-400" />
+              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400">
+                <FiTarget className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-400 flex-shrink-0" />
                 <span className="font-semibold text-white">{Math.floor(questions.length * 0.8)}</span>
-                <span>active this week</span>
+                <span className="hidden xs:inline">active</span>
+                <span className="hidden sm:inline">this week</span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 self-end sm:self-auto">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
               <span className="text-xs text-green-400 font-semibold">Live</span>
             </div>
@@ -746,26 +765,26 @@ export default function CommunityFeedPage() {
 
         {/* Feed */}
         {loading ? (
-          <div className="flex items-center justify-center py-20">
+          <div className="flex items-center justify-center py-12 sm:py-16 md:py-20">
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full 
-                bg-teal-500/20 border-2 border-teal-500/30 mb-4">
-                <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent 
+              <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full 
+                bg-teal-500/20 border-2 border-teal-500/30 mb-3 sm:mb-4">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 border-4 border-teal-500 border-t-transparent 
                   rounded-full animate-spin" />
               </div>
-              <p className="text-gray-400">Loading questions...</p>
+              <p className="text-sm sm:text-base text-gray-400">Loading questions...</p>
             </div>
           </div>
         ) : questions.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full 
-              bg-gray-800 border-2 border-gray-700 mb-6">
-              <FiMessageSquare className="w-10 h-10 text-gray-600" />
+          <div className="text-center py-12 sm:py-16 md:py-20 px-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full 
+              bg-gray-800 border-2 border-gray-700 mb-4 sm:mb-6">
+              <FiMessageSquare className="w-8 h-8 sm:w-10 sm:h-10 text-gray-600" />
             </div>
-            <h3 className="text-2xl font-bold text-white mb-3">
+            <h3 className="text-xl sm:text-2xl font-bold text-white mb-2 sm:mb-3">
               No questions yet
             </h3>
-            <p className="text-gray-400 mb-6">
+            <p className="text-sm sm:text-base text-gray-400 mb-4 sm:mb-6 max-w-md mx-auto">
               {activeFilter === 'following' 
                 ? "You're not following anyone yet. Follow other investors to see their questions here."
                 : "Be the first to create a scenario question!"
@@ -774,16 +793,16 @@ export default function CommunityFeedPage() {
             {user && activeFilter !== 'following' && (
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 hover:bg-teal-700 
-                  text-white font-bold rounded-xl transition-all duration-300 hover:scale-105"
+                className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-teal-600 hover:bg-teal-700 
+                  text-white text-sm sm:text-base font-bold rounded-xl transition-all duration-300 hover:scale-105"
               >
-                <FiPlus className="w-5 h-5" />
+                <FiPlus className="w-4 h-4 sm:w-5 sm:h-5" />
                 Create First Question
               </button>
             )}
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {questions.map((question) => (
               <PostCard
                 key={question.id}
@@ -798,10 +817,10 @@ export default function CommunityFeedPage() {
 
         {/* Load More (placeholder for future pagination) */}
         {!loading && questions.length > 0 && (
-          <div className="flex justify-center mt-8">
+          <div className="flex justify-center mt-6 sm:mt-8">
             <button
-              className="px-6 py-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 
-                text-white font-semibold rounded-xl transition-colors"
+              className="px-4 sm:px-6 py-2.5 sm:py-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 
+                text-white text-sm sm:text-base font-semibold rounded-xl transition-colors"
               onClick={() => {
                 // TODO: Implement pagination
                 console.log('Load more clicked');
@@ -824,7 +843,11 @@ export default function CommunityFeedPage() {
       {testResults && (
         <TestResultsModal
           isOpen={showTestResults}
-          onClose={() => setShowTestResults(false)}
+          onClose={() => {
+            setShowTestResults(false);
+            // Clear sessionStorage when modal is closed
+            sessionStorage.removeItem('latestTestResult');
+          }}
           results={testResults}
           portfolioComparison={portfolioComparison || undefined}
         />
@@ -833,16 +856,16 @@ export default function CommunityFeedPage() {
       {/* Loading Overlay for Testing */}
       {isRunningTest && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="loading-test-title"
         >
-          <div className="bg-gray-900 rounded-2xl border border-teal-500/50 p-8 max-w-md text-center">
-            <div className="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full 
-              animate-spin mx-auto mb-4" />
-            <h3 id="loading-test-title" className="text-xl font-bold text-white mb-2">Running Portfolio Test</h3>
-            <p className="text-sm text-gray-400 mb-4">
+          <div className="bg-gray-900 rounded-2xl border border-teal-500/50 p-6 sm:p-8 max-w-md w-full text-center mx-4">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-teal-500 border-t-transparent rounded-full 
+              animate-spin mx-auto mb-3 sm:mb-4" />
+            <h3 id="loading-test-title" className="text-lg sm:text-xl font-bold text-white mb-2">Running Portfolio Test</h3>
+            <p className="text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4">
               Analyzing your portfolio allocation...
             </p>
             <p className="text-xs text-teal-400">

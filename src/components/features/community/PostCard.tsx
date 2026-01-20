@@ -133,25 +133,24 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
 
   return (
     <div
-      onClick={handleTopPortfolios}
-      className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl border border-gray-700 
-        hover:border-teal-500/50 shadow-lg hover:shadow-xl transition-all duration-200 group cursor-pointer"
+      className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl sm:rounded-2xl border border-gray-700 
+        hover:border-teal-500/50 shadow-lg hover:shadow-xl transition-all duration-200 group"
     >
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 px-5 py-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-teal-500 to-blue-500 border border-teal-400/30 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">
+      <div className="flex items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 md:px-5 py-3 sm:py-4">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-full bg-gradient-to-br from-teal-500 to-blue-500 border border-teal-400/30 flex items-center justify-center flex-shrink-0">
+            <span className="text-white font-bold text-xs sm:text-sm">
               {getAuthorName().charAt(0).toUpperCase()}
             </span>
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{getAuthorName()}</p>
-            <div className="flex items-center gap-2 text-xs text-gray-400">
-              <span>@{(question.author && question.author.email) ? question.author.email.split('@')[0] : 'investor'}</span>
-              <span>•</span>
-              <span className="inline-flex items-center gap-1">
-                <FiClock className="w-3 h-3" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs sm:text-sm font-semibold text-white truncate">{getAuthorName()}</p>
+            <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-gray-400">
+              <span className="truncate max-w-[100px] sm:max-w-none">@{(question.author && question.author.email) ? question.author.email.split('@')[0] : 'investor'}</span>
+              <span className="flex-shrink-0">•</span>
+              <span className="inline-flex items-center gap-1 flex-shrink-0">
+                <FiClock className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                 {getTimeAgo(question.created_at)}
               </span>
             </div>
@@ -164,78 +163,105 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
               `${window.location.origin}/scenario-testing/${question.id}`
             );
           }}
-          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-gray-300 
-            border border-gray-600 rounded-full hover:bg-gray-700 hover:border-teal-500 transition-colors"
+          className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-semibold text-gray-300 
+            border border-gray-600 rounded-full hover:bg-gray-700 hover:border-teal-500 transition-colors flex-shrink-0"
         >
-          <FiShare2 className="w-3.5 h-3.5" />
-          Share
+          <FiShare2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+          <span className="hidden xs:inline">Share</span>
         </button>
       </div>
 
-      {/* Question Banner */}
-      <div className="px-5 pb-4">
-        <div className="rounded-xl bg-gradient-to-r from-teal-500 via-emerald-500 to-blue-500 px-6 py-8 text-center border border-teal-400/20">
-          <p className="text-lg md:text-xl font-semibold text-white leading-snug">
+      {/* Question Banner - Clickable to view top portfolios */}
+      <div className="px-3 sm:px-4 md:px-5 pb-3 sm:pb-4">
+        <button
+          onClick={handleTopPortfolios}
+          className="w-full rounded-lg sm:rounded-xl bg-gradient-to-r from-teal-500 via-emerald-500 to-blue-500 px-4 sm:px-5 md:px-6 py-5 sm:py-6 md:py-8 text-center border border-teal-400/20 hover:from-teal-600 hover:via-emerald-600 hover:to-blue-600 transition-all cursor-pointer"
+        >
+          <p className="text-sm sm:text-base md:text-lg lg:text-xl font-semibold text-white leading-snug break-words">
             {question.question_text || question.title}
           </p>
-        </div>
+        </button>
       </div>
+
+      {/* Tags */}
+      {question.tags && question.tags.length > 0 && (
+        <div className="px-3 sm:px-4 md:px-5 pb-3 sm:pb-4">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+            {question.tags.map((tag, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold
+                  bg-gray-700/50 border border-gray-600/50 text-gray-300 hover:bg-gray-600/50 hover:border-gray-500/50 
+                  transition-colors cursor-default"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Historical Analog */}
       {question.historical_period && Array.isArray(question.historical_period) && 
        question.historical_period.length > 0 && (
-        <div className="px-5 pb-4">
-          <p className="text-xs text-gray-400 flex items-center gap-2">
-            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-teal-500/20 border border-teal-500/30">
-              <FiAward className="w-3 h-3 text-teal-400" />
+        <div className="px-3 sm:px-4 md:px-5 pb-3 sm:pb-4">
+          <p className="text-[10px] sm:text-xs text-gray-400 flex items-start sm:items-center gap-1.5 sm:gap-2 break-words">
+            <span className="inline-flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-teal-500/20 border border-teal-500/30 flex-shrink-0 mt-0.5 sm:mt-0">
+              <FiAward className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-teal-400" />
             </span>
-            Historical analog: {question.historical_period[0].start}-{question.historical_period[0].end} — {question.historical_period[0].label}
+            <span className="flex-1">
+              <span className="hidden sm:inline">Historical analog: </span>
+              <span className="sm:hidden">Analog: </span>
+              {question.historical_period[0].start}-{question.historical_period[0].end} — {question.historical_period[0].label}
+            </span>
           </p>
         </div>
       )}
 
       {/* Stats */}
-      <div className="px-5 pb-4">
-        <div className="flex items-center gap-6 text-sm text-gray-400">
-          <div className="flex items-center gap-2">
-            <FiThumbsUp className="w-4 h-4 text-teal-400" />
+      <div className="px-3 sm:px-4 md:px-5 pb-3 sm:pb-4">
+        <div className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm text-gray-400">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <FiThumbsUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-400" />
             <span className="font-semibold text-white">{localLikes.toLocaleString()}</span>
           </div>
         </div>
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-between border-t border-gray-700 px-5 py-3 bg-gray-900/50">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col xs:flex-row items-stretch xs:items-center justify-between gap-2 xs:gap-0 border-t border-gray-700 px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 bg-gray-900/50">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={handleLikeToggle}
             disabled={isLiking}
-            className={`flex items-center gap-2 text-sm font-semibold transition-colors
+            className={`flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold transition-colors
               ${isLiked 
                 ? 'text-teal-400' 
                 : 'text-gray-400 hover:text-white'
               } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            <FiThumbsUp className={`w-4 h-4 ${isLiking ? 'animate-pulse' : ''}`} />
+            <FiThumbsUp className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isLiking ? 'animate-pulse' : ''}`} />
             Like
           </button>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             onClick={handleTestClick}
-            className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold text-gray-200 
-              border border-gray-600 rounded-lg hover:bg-gray-700 hover:border-teal-500 transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold text-gray-200 
+              border border-gray-600 rounded-lg hover:bg-gray-700 hover:border-teal-500 transition-colors flex-1 xs:flex-initial whitespace-nowrap"
           >
-            <FiBarChart2 className="w-4 h-4" />
-            Test My Portfolio
+            <FiBarChart2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline">Test My Portfolio</span>
+            <span className="xs:hidden">Test Portfolio</span>
           </button>
           <button
             onClick={handleTopPortfolios}
-            className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold text-teal-400 
-              bg-teal-500/10 border border-teal-500/30 rounded-lg hover:bg-teal-500/20 transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-semibold text-teal-400 
+              bg-teal-500/10 border border-teal-500/30 rounded-lg hover:bg-teal-500/20 transition-colors flex-1 xs:flex-initial whitespace-nowrap"
           >
-            <FiAward className="w-4 h-4" />
-            Top Portfolios
+            <FiAward className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline">Top Portfolios</span>
+            <span className="xs:hidden">Top</span>
           </button>
         </div>
       </div>

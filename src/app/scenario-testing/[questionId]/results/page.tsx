@@ -18,28 +18,129 @@ export default function ScenarioResultsPage() {
   const [portfolioComparison, setPortfolioComparison] = useState<PortfolioComparison | null>(null);
   const [portfolioName, setPortfolioName] = useState<string>('Your Portfolio');
   const [scenarioName, setScenarioName] = useState<string>('Scenario');
+  const [isRealData, setIsRealData] = useState(false);
   
   // Find scenario details
   const scenario = SCENARIO_QUESTIONS.find(q => q.id === questionId);
   
   useEffect(() => {
-    // TODO: In real implementation, this would fetch actual test results
-    // For now, show mock comparison UI
+    // Check for actual test results first (from fresh test)
+    const latestTestResultStr = sessionStorage.getItem('latestTestResult');
     
-    const userPortfolioId = sessionStorage.getItem('scenarioTestPortfolioId');
-    const leaderboardPortfolioId = sessionStorage.getItem('scenarioLeaderboardPortfolioId');
+    if (latestTestResultStr) {
+      try {
+        const latestTestResult = JSON.parse(latestTestResultStr);
+        
+        // Verify this result is for the current question
+        if (latestTestResult.questionId === questionId) {
+          console.log('📊 Loading actual test results from session');
+          
+          // Use the actual portfolioComparison from Kronos
+          if (latestTestResult.portfolioComparison) {
+            setPortfolioComparison(latestTestResult.portfolioComparison);
+            setPortfolioName(latestTestResult.portfolioName || 'Your Portfolio');
+            setScenarioName(latestTestResult.kronosResponse?.scenarioName || scenario?.title || 'Scenario');
+            setIsRealData(true);
+            setLoading(false);
+            
+            // Clear the session storage after using it
+            sessionStorage.removeItem('latestTestResult');
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to parse test results:', error);
+      }
+    }
     
-    if (userPortfolioId) {
-      // User's own portfolio selected
-      fetchPortfolioAndGenerateMockComparison(userPortfolioId);
-    } else if (leaderboardPortfolioId) {
-      // Leaderboard portfolio selected
-      generateLeaderboardMockComparison(leaderboardPortfolioId);
+    // If no session data, try to fetch from database (for test history)
+    if (user) {
+      fetchUserTestResult();
     } else {
-      // No portfolio selected, generate generic mock comparison
+      // Fallback to mock data if no user
+      const userPortfolioId = sessionStorage.getItem('scenarioTestPortfolioId');
+      const leaderboardPortfolioId = sessionStorage.getItem('scenarioLeaderboardPortfolioId');
+      
+      if (userPortfolioId) {
+        fetchPortfolioAndGenerateMockComparison(userPortfolioId);
+      } else if (leaderboardPortfolioId) {
+        generateLeaderboardMockComparison(leaderboardPortfolioId);
+      } else {
+        generateMockComparison();
+      }
+    }
+  }, [questionId, user]);
+  
+  const fetchUserTestResult = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: HeadersInit = {};
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      
+      // Check URL params for specific test/portfolio ID
+      const searchParams = new URLSearchParams(window.location.search);
+      const testId = searchParams.get('testId');
+      const portfolioId = searchParams.get('portfolioId');
+      
+      // Fetch user's test results for this question
+      const response = await fetch(`/api/community/questions/${questionId}/test-results`, { headers });
+      const data = await response.json();
+      
+      console.log('🔍 Fetching test results:', { questionId, testId, portfolioId, userId: user?.id });
+      console.log('📦 API Response:', { success: data.success, count: data.topPortfolios?.length });
+      
+      if (response.ok && data.success && data.topPortfolios.length > 0) {
+        let userTest = null;
+        
+        // If testId is provided, find that specific test
+        if (testId) {
+          userTest = data.topPortfolios.find((test: any) => test.id === testId);
+          console.log('🔍 Looking for testId:', testId, 'Found:', !!userTest);
+        }
+        // If portfolioId is provided, find test for that portfolio
+        else if (portfolioId) {
+          userTest = data.topPortfolios.find((test: any) => 
+            test.portfolioId === portfolioId && test.userId === user?.id
+          );
+          console.log('🔍 Looking for portfolioId:', portfolioId, 'Found:', !!userTest);
+        }
+        // Otherwise, find user's most recent test
+        else {
+          userTest = data.topPortfolios.find((test: any) => test.userId === user?.id);
+          console.log('🔍 Looking for userId:', user?.id, 'Found:', !!userTest);
+        }
+        
+        console.log('📊 User test:', userTest ? 'Found' : 'Not found');
+        console.log('📊 Has comparisonData:', !!userTest?.comparisonData);
+        
+        if (userTest && userTest.comparisonData) {
+          console.log('✅ Loading test results from database');
+          console.log('📊 Comparison data:', userTest.comparisonData);
+          
+          // Extract portfolio comparison from saved test
+          setPortfolioComparison(userTest.comparisonData);
+          setPortfolioName(userTest.portfolioName || 'Your Portfolio');
+          setScenarioName(scenario?.title || 'Scenario');
+          setIsRealData(true);
+          setLoading(false);
+          return;
+        } else {
+          console.log('⚠️ Test found but no comparisonData');
+        }
+      } else {
+        console.log('⚠️ API response not OK or no portfolios');
+      }
+      
+      // If no test found, fall back to mock data
+      console.log('⚠️ No test results found in database, using mock data');
+      generateMockComparison();
+    } catch (error) {
+      console.error('Failed to fetch test result:', error);
       generateMockComparison();
     }
-  }, [questionId]);
+  };
   
   const fetchPortfolioAndGenerateMockComparison = async (portfolioId: string) => {
     try {
@@ -410,21 +511,23 @@ export default function ScenarioResultsPage() {
           </div>
         </div>
         
-        {/* Notice Banner */}
-        <div className="mb-8 p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-xl">
-          <div className="flex items-start gap-3">
-            <svg className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div>
-              <p className="text-yellow-200 font-semibold text-sm">Mock Data - UI Preview</p>
-              <p className="text-yellow-300/80 text-xs mt-1">
-                This is a preview of the comparison UI. Actual scenario testing logic will be implemented next.
-              </p>
+        {/* Notice Banner - only show for mock data */}
+        {!isRealData && (
+          <div className="mb-8 p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-xl">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <p className="text-yellow-200 font-semibold text-sm">Mock Data - UI Preview</p>
+                <p className="text-yellow-300/80 text-xs mt-1">
+                  This is a preview of the comparison UI. Actual scenario testing logic will be implemented next.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
         
         {/* Portfolio Comparison */}
         {portfolioComparison && (
