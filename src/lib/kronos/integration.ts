@@ -6,6 +6,7 @@
  */
 
 import type { Holding } from './types';
+import { runPortfolioMonteCarloSimulation, type AssetClass } from '@/lib/services/monte-carlo-portfolio';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -282,6 +283,7 @@ export function transformKronosToUIResult(
 
 /**
  * Transform Kronos response to UI portfolio comparison format
+ * Runs Monte Carlo simulations for both portfolios based on scenario returns
  */
 export function transformKronosToUIComparison(
   kronosResponse: KronosScoreResponse
@@ -293,12 +295,45 @@ export function transformKronosToUIComparison(
   const userPortfolio = kronosResponse.userPortfolio;
   const timePortfolio = kronosResponse.timePortfolio;
   
+  // Helper to map asset class strings to AssetClass type
+  const mapToAssetClass = (assetClass?: string): AssetClass => {
+    if (!assetClass) return 'stocks';
+    const lower = assetClass.toLowerCase();
+    if (lower.includes('bond')) return 'bonds';
+    if (lower.includes('gold') || lower.includes('commodit')) return 'commodities';
+    if (lower.includes('real') && lower.includes('estate')) return 'realEstate';
+    if (lower.includes('cash')) return 'cash';
+    return 'stocks';
+  };
+  
+  // Run Monte Carlo for USER portfolio based on scenario return
+  const userMC = runPortfolioMonteCarloSimulation(
+    kronosResponse.userHoldings?.map(h => ({
+      weight: h.weight,
+      year1Return: userPortfolio.portfolioReturn,  // Scenario-based return from Kronos
+      year1Volatility: 0.18, // Required by interface, not used in calculation
+      assetClass: mapToAssetClass(h.assetClass)
+    })) || [],
+    1 // 1-year horizon for scenario testing
+  );
+  
+  // Run Monte Carlo for TIME portfolio based on scenario return
+  const timeMC = runPortfolioMonteCarloSimulation(
+    kronosResponse.timeHoldings?.map(h => ({
+      weight: h.weight,
+      year1Return: timePortfolio.portfolioReturn,  // Scenario-based return from Kronos
+      year1Volatility: 0.18,
+      assetClass: mapToAssetClass(h.assetClass)
+    })) || [],
+    1
+  );
+  
   return {
     userPortfolio: {
       totalValue: 100000, // Placeholder - we don't have actual value
       expectedReturn: userPortfolio.portfolioReturn,
-      upside: userPortfolio.portfolioReturn + (Math.abs(userPortfolio.portfolioReturn) * 1.5),
-      downside: userPortfolio.portfolioDrawdown,
+      upside: userMC.upside,        // Real Monte Carlo 95th percentile
+      downside: userMC.downside,    // Real Monte Carlo 5th percentile
       score: userPortfolio.score,
       isUsingProxy: false,
       positions: [],
@@ -306,15 +341,24 @@ export function transformKronosToUIComparison(
         ticker: h.ticker,
         name: h.name || h.ticker,
         weight: h.weight * 100,
+        currentPrice: 0,
+        targetPrice: null,
         expectedReturn: userPortfolio.portfolioReturn,
-        monteCarlo: null
+        monteCarlo: {
+          ticker: h.ticker,
+          median: userPortfolio.portfolioReturn,
+          upside: userMC.upside,      // Portfolio-level upside
+          downside: userMC.downside,  // Portfolio-level downside
+          volatility: userMC.volatility,
+          simulations: 5000
+        }
       })) || []
     },
     timePortfolio: {
       totalValue: 100000, // Placeholder
       expectedReturn: timePortfolio.portfolioReturn,
-      upside: timePortfolio.portfolioReturn + (Math.abs(timePortfolio.portfolioReturn) * 1.5),
-      downside: timePortfolio.portfolioDrawdown,
+      upside: timeMC.upside,        // Real Monte Carlo 95th percentile
+      downside: timeMC.downside,    // Real Monte Carlo 5th percentile
       score: timePortfolio.score,
       isUsingProxy: false,
       positions: [],
@@ -322,8 +366,17 @@ export function transformKronosToUIComparison(
         ticker: h.ticker,
         name: h.name || h.ticker,
         weight: h.weight * 100,
+        currentPrice: 0,
+        targetPrice: null,
         expectedReturn: timePortfolio.portfolioReturn,
-        monteCarlo: null
+        monteCarlo: {
+          ticker: h.ticker,
+          median: timePortfolio.portfolioReturn,
+          upside: timeMC.upside,      // Portfolio-level upside
+          downside: timeMC.downside,  // Portfolio-level downside
+          volatility: timeMC.volatility,
+          simulations: 5000
+        }
       })) || []
     }
   };

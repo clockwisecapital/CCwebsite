@@ -766,21 +766,23 @@ export default function CommunityFeedPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6 px-3 sm:px-4 md:px-6 py-3 sm:py-3 bg-gray-900/40 backdrop-blur-sm 
             border border-gray-800 rounded-xl">
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 md:gap-6 text-xs sm:text-sm w-full sm:w-auto">
-              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <FiUsers className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-400 flex-shrink-0" />
                 <span className="font-semibold text-white">{questions.length * 43}</span>
-                <span className="hidden xs:inline">members</span>
+                <span className="text-gray-400">members</span>
               </div>
-              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <FiFileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 flex-shrink-0" />
                 <span className="font-semibold text-white">{questions.length}</span>
-                <span className="hidden xs:inline">questions</span>
+                <span className="text-gray-400">questions</span>
               </div>
-              <div className="flex items-center gap-1.5 sm:gap-2 text-gray-400">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <FiTarget className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-400 flex-shrink-0" />
                 <span className="font-semibold text-white">{Math.floor(questions.length * 0.8)}</span>
-                <span className="hidden xs:inline">active</span>
-                <span className="hidden sm:inline">this week</span>
+                <span className="text-gray-400">
+                  <span className="sm:hidden">active</span>
+                  <span className="hidden sm:inline">active this week</span>
+                </span>
               </div>
             </div>
             <div className="flex items-center gap-2 self-end sm:self-auto">

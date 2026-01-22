@@ -306,7 +306,7 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange, s
         <p className="text-sm md:text-base text-teal-100 mb-4 md:mb-6">
           Work 1:1 with a strategist to optimize allocations for the current cycle.
         </p>
-        <div className="flex justify-center">
+        <div className="flex flex-col sm:flex-row justify-center gap-3">
           <a
             href="https://calendly.com/clockwisecapital/appointments"
             target="_blank"
@@ -321,6 +321,17 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange, s
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </a>
+          {showFinishAccount && onFinishAccountClick && (
+            <button
+              onClick={onFinishAccountClick}
+              className="px-6 md:px-8 py-3 bg-white text-teal-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors text-center flex items-center justify-center gap-2 text-sm md:text-base"
+            >
+              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+              Finish Account
+            </button>
+          )}
         </div>
       </div>
     </div>
