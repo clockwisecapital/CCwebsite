@@ -893,12 +893,9 @@ export default function CommunityFeedPage() {
           <div className="bg-gray-900 rounded-2xl border border-teal-500/50 p-6 sm:p-8 max-w-md w-full text-center mx-4">
             <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-teal-500 border-t-transparent rounded-full 
               animate-spin mx-auto mb-3 sm:mb-4" />
-            <h3 id="loading-test-title" className="text-lg sm:text-xl font-bold text-white mb-2">Running Portfolio Test</h3>
-            <p className="text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4">
-              Analyzing your portfolio allocation...
-            </p>
-            <p className="text-xs text-teal-400">
-              Finding best historical analog...
+            <h3 id="loading-test-title" className="text-lg sm:text-xl font-bold text-white mb-2">Testing Against Scenario</h3>
+            <p className="text-xs sm:text-sm text-gray-400">
+              Analyzing your portfolio allocation
             </p>
           </div>
         </div>
