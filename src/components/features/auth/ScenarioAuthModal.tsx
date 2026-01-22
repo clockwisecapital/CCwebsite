@@ -244,7 +244,7 @@ export default function ScenarioAuthModal({
                 </button>
               )}
               <h2 className="text-2xl font-bold text-white text-center mb-2">
-                {hasIntakeData ? 'Save Your Portfolio!' : 'Create Your Account'}
+                {hasIntakeData ? 'Finish Your Account' : 'Create Your Account'}
               </h2>
               <p className="text-gray-400 text-center text-sm">
                 {hasIntakeData 

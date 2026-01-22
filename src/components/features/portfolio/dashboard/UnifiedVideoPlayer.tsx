@@ -13,9 +13,10 @@ export interface VideoConfig {
 interface UnifiedVideoPlayerProps {
   currentVideo: VideoConfig;
   onVideoReady?: () => void;
+  onVideoEnd?: () => void;
 }
 
-export default function UnifiedVideoPlayer({ currentVideo, onVideoReady }: UnifiedVideoPlayerProps) {
+export default function UnifiedVideoPlayer({ currentVideo, onVideoReady, onVideoEnd }: UnifiedVideoPlayerProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [displayedVideo, setDisplayedVideo] = useState<VideoConfig>(currentVideo);
   const [isMuted, setIsMuted] = useState(true);
@@ -143,6 +144,11 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady }: Unifi
     }
     // Auto-minimize after video completes
     setIsMinimized(true);
+    
+    // Notify parent component that video has ended
+    if (onVideoEnd) {
+      onVideoEnd();
+    }
   };
 
   const getVideoSource = (): string | null => {

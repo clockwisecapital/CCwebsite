@@ -2,9 +2,11 @@
 
 import { useRouter } from 'next/navigation';
 import type { IntakeFormData, AnalysisResult } from './PortfolioDashboard';
+import type { User } from '@supabase/supabase-js';
 import CycleTab from './CycleTab';
 import PortfolioTab from './PortfolioTab';
 import GoalTab from './GoalTab';
+import FinishAccountButton from '@/components/features/auth/FinishAccountButton';
 
 interface ReviewTabProps {
   analysisResult: AnalysisResult;
@@ -21,10 +23,12 @@ interface ReviewTabProps {
   onMarketSlideChange: (slide: number) => void;
   cyclesLoading?: boolean; // True while market cycles are still loading
   portfolioId?: string; // ID of saved portfolio for scenario testing
+  user?: User | null; // Current authenticated user
+  onFinishAccountClick?: () => void; // Handler to show finish account modal
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId: _conversationId, videoId: _videoId, onReset, onBack, onNavigateToAnalyze, cycleAnalysisTab, onCycleAnalysisTabChange, onGoalSlideChange, onPortfolioSlideChange, onMarketSlideChange, cyclesLoading = false, portfolioId }: ReviewTabProps) {
+export default function ReviewTab({ analysisResult, intakeData: _intakeData, conversationId: _conversationId, videoId: _videoId, onReset, onBack, onNavigateToAnalyze, cycleAnalysisTab, onCycleAnalysisTabChange, onGoalSlideChange, onPortfolioSlideChange, onMarketSlideChange, cyclesLoading = false, portfolioId, user, onFinishAccountClick }: ReviewTabProps) {
   const router = useRouter();
   const handleNext = () => {
     if (cycleAnalysisTab === 'goal') {
@@ -195,6 +199,8 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                     onNext={handleNext}
                     onBack={handleBack}
                     onSlideChange={onMarketSlideChange}
+                    showFinishAccount={!user}
+                    onFinishAccountClick={onFinishAccountClick}
                   />
                 )
               )}
@@ -205,6 +211,8 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                     onNext={handleNext}
                     onBack={handleBack}
                     onSlideChange={onPortfolioSlideChange}
+                    showFinishAccount={!user}
+                    onFinishAccountClick={onFinishAccountClick}
                   />
                   
                   {/* Scenario Testing CTA */}
@@ -249,6 +257,8 @@ export default function ReviewTab({ analysisResult, intakeData: _intakeData, con
                   onNext={handleNext}
                   onBack={handleBack}
                   onSlideChange={onGoalSlideChange}
+                  showFinishAccount={!user}
+                  onFinishAccountClick={onFinishAccountClick}
                 />
               )}
             </div>

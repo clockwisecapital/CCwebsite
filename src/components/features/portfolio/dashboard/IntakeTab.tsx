@@ -76,6 +76,8 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing, authenti
         firstName: authenticatedUser.user_metadata?.first_name || prev.firstName,
         lastName: authenticatedUser.user_metadata?.last_name || prev.lastName,
       }));
+      // Auto-acknowledge for authenticated users
+      setAcknowledged(true);
     }
   }, [authenticatedUser, formData.email]);
 
@@ -244,18 +246,18 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing, authenti
         }
       }
     }
-    // Step 7: First Name
-    if (currentStep === 7 && (!formData.firstName || !formData.firstName.trim())) {
+    // Step 7: First Name (only for unauthenticated users)
+    if (!authenticatedUser && currentStep === 7 && (!formData.firstName || !formData.firstName.trim())) {
       setErrors({ firstName: 'First name is required' });
       return;
     }
-    // Step 8: Last Name
-    if (currentStep === 8 && (!formData.lastName || !formData.lastName.trim())) {
+    // Step 8: Last Name (only for unauthenticated users)
+    if (!authenticatedUser && currentStep === 8 && (!formData.lastName || !formData.lastName.trim())) {
       setErrors({ lastName: 'Last name is required' });
       return;
     }
-    // Step 9: Email & Acknowledgement
-    if (currentStep === 9) {
+    // Step 9: Email & Acknowledgement (only for unauthenticated users)
+    if (!authenticatedUser && currentStep === 9) {
       if (!formData.email || !formData.email.trim()) {
         setErrors({ email: 'Email is required' });
         return;
@@ -270,7 +272,9 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing, authenti
       }
     }
     // Step 10: Portfolio Name (optional but we proceed anyway)
-    if (currentStep === 10) {
+    // For authenticated users, this is step 7; for unauthenticated, it's step 10
+    const portfolioNameStep = authenticatedUser ? 7 : 10;
+    if (currentStep === portfolioNameStep) {
       // Portfolio name is optional, so no validation required
       // Just proceed to submission
     }
@@ -283,10 +287,11 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing, authenti
     }
 
     // Move to next step
-    if (currentStep < 10) {
+    const finalStep = authenticatedUser ? 7 : 10;
+    if (currentStep < finalStep) {
       setCurrentStep(currentStep + 1);
     } else {
-      // On final step (10), submit everything and Show Analysis 
+      // On final step, submit everything and Show Analysis 
       // Submit regardless of portfolio parsing state - backend will handle validation
       onSubmit(formData);
     }
@@ -365,6 +370,7 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing, authenti
     // The last step (10) will use handleNext which validates and completes
   };
 
+  // Define steps - exclude email/name fields for authenticated users
   const steps = [
     { id: 0, title: 'Age', field: 'age' },
     { id: 1, title: 'Current Investments', field: 'specificHoldings' },
@@ -373,9 +379,12 @@ export default function IntakeTab({ onSubmit, initialData, isAnalyzing, authenti
     { id: 4, title: 'Time Horizon', field: 'timeHorizon' },
     { id: 5, title: 'Monthly Contribution', field: 'monthlyContribution' },
     { id: 6, title: 'Goal Description', field: 'goalDescription' },
-    { id: 7, title: 'First Name', field: 'firstName' },
-    { id: 8, title: 'Last Name', field: 'lastName' },
-    { id: 9, title: 'Email & Acknowledgment', field: 'email' },
+    // Only show name/email steps for unauthenticated users
+    ...(authenticatedUser ? [] : [
+      { id: 7, title: 'First Name', field: 'firstName' },
+      { id: 8, title: 'Last Name', field: 'lastName' },
+      { id: 9, title: 'Email & Acknowledgment', field: 'email' },
+    ]),
     { id: 10, title: 'Portfolio Name', field: 'portfolioName' },
   ];
 

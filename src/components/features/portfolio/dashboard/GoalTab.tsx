@@ -9,9 +9,11 @@ interface GoalTabProps {
   onNext?: () => void;
   onBack?: () => void;
   onSlideChange?: (slide: number) => void;
+  showFinishAccount?: boolean;
+  onFinishAccountClick?: () => void;
 }
 
-export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }: GoalTabProps) {
+export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange, showFinishAccount, onFinishAccountClick }: GoalTabProps) {
   // NOTE: Goal probability calculations now use:
   // - Monte Carlo simulations (10,000 iterations)
   // - Long-term historical averages: Stocks 10%, Bonds 5%, Real Estate 10%, Commodities 5%, Cash 3%
@@ -107,6 +109,8 @@ export default function GoalTab({ goalAnalysis, onNext, onBack, onSlideChange }:
         onNext={handleNextSlide}
         onPrev={handlePrevSlide}
         nextButtonText="Go to Portfolio Analysis"
+        showFinishAccount={showFinishAccount}
+        onFinishAccountClick={onFinishAccountClick}
       >
         {/* SLIDE 1: Probability of Reaching Your Goal */}
         <CarouselSlide isActive={currentSlide === 0} direction={getSlideDirection(0)}>

@@ -21,9 +21,11 @@ interface CycleTabProps {
   onNext?: () => void;
   onBack?: () => void;
   onSlideChange?: (slide: number) => void;
+  showFinishAccount?: boolean;
+  onFinishAccountClick?: () => void;
 }
 
-export default function CycleTab({ cycleData, portfolioAnalysis, timeExpectedReturn, onNext, onBack, onSlideChange }: CycleTabProps) {
+export default function CycleTab({ cycleData, portfolioAnalysis, timeExpectedReturn, onNext, onBack, onSlideChange, showFinishAccount, onFinishAccountClick }: CycleTabProps) {
   // Carousel state: 0 = S&P 500 & Cycle Analysis, 1 = Historical Analog, 2 = Performance By Cycle
   const [currentSlide, setCurrentSlide] = useState(0);
   
@@ -182,6 +184,8 @@ export default function CycleTab({ cycleData, portfolioAnalysis, timeExpectedRet
         onNext={handleNextSlide}
         onPrev={handlePrevSlide}
         nextButtonText={currentSlide === 2 ? 'Complete Analysis' : 'Next'}
+        showFinishAccount={showFinishAccount}
+        onFinishAccountClick={onFinishAccountClick}
       >
         {/* SLIDE 1: S&P 500 Historical Backtest & Cycle Analysis */}
         <CarouselSlide isActive={currentSlide === 0} direction={getSlideDirection(0)}>

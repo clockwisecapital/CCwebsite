@@ -54,6 +54,8 @@ interface CarouselContainerProps {
   onNext: () => void;
   onPrev: () => void;
   nextButtonText?: string;
+  showFinishAccount?: boolean;
+  onFinishAccountClick?: () => void;
 }
 
 export function CarouselContainer({
@@ -63,7 +65,9 @@ export function CarouselContainer({
   onSlideChange,
   onNext,
   onPrev,
-  nextButtonText = 'Next'
+  nextButtonText = 'Next',
+  showFinishAccount = false,
+  onFinishAccountClick
 }: CarouselContainerProps) {
   return (
     <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
@@ -94,21 +98,36 @@ export function CarouselContainer({
 
       {/* Navigation Buttons */}
       <div className="flex justify-between items-center p-3 sm:p-4 bg-gray-700/50 border-t border-gray-700">
-        <button
-          onClick={onPrev}
-          disabled={currentSlide === 0}
-          className="px-3 sm:px-4 py-2 text-gray-300 font-medium rounded-lg hover:bg-gray-700 hover:scale-105 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-300 ease-out flex items-center gap-1 sm:gap-2 shadow-sm hover:shadow-md text-sm sm:text-base"
-          style={{
-            transitionProperty: 'background-color, transform, opacity, box-shadow',
-            transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
-          }}
-        >
-          <svg className="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          <span className="hidden sm:inline">Previous</span>
-          <span className="sm:hidden">Back</span>
-        </button>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            onClick={onPrev}
+            disabled={currentSlide === 0}
+            className="px-3 sm:px-4 py-2 text-gray-300 font-medium rounded-lg hover:bg-gray-700 hover:scale-105 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-300 ease-out flex items-center gap-1 sm:gap-2 shadow-sm hover:shadow-md text-sm sm:text-base"
+            style={{
+              transitionProperty: 'background-color, transform, opacity, box-shadow',
+              transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+            }}
+          >
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="hidden sm:inline">Previous</span>
+            <span className="sm:hidden">Back</span>
+          </button>
+          
+          {showFinishAccount && onFinishAccountClick && (
+            <button
+              onClick={onFinishAccountClick}
+              className="px-3 sm:px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-lg transition-all duration-300 ease-out flex items-center gap-1 sm:gap-2 shadow-sm hover:shadow-md text-xs sm:text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+              <span className="hidden sm:inline">Finish Account</span>
+              <span className="sm:hidden">Save</span>
+            </button>
+          )}
+        </div>
         
         <div className="text-xs sm:text-sm text-gray-400 font-medium transition-all duration-300">
           {currentSlide + 1} / {totalSlides}

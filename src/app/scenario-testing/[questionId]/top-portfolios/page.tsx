@@ -360,8 +360,8 @@ export default function TopPortfoliosPage() {
               <FiChevronRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform flex-shrink-0" />
             </button>
 
-            <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
-              {/* First row - Main stats */}
+            <div className="mb-4 sm:mb-6">
+              {/* Single row - All 3 metrics */}
               <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4">
                 <div className="bg-gray-900/50 border border-gray-700 rounded-lg sm:rounded-xl p-2.5 sm:p-3 md:p-4 text-center hover:border-teal-500/50 transition-colors">
                   <p className="text-lg sm:text-xl md:text-2xl font-bold text-white">{question.tests_count.toLocaleString()}</p>
@@ -370,26 +370,6 @@ export default function TopPortfoliosPage() {
                     <span className="xs:hidden">Testing</span>
                   </p>
                 </div>
-                <div className="bg-gray-900/50 border border-gray-700 rounded-lg sm:rounded-xl p-2.5 sm:p-3 md:p-4 text-center hover:border-teal-500/50 transition-colors">
-                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-teal-400">
-                    {averageReturn >= 0 ? '+' : ''}{(averageReturn * 100).toFixed(1)}%
-                  </p>
-                  <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-400 mt-0.5">
-                    <span className="hidden xs:inline">Avg Return</span>
-                    <span className="xs:hidden">Avg</span>
-                  </p>
-                </div>
-                <div className="bg-gray-900/50 border border-gray-700 rounded-lg sm:rounded-xl p-2.5 sm:p-3 md:p-4 text-center hover:border-teal-500/50 transition-colors">
-                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-white">{leaderboard.length}</p>
-                  <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-400 mt-0.5">
-                    <span className="hidden xs:inline">Top Portfolios</span>
-                    <span className="xs:hidden">Top</span>
-                  </p>
-                </div>
-              </div>
-              
-              {/* Second row - Benchmark comparison */}
-              <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4">
                 <div className="bg-gray-900/50 border border-gray-700 rounded-lg sm:rounded-xl p-2.5 sm:p-3 md:p-4 text-center hover:border-blue-500/50 transition-colors">
                   <p className="text-lg sm:text-xl md:text-2xl font-bold text-blue-400">
                     {question.metadata?.sp500_return 
@@ -413,8 +393,8 @@ export default function TopPortfoliosPage() {
             <div className="bg-gray-900/50 border border-gray-700 rounded-xl sm:rounded-2xl shadow-lg">
               <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-2 xs:gap-0 px-4 sm:px-5 md:px-6 py-3 sm:py-4 border-b border-gray-700">
                 <h3 className="text-xs sm:text-sm font-semibold text-white break-words">
-                  <span className="hidden sm:inline">Winning Portfolios for "{question.title}"</span>
-                  <span className="sm:hidden">Winning Portfolios</span>
+                  <span className="hidden sm:inline">Top Portfolios for "{question.title}"</span>
+                  <span className="sm:hidden">Top Portfolios</span>
                 </h3>
                 <p className="text-[10px] sm:text-xs text-gray-400 self-end xs:self-auto">
                   <span className="hidden xs:inline">Tap to compare vs TIME</span>
@@ -529,12 +509,9 @@ export default function TopPortfoliosPage() {
           <div className="bg-gray-900 rounded-2xl border border-teal-500/50 p-6 sm:p-8 max-w-md w-full text-center mx-4">
             <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-teal-500 border-t-transparent rounded-full 
               animate-spin mx-auto mb-3 sm:mb-4" />
-            <h3 id="loading-test-title" className="text-lg sm:text-xl font-bold text-white mb-2">Running Portfolio Test</h3>
-            <p className="text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4">
-              Analyzing your portfolio allocation...
-            </p>
-            <p className="text-xs text-teal-400">
-              Finding best historical analog...
+            <h3 id="loading-test-title" className="text-lg sm:text-xl font-bold text-white mb-2">Testing Portfolio</h3>
+            <p className="text-xs sm:text-sm text-gray-400">
+              Analyzing your portfolio allocation
             </p>
           </div>
         </div>

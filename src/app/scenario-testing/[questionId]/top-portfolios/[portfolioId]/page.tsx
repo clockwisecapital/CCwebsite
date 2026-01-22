@@ -228,90 +228,90 @@ const PortfolioComparison = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0e1a] via-[#0f1420] to-[#0a0e1a] pt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
         {/* Back Button */}
         <button
           onClick={() => router.push(`/scenario-testing/${questionId}/top-portfolios`)}
-          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-8"
+          className="flex items-center gap-1.5 sm:gap-2 text-gray-400 hover:text-white transition-colors mb-4 sm:mb-6 md:mb-8"
         >
-          <FiArrowLeft className="w-5 h-5" />
-          <span className="font-semibold">Back to Top Portfolios</span>
+          <FiArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+          <span className="text-sm sm:text-base font-semibold">Back to Top Portfolios</span>
         </button>
 
         {/* Test Scenario Header */}
-        <div className="bg-gradient-to-r from-gray-900/60 to-gray-800/60 border border-teal-600/50 rounded-2xl p-6 mb-8">
-          <p className="text-xs font-bold text-teal-400 uppercase tracking-wide mb-2">
+        <div className="bg-gradient-to-r from-gray-900/60 to-gray-800/60 border border-teal-600/50 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 mb-4 sm:mb-6 md:mb-8">
+          <p className="text-[10px] sm:text-xs font-bold text-teal-400 uppercase tracking-wide mb-2">
             Testing Scenario: AI Supercycle • Historical Analog: 1995-2000 — Internet Boom
           </p>
-          <h2 className="text-2xl font-bold text-white">
+          <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-white">
             "Is AI a productivity supercycle or just another bubble?"
           </h2>
         </div>
 
         {/* Head-to-Head Comparison */}
-        <div className="bg-gradient-to-r from-teal-500/10 to-blue-500/10 border border-teal-500/50 rounded-2xl p-8 mb-8">
-          <h3 className="text-xl font-bold text-white mb-8 flex items-center gap-2">
-            <FiZap className="w-5 h-5 text-teal-400" />
+        <div className="bg-gradient-to-r from-teal-500/10 to-blue-500/10 border border-teal-500/50 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 md:mb-8">
+          <h3 className="text-base sm:text-lg md:text-xl font-bold text-white mb-4 sm:mb-6 md:mb-8 flex items-center gap-2">
+            <FiZap className="w-4 h-4 sm:w-5 sm:h-5 text-teal-400" />
             Head-to-Head Comparison
           </h3>
 
           {/* Score Comparison */}
-          <div className="grid grid-cols-2 gap-8 mb-8 pb-8 border-b border-teal-500/20">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-teal-500/20">
             {/* Left Portfolio */}
             <div>
-              <p className="text-gray-400 text-sm mb-2">{selectedPortfolio.name}</p>
-              <div className="flex items-baseline gap-3 mb-6">
-                <span className="text-3xl font-bold text-white">{selectedPortfolio.score}</span>
-                <span className="text-gray-400 text-sm">VS</span>
+              <p className="text-gray-400 text-xs sm:text-sm mb-2 truncate">{selectedPortfolio.name}</p>
+              <div className="flex items-baseline gap-2 sm:gap-3 mb-4 sm:mb-6">
+                <span className="text-2xl sm:text-3xl font-bold text-white">{selectedPortfolio.score}</span>
+                <span className="text-gray-400 text-xs sm:text-sm">VS</span>
               </div>
               {/* Metrics */}
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div>
-                  <p className="text-xs text-gray-500 uppercase mb-1">Expected Return (5yr)</p>
-                  <p className={`text-base font-bold ${getColorClass(selectedPortfolio.expectedReturn)}`}>
+                  <p className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Expected Return (5yr)</p>
+                  <p className={`text-sm sm:text-base font-bold ${getColorClass(selectedPortfolio.expectedReturn)}`}>
                     {formatPercent(selectedPortfolio.expectedReturn)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase mb-1">Expected Best Year (5yr)</p>
-                  <p className="text-base font-bold text-green-400">{formatPercent(selectedPortfolio.expectedBestYear)}</p>
+                  <p className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Expected Best Year (5yr)</p>
+                  <p className="text-sm sm:text-base font-bold text-green-400">{formatPercent(selectedPortfolio.expectedBestYear)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase mb-1">Expected Worst Year (5yr)</p>
-                  <p className="text-base font-bold text-red-400">{formatPercent(selectedPortfolio.expectedWorstYear)}</p>
+                  <p className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Expected Worst Year (5yr)</p>
+                  <p className="text-sm sm:text-base font-bold text-red-400">{formatPercent(selectedPortfolio.expectedWorstYear)}</p>
                 </div>
               </div>
             </div>
 
             {/* Right Portfolio (TIME) */}
             <div>
-              <p className="text-teal-400 text-sm mb-2 font-semibold text-right">{timePortfolio.name}</p>
-              <div className="flex items-baseline gap-3 justify-end mb-6">
-                <span className="text-gray-400 text-sm">vs</span>
-                <span className="text-3xl font-bold text-teal-400">{timePortfolio.score}</span>
+              <p className="text-teal-400 text-xs sm:text-sm mb-2 font-semibold sm:text-right truncate">{timePortfolio.name}</p>
+              <div className="flex items-baseline gap-2 sm:gap-3 sm:justify-end mb-4 sm:mb-6">
+                <span className="text-gray-400 text-xs sm:text-sm">vs</span>
+                <span className="text-2xl sm:text-3xl font-bold text-teal-400">{timePortfolio.score}</span>
               </div>
               {/* Metrics */}
-              <div className="space-y-4">
-                <div className="text-right">
-                  <p className="text-xs text-gray-500 uppercase mb-1">Expected Return (5yr)</p>
-                  <p className={`text-base font-bold ${getColorClass(timePortfolio.expectedReturn)}`}>
+              <div className="space-y-3 sm:space-y-4">
+                <div className="sm:text-right">
+                  <p className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Expected Return (5yr)</p>
+                  <p className={`text-sm sm:text-base font-bold ${getColorClass(timePortfolio.expectedReturn)}`}>
                     {formatPercent(timePortfolio.expectedReturn)}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-gray-500 uppercase mb-1">Expected Best Year (5yr)</p>
-                  <p className="text-base font-bold text-green-400">{formatPercent(timePortfolio.expectedBestYear)}</p>
+                <div className="sm:text-right">
+                  <p className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Expected Best Year (5yr)</p>
+                  <p className="text-sm sm:text-base font-bold text-green-400">{formatPercent(timePortfolio.expectedBestYear)}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-gray-500 uppercase mb-1">Expected Worst Year (5yr)</p>
-                  <p className="text-base font-bold text-red-400">{formatPercent(timePortfolio.expectedWorstYear)}</p>
+                <div className="sm:text-right">
+                  <p className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Expected Worst Year (5yr)</p>
+                  <p className="text-sm sm:text-base font-bold text-red-400">{formatPercent(timePortfolio.expectedWorstYear)}</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Key Insights */}
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {getInsights().map((insight, idx) => {
               const bgColor = {
                 green: 'bg-green-500/20 border-green-500/50',
@@ -328,47 +328,47 @@ const PortfolioComparison = () => {
               }[insight.color];
 
               return (
-                <div key={idx} className={`flex items-start gap-3 p-4 rounded-lg border ${bgColor}`}>
-                  <div className={`flex-shrink-0 mt-1 ${textColor}`}>
+                <div key={idx} className={`flex items-start gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border ${bgColor}`}>
+                  <div className={`flex-shrink-0 mt-0.5 sm:mt-1 ${textColor}`}>
                     {insight.icon}
                   </div>
-                  <p className={`text-sm font-medium ${textColor}`}>{insight.text}</p>
+                  <p className={`text-xs sm:text-sm font-medium ${textColor}`}>{insight.text}</p>
                 </div>
               );
             })}
           </div>
 
           {/* Summary */}
-          <div className="mt-6 p-4 bg-teal-500/20 border border-teal-500/30 rounded-lg">
-            <p className="text-base text-teal-300">
+          <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-teal-500/20 border border-teal-500/30 rounded-lg">
+            <p className="text-xs sm:text-sm md:text-base text-teal-300">
               <span className="font-bold text-teal-400">{timePortfolio.name}</span> delivers <span className="font-bold text-green-400">+2.6% higher expected returns</span> with <span className="font-bold text-orange-400">4.3% more downside risk</span>
             </p>
           </div>
         </div>
 
         {/* Portfolio Composition */}
-        <div className="grid grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mb-4 sm:mb-6 md:mb-8">
           {/* Left Portfolio */}
-          <div className="bg-gray-900/50 border border-gray-700 rounded-2xl p-6">
-            <h4 className="text-base font-bold text-white mb-4 flex items-center gap-2">
-              <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-              {selectedPortfolio.name}
+          <div className="bg-gray-900/50 border border-gray-700 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6">
+            <h4 className="text-sm sm:text-base font-bold text-white mb-3 sm:mb-4 flex items-center gap-2 truncate">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-gray-400 rounded-full flex-shrink-0"></div>
+              <span className="truncate">{selectedPortfolio.name}</span>
             </h4>
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {selectedPortfolio.topPositions.length === 0 ? (
-                <div className="text-center py-8 text-gray-400 text-sm">
+                <div className="text-center py-6 sm:py-8 text-gray-400 text-xs sm:text-sm">
                   No specific holdings data available
                 </div>
               ) : (
                 selectedPortfolio.topPositions.map((position, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors">
+                  <div key={idx} className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors">
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-white text-sm">{position.ticker}</p>
-                      <p className="text-xs text-gray-400 truncate">{position.name}</p>
+                      <p className="font-semibold text-white text-xs sm:text-sm">{position.ticker}</p>
+                      <p className="text-[10px] sm:text-xs text-gray-400 truncate">{position.name}</p>
                     </div>
                     <div className="text-right flex-shrink-0 ml-2">
-                      <p className="font-bold text-gray-200">{position.weight.toFixed(1)}%</p>
-                      <p className={`text-xs font-semibold ${getColorClass(position.expectedReturn)}`}>
+                      <p className="font-bold text-gray-200 text-xs sm:text-sm">{position.weight.toFixed(1)}%</p>
+                      <p className={`text-[10px] sm:text-xs font-semibold ${getColorClass(position.expectedReturn)}`}>
                         {formatPercent(position.expectedReturn)}
                       </p>
                     </div>
@@ -379,21 +379,21 @@ const PortfolioComparison = () => {
           </div>
 
           {/* Right Portfolio (TIME) */}
-          <div className="bg-teal-900/20 border border-teal-600/50 rounded-2xl p-6">
-            <h4 className="text-base font-bold text-teal-300 mb-4 flex items-center gap-2">
-              <div className="w-3 h-3 bg-teal-400 rounded-full"></div>
-              {timePortfolio.name}
+          <div className="bg-teal-900/20 border border-teal-600/50 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6">
+            <h4 className="text-sm sm:text-base font-bold text-teal-300 mb-3 sm:mb-4 flex items-center gap-2 truncate">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-teal-400 rounded-full flex-shrink-0"></div>
+              <span className="truncate">{timePortfolio.name}</span>
             </h4>
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {timePortfolio.topPositions.map((position, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 bg-teal-900/30 rounded-lg hover:bg-teal-900/50 transition-colors">
+                <div key={idx} className="flex items-center justify-between p-2.5 sm:p-3 bg-teal-900/30 rounded-lg hover:bg-teal-900/50 transition-colors">
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-teal-200 text-sm">{position.ticker}</p>
-                    <p className="text-xs text-teal-400 truncate">{position.name}</p>
+                    <p className="font-semibold text-teal-200 text-xs sm:text-sm">{position.ticker}</p>
+                    <p className="text-[10px] sm:text-xs text-teal-400 truncate">{position.name}</p>
                   </div>
                   <div className="text-right flex-shrink-0 ml-2">
-                    <p className="font-bold text-teal-200">{position.weight}%</p>
-                    <p className={`text-xs font-semibold ${getColorClass(position.expectedReturn)}`}>
+                    <p className="font-bold text-teal-200 text-xs sm:text-sm">{position.weight}%</p>
+                    <p className={`text-[10px] sm:text-xs font-semibold ${getColorClass(position.expectedReturn)}`}>
                       {formatPercent(position.expectedReturn)}
                     </p>
                   </div>
@@ -404,14 +404,14 @@ const PortfolioComparison = () => {
         </div>
 
         {/* CTA Section */}
-        <div className="bg-gradient-to-r from-teal-900/40 to-blue-900/40 border border-teal-600/50 rounded-2xl p-8 text-center">
-          <h3 className="text-xl font-bold text-white mb-2">
+        <div className="bg-gradient-to-r from-teal-900/40 to-blue-900/40 border border-teal-600/50 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 text-center">
+          <h3 className="text-base sm:text-lg md:text-xl font-bold text-white mb-2">
             Ready to optimize your portfolio?
           </h3>
-          <p className="text-gray-300 mb-6">
+          <p className="text-xs sm:text-sm md:text-base text-gray-300 mb-4 sm:mb-6">
             Get personalized recommendations from our advisors
           </p>
-          <button className="inline-flex items-center gap-2 px-8 py-3 bg-teal-500 hover:bg-teal-600 text-black font-bold rounded-xl transition-all duration-300 hover:scale-105">
+          <button className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-teal-500 hover:bg-teal-600 text-black text-sm sm:text-base font-bold rounded-lg sm:rounded-xl transition-all duration-300 hover:scale-105">
             Talk to an Advisor
             <span>→</span>
           </button>

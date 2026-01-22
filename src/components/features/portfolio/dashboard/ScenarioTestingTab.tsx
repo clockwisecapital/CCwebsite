@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { FiUsers, FiTrendingUp, FiMessageSquare, FiClock, FiTarget, FiAward, FiBarChart2 } from 'react-icons/fi';
 import { useAuth } from '@/lib/auth/AuthContext';
 import ScenarioAuthModal from '@/components/features/auth/ScenarioAuthModal';
+import FinishAccountButton from '@/components/features/auth/FinishAccountButton';
 import type { ScenarioQuestionWithAuthor } from '@/types/community';
 
 interface ScenarioTestingTabProps {
@@ -139,15 +140,6 @@ export default function ScenarioTestingTab({
           >
             <FiTarget className="w-5 h-5" />
             Test My Portfolio
-          </button>
-          <button
-            onClick={handleGoToCommunity}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-3 
-              bg-gray-700 hover:bg-gray-600 border border-gray-600 text-white font-semibold rounded-lg 
-              transition-colors"
-          >
-            <FiUsers className="w-5 h-5" />
-            View Community
           </button>
         </div>
       </div>

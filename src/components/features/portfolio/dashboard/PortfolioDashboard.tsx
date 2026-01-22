@@ -7,6 +7,8 @@ import ScenarioTestingTab from './ScenarioTestingTab';
 import UnifiedVideoPlayer, { type VideoConfig } from './UnifiedVideoPlayer';
 import { getVideoPath } from '@/hooks/useAvatarVariant';
 import CreatePasswordModal from '@/components/features/auth/CreatePasswordModal';
+import ScenarioAuthModal from '@/components/features/auth/ScenarioAuthModal';
+import FinishAccountButton from '@/components/features/auth/FinishAccountButton';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 
@@ -85,6 +87,8 @@ export default function PortfolioDashboard() {
   const [cycleAnalysisTab, setCycleAnalysisTab] = useState<'market' | 'portfolio' | 'goal'>('goal');
   const [cyclesLoading, setCyclesLoading] = useState(false); // Track if market cycles are still loading
   const [showCreatePasswordModal, setShowCreatePasswordModal] = useState(false);
+  const [showFinishAccountModal, setShowFinishAccountModal] = useState(false);
+  const [showAnalysisPrompt, setShowAnalysisPrompt] = useState(false);
   const [portfolioSaved, setPortfolioSaved] = useState(false);
   const [savedPortfolioId, setSavedPortfolioId] = useState<string | null>(null);
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
@@ -321,12 +325,9 @@ export default function PortfolioDashboard() {
         // User is authenticated: automatically save portfolio
         console.log('🔐 User authenticated, auto-saving portfolio...');
         savePortfolio(user.id);
-      } else if (!user && !portfolioSaved) {
-        // User is not authenticated: show create password modal
-        setTimeout(() => {
-          setShowCreatePasswordModal(true);
-        }, 2000); // 2 second delay to let user see results first
       }
+      // Note: For unauthenticated users, we now wait until the Analysis tab video finishes
+      // The prompt will be triggered by handleVideoEnd() when they watch the personalized video
     }
   }, [emailData, analysisComplete, analysisResult, conversationId, user, portfolioSaved]);
 
@@ -479,6 +480,27 @@ export default function PortfolioDashboard() {
     await savePortfolio(userId);
   };
 
+  const handleVideoEnd = () => {
+    // When the personalized analysis video ends, prompt user to finish account
+    // Only show if user is not authenticated and on the analyze tab
+    if (!user && activeTab === 'analyze' && !portfolioSaved) {
+      setShowAnalysisPrompt(true);
+    }
+  };
+
+  const handleFinishAccountClick = () => {
+    setShowFinishAccountModal(true);
+  };
+
+  const handleFinishAccountSuccess = async () => {
+    // After user finishes account, save portfolio if we have the data
+    if (user && !portfolioSaved && conversationId && intakeData && analysisResult) {
+      await savePortfolio(user.id);
+    }
+    setShowFinishAccountModal(false);
+    setShowAnalysisPrompt(false);
+  };
+
   // Auto-save portfolio for authenticated users when analysis completes
   useEffect(() => {
     const autoSaveForAuthenticatedUser = async () => {
@@ -593,9 +615,9 @@ export default function PortfolioDashboard() {
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Unified Video Player - appears at top on mobile, bottom-right on desktop */}
-      <UnifiedVideoPlayer currentVideo={currentVideo} />
+      <UnifiedVideoPlayer currentVideo={currentVideo} onVideoEnd={handleVideoEnd} />
 
-      {/* Create Password Modal */}
+      {/* Create Password Modal (legacy - for backward compatibility) */}
       {emailData && !user && (
         <CreatePasswordModal
           isOpen={showCreatePasswordModal}
@@ -604,6 +626,20 @@ export default function PortfolioDashboard() {
           firstName={emailData.firstName}
           lastName={emailData.lastName}
           onSuccess={handlePasswordCreated}
+        />
+      )}
+
+      {/* Finish Account Modal (new unified modal) */}
+      {emailData && !user && (
+        <ScenarioAuthModal
+          isOpen={showFinishAccountModal}
+          onClose={() => setShowFinishAccountModal(false)}
+          onSuccess={handleFinishAccountSuccess}
+          title="Finish Your Account"
+          description="Create a password to save your analysis and access scenario testing."
+          defaultEmail={emailData.email}
+          defaultFirstName={emailData.firstName}
+          defaultLastName={emailData.lastName}
         />
       )}
 
@@ -746,6 +782,8 @@ export default function PortfolioDashboard() {
                 onMarketSlideChange={setMarketSlide}
                 cyclesLoading={cyclesLoading}
                 portfolioId={savedPortfolioId || undefined}
+                user={user}
+                onFinishAccountClick={handleFinishAccountClick}
               />
             )}
 
@@ -763,6 +801,42 @@ export default function PortfolioDashboard() {
             
             {activeTab === 'analyze' && videoId && (
               <div className="space-y-6">
+                {/* Finish Account Prompt (shown after video ends for unauthenticated users) */}
+                {!user && showAnalysisPrompt && emailData && (
+                  <div className="bg-gradient-to-br from-teal-600 to-blue-600 rounded-lg p-6 md:p-8 text-white shadow-xl border-2 border-teal-400 animate-pulse-slow">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-xl md:text-2xl font-bold mb-2">Your Analysis is Complete!</h3>
+                        <p className="text-teal-100 mb-4">
+                          Create an account to save your personalized portfolio analysis and access advanced scenario testing.
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <button
+                            onClick={handleFinishAccountClick}
+                            className="px-6 py-3 bg-white text-teal-600 font-bold rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                            </svg>
+                            Finish Account Setup
+                          </button>
+                          <button
+                            onClick={() => setShowAnalysisPrompt(false)}
+                            className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg transition-colors"
+                          >
+                            Maybe Later
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Ready to Optimize CTA */}
                 <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-4 md:p-8 text-white">
                   <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">Ready to Optimize?</h3>

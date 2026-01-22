@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { FiX, FiTrendingUp, FiTrendingDown, FiTarget, FiCalendar, FiCheckCircle, FiBarChart2, FiActivity, FiLayers, FiAward } from 'react-icons/fi';
+import React from 'react';
+import { FiX, FiTrendingUp, FiTrendingDown, FiTarget, FiBarChart2, FiAward } from 'react-icons/fi';
 import type { PortfolioComparison } from '@/types/portfolio';
 
 export interface HistoricalAnalog {
@@ -34,13 +34,7 @@ interface TestResultsModalProps {
 }
 
 export default function TestResultsModal({ isOpen, onClose, results, portfolioComparison }: TestResultsModalProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'performance' | 'comparison'>('overview');
-  
   if (!isOpen) return null;
-
-  const returnColor = results.expectedReturn >= 0 ? 'text-green-400' : 'text-red-400';
-  const returnIcon = results.expectedReturn >= 0 ? FiTrendingUp : FiTrendingDown;
-  const ReturnIcon = returnIcon;
 
   // Formatting helpers
   const formatCurrency = (value: number) => {
@@ -56,19 +50,6 @@ export default function TestResultsModal({ isOpen, onClose, results, portfolioCo
     const percent = (value * 100).toFixed(1);
     return `${percent}%`;
   };
-
-  // Mock performance data for the chart
-  const performanceData = [
-    { date: 'Oct 2008', value: 100 },
-    { date: 'Nov 2008', value: 85 },
-    { date: 'Dec 2008', value: 78 },
-    { date: 'Jan 2009', value: 72 },
-    { date: 'Feb 2009', value: 75 },
-    { date: 'Mar 2009', value: 82 },
-  ];
-
-  const maxValue = Math.max(...performanceData.map(d => d.value));
-  const minValue = Math.min(...performanceData.map(d => d.value));
 
   return (
     <div 
@@ -120,327 +101,61 @@ export default function TestResultsModal({ isOpen, onClose, results, portfolioCo
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="px-8 pt-4">
-          <div className="flex items-center gap-2 border-b border-gray-800/50">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`px-4 py-2.5 text-sm font-semibold transition-all border-b-2 -mb-px ${
-                activeTab === 'overview'
-                  ? 'text-teal-400 border-teal-500'
-                  : 'text-gray-400 border-transparent hover:text-white'
-              }`}
-            >
-              <FiTarget className="w-4 h-4 inline mr-2" />
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('performance')}
-              className={`px-4 py-2.5 text-sm font-semibold transition-all border-b-2 -mb-px ${
-                activeTab === 'performance'
-                  ? 'text-teal-400 border-teal-500'
-                  : 'text-gray-400 border-transparent hover:text-white'
-              }`}
-            >
-              <FiActivity className="w-4 h-4 inline mr-2" />
-              Performance Over Time
-            </button>
-            {portfolioComparison && (
-              <button
-                onClick={() => setActiveTab('comparison')}
-                className={`px-4 py-2.5 text-sm font-semibold transition-all border-b-2 -mb-px ${
-                  activeTab === 'comparison'
-                    ? 'text-teal-400 border-teal-500'
-                    : 'text-gray-400 border-transparent hover:text-white'
-                }`}
-              >
-                <FiLayers className="w-4 h-4 inline mr-2" />
-                Detailed Comparison
-              </button>
-            )}
-          </div>
-        </div>
-
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-8 py-6">
-          {activeTab === 'overview' ? (
-            <div className="space-y-6">
-
-              {/* Historical Analog Match */}
-              {results.historicalAnalog && (
-                <div className="bg-gradient-to-br from-blue-500/5 to-purple-500/5 border border-blue-500/20 rounded-xl p-6">
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                      <FiCalendar className="w-5 h-5 text-blue-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-white">Historical Analog Match</h3>
-                      <p className="text-xs text-gray-400">
-                        Based on {results.historicalPeriod?.label || 'selected period'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mb-5">
-                    <p className="text-2xl font-bold text-white mb-3">
-                      {results.historicalAnalog.period}
-                    </p>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="flex-1 bg-gray-800/50 rounded-full h-2">
-                        <div 
-                          className="bg-gradient-to-r from-teal-500 to-blue-500 h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${results.historicalAnalog.similarity}%` }}
-                        />
-                      </div>
-                      <span className="text-lg font-bold text-teal-400">
-                        {results.historicalAnalog.similarity}%
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500">Similarity to current market conditions</p>
-                  </div>
-
-                  {/* Matching Factors */}
-                  {results.historicalAnalog.matchingFactors && results.historicalAnalog.matchingFactors.length > 0 && (
-                    <div className="space-y-2">
-                      {results.historicalAnalog.matchingFactors.map((factor, idx) => (
-                        <div key={idx} className="flex items-start gap-2.5">
-                          <div className="w-5 h-5 rounded-full bg-green-500/10 flex items-center justify-center mt-0.5 flex-shrink-0">
-                            <FiCheckCircle className="w-3 h-3 text-green-400" />
-                          </div>
-                          <p className="text-sm text-gray-300">{factor}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Expected Returns */}
-              <div className="grid md:grid-cols-3 gap-4">
-                {/* Expected Return */}
-                <div className="bg-gray-900/40 backdrop-blur-sm border border-gray-800/50 rounded-xl p-5">
-                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">Expected Return</p>
-                  <div className="flex items-center gap-2 mb-2">
-                    <ReturnIcon className={`w-5 h-5 ${returnColor}`} />
-                    <p className={`text-3xl font-bold ${returnColor}`}>
-                      {formatPercent(results.expectedReturn)}
-                    </p>
-                  </div>
-                  <p className="text-xs text-gray-600">Median outcome</p>
-                </div>
-
-                {/* Upside */}
-                <div className="bg-gray-900/40 backdrop-blur-sm border border-gray-800/50 rounded-xl p-5">
-                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">Best Case</p>
-                  <div className="flex items-center gap-2 mb-2">
-                    <FiTrendingUp className="w-5 h-5 text-green-400" />
-                    <p className="text-3xl font-bold text-green-400">
-                      +{(results.expectedUpside * 100).toFixed(1)}%
-                    </p>
-                  </div>
-                  <p className="text-xs text-gray-600">95th percentile</p>
-                </div>
-
-                {/* Downside */}
-                <div className="bg-gray-900/40 backdrop-blur-sm border border-gray-800/50 rounded-xl p-5">
-                  <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">Worst Case</p>
-                  <div className="flex items-center gap-2 mb-2">
-                    <FiTrendingDown className="w-5 h-5 text-red-400" />
-                    <p className="text-3xl font-bold text-red-400">
-                      {(results.expectedDownside * 100).toFixed(1)}%
-                    </p>
-                  </div>
-                  <p className="text-xs text-gray-600">5th percentile</p>
-                </div>
-              </div>
-
-              {/* Portfolio Scores Comparison */}
-              <div className="grid grid-cols-2 gap-4">
-                {/* Your Portfolio Score */}
-                <div className="bg-gradient-to-br from-blue-500/5 to-purple-500/5 border border-blue-500/20 rounded-xl p-6">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                      <FiTarget className="w-5 h-5 text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wider">Your Portfolio</p>
-                      <p className="text-sm text-white font-semibold">Score</p>
-                    </div>
-                  </div>
-                  <p className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-                    {results.score.toFixed(0)}
-                  </p>
-                  {results.confidence && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      Confidence: <span className="text-blue-400 font-semibold">{results.confidence}%</span>
-                    </p>
-                  )}
-                </div>
-
-                {/* TIME Portfolio Score */}
-                <div className="bg-gradient-to-br from-teal-500/5 to-blue-500/5 border border-teal-500/20 rounded-xl p-6">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-lg bg-teal-500/10 flex items-center justify-center">
-                      <FiAward className="w-5 h-5 text-teal-400" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wider">TIME Portfolio</p>
-                      <p className="text-sm text-white font-semibold">Score</p>
-                    </div>
-                  </div>
-                  <p className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-400">
-                    {portfolioComparison?.timePortfolio?.score?.toFixed(0) || 'N/A'}
-                  </p>
-                  {portfolioComparison && portfolioComparison.timePortfolio.score !== undefined && (
-                    <p className="text-xs text-teal-400 mt-2 font-semibold">
-                      {portfolioComparison.timePortfolio.score > results.score 
-                        ? `+${(portfolioComparison.timePortfolio.score - results.score).toFixed(0)} points higher`
-                        : results.score > portfolioComparison.timePortfolio.score
-                        ? `${(results.score - portfolioComparison.timePortfolio.score).toFixed(0)} points lower`
-                        : 'Same score'}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : activeTab === 'performance' ? (
-            /* Performance Over Time Tab */
-            <div className="space-y-6">
-              {/* Performance Comparison Chart */}
-              <div className="bg-gray-900/40 backdrop-blur-sm border border-gray-800/50 rounded-xl p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-bold text-white">Performance vs TIME Portfolio</h3>
-                  <div className="flex items-center gap-4 text-xs">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-blue-500" />
-                      <span className="text-gray-400">Your Portfolio</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-teal-500" />
-                      <span className="text-gray-400">TIME Portfolio</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Chart Area */}
-                <div className="relative h-80">
-                  <svg className="w-full h-full" viewBox="0 0 800 320" preserveAspectRatio="none">
-                    {/* Grid lines */}
-                    <line x1="0" y1="80" x2="800" y2="80" stroke="#374151" strokeWidth="1" strokeDasharray="4 4" />
-                    <line x1="0" y1="160" x2="800" y2="160" stroke="#374151" strokeWidth="1" strokeDasharray="4 4" />
-                    <line x1="0" y1="240" x2="800" y2="240" stroke="#374151" strokeWidth="1" strokeDasharray="4 4" />
-
-                    {/* Your Portfolio Line */}
-                    <path
-                      d={`M 0 ${320 - performanceData[0].value * 2} ${performanceData.map((d, i) => 
-                        `L ${(i / (performanceData.length - 1)) * 800} ${320 - d.value * 2}`
-                      ).join(' ')}`}
-                      fill="none"
-                      stroke="#3B82F6"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-
-                    {/* TIME Portfolio Line */}
-                    <path
-                      d={`M 0 ${320 - (performanceData[0].value + 5) * 2} ${performanceData.map((d, i) => 
-                        `L ${(i / (performanceData.length - 1)) * 800} ${320 - (d.value + 8 - i * 2) * 2}`
-                      ).join(' ')}`}
-                      fill="none"
-                      stroke="#14B8A6"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-
-                    {/* Data points */}
-                    {performanceData.map((d, i) => (
-                      <g key={i}>
-                        <circle
-                          cx={(i / (performanceData.length - 1)) * 800}
-                          cy={320 - d.value * 2}
-                          r="4"
-                          fill="#3B82F6"
-                          className="hover:r-6 transition-all cursor-pointer"
-                        />
-                        <circle
-                          cx={(i / (performanceData.length - 1)) * 800}
-                          cy={320 - (d.value + 8 - i * 2) * 2}
-                          r="4"
-                          fill="#14B8A6"
-                          className="hover:r-6 transition-all cursor-pointer"
-                        />
-                      </g>
-                    ))}
-                  </svg>
-
-                  {/* X-Axis Labels */}
-                  <div className="flex justify-between mt-2 text-xs text-gray-500">
-                    {performanceData.map((d, i) => (
-                      <span key={i}>{d.date}</span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Performance Stats */}
-                <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-gray-800/50">
-                  <div>
-                    <p className="text-xs text-gray-500 mb-2">Your Portfolio</p>
-                    <div className="flex items-center gap-3">
-                      <div className="text-2xl font-bold text-blue-400">
-                        {formatPercent(results.expectedReturn)}
-                      </div>
-                      <span className="text-xs text-gray-500">Total Return</span>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-2">TIME Portfolio</p>
-                    <div className="flex items-center gap-3">
-                      <div className="text-2xl font-bold text-teal-400">
-                        {portfolioComparison?.timePortfolio ? 
-                          (() => {
-                            const timeReturn = portfolioComparison.timePortfolio.expectedReturn;
-                            const timePercent = (timeReturn * 100).toFixed(1);
-                            return timeReturn >= 0 ? `+${timePercent}%` : `${timePercent}%`;
-                          })()
-                          : 'N/A'
-                        }
-                      </div>
-                      <span className="text-xs text-gray-500">Total Return</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Key Insights */}
+          <div className="space-y-6">
+            {/* Portfolio Scores Comparison - At the Top */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Your Portfolio Score */}
               <div className="bg-gradient-to-br from-blue-500/5 to-purple-500/5 border border-blue-500/20 rounded-xl p-6">
-                <h4 className="text-sm font-bold text-white mb-4">Key Insights</h4>
-                <div className="space-y-3 text-sm text-gray-300">
-                  <div className="flex items-start gap-3">
-                    <div className="w-5 h-5 rounded-full bg-green-500/10 flex items-center justify-center mt-0.5 flex-shrink-0">
-                      <FiCheckCircle className="w-3 h-3 text-green-400" />
-                    </div>
-                    <p>TIME Portfolio maintained steadier growth during the analog period</p>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                    <FiTarget className="w-5 h-5 text-blue-400" />
                   </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-5 h-5 rounded-full bg-green-500/10 flex items-center justify-center mt-0.5 flex-shrink-0">
-                      <FiCheckCircle className="w-3 h-3 text-green-400" />
-                    </div>
-                    <p>Maximum drawdown was 15% vs your portfolio&apos;s 28%</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-5 h-5 rounded-full bg-green-500/10 flex items-center justify-center mt-0.5 flex-shrink-0">
-                      <FiCheckCircle className="w-3 h-3 text-green-400" />
-                    </div>
-                    <p>TIME&apos;s tactical rebalancing helped capture upside while managing risk</p>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wider">Your Portfolio</p>
+                    <p className="text-sm text-white font-semibold">Score</p>
                   </div>
                 </div>
+                <p className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+                  {results.score.toFixed(0)}
+                </p>
+                {results.confidence && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Confidence: <span className="text-blue-400 font-semibold">{results.confidence}%</span>
+                  </p>
+                )}
+              </div>
+
+              {/* TIME Portfolio Score */}
+              <div className="bg-gradient-to-br from-teal-500/5 to-blue-500/5 border border-teal-500/20 rounded-xl p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-teal-500/10 flex items-center justify-center">
+                    <FiAward className="w-5 h-5 text-teal-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wider">TIME Portfolio</p>
+                    <p className="text-sm text-white font-semibold">Score</p>
+                  </div>
+                </div>
+                <p className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-400">
+                  {portfolioComparison?.timePortfolio?.score?.toFixed(0) || 'N/A'}
+                </p>
+                {portfolioComparison && portfolioComparison.timePortfolio.score !== undefined && (
+                  <p className="text-xs text-teal-400 mt-2 font-semibold">
+                    {portfolioComparison.timePortfolio.score > results.score 
+                      ? `+${(portfolioComparison.timePortfolio.score - results.score).toFixed(0)} points higher`
+                      : results.score > portfolioComparison.timePortfolio.score
+                      ? `${(results.score - portfolioComparison.timePortfolio.score).toFixed(0)} points lower`
+                      : 'Same score'}
+                  </p>
+                )}
               </div>
             </div>
-          ) : activeTab === 'comparison' && portfolioComparison ? (
-            /* Detailed Comparison Tab */
-            <div className="space-y-6">
+
+            {/* Comparison Content */}
+            {portfolioComparison && (
+              <>
               {/* Description */}
               <div className="bg-gradient-to-br from-blue-900/30 to-cyan-900/30 rounded-xl p-4 border border-blue-800">
                 <p className="text-sm text-gray-300 leading-relaxed">
@@ -646,8 +361,9 @@ export default function TestResultsModal({ isOpen, onClose, results, portfolioCo
                   </div>
                 </div>
               </div>
-            </div>
-          ) : null}
+              </>
+            )}
+          </div>
         </div>
 
         {/* Footer */}

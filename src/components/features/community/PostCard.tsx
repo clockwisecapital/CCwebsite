@@ -260,8 +260,7 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
               bg-teal-500/10 border border-teal-500/30 rounded-lg hover:bg-teal-500/20 transition-colors flex-1 xs:flex-initial whitespace-nowrap"
           >
             <FiAward className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden xs:inline">Top Portfolios</span>
-            <span className="xs:hidden">Top</span>
+            Top Portfolios
           </button>
         </div>
       </div>

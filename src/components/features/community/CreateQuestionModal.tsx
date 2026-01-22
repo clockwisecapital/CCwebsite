@@ -125,8 +125,8 @@ export default function CreateQuestionModal({ isOpen, onClose, onSubmit }: Creat
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-5 md:p-6 border-b border-gray-700">
           <h2 id="create-question-modal-title" className="text-lg sm:text-xl md:text-2xl font-bold text-white pr-2">
-            <span className="hidden sm:inline">Create Scenario Question</span>
-            <span className="sm:hidden">Create Question</span>
+            <span className="hidden sm:inline">Test Question</span>
+            <span className="sm:hidden">Test Question</span>
           </h2>
           <button
             onClick={() => {
