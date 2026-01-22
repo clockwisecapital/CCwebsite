@@ -263,6 +263,23 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // Validate tags (must be exactly one economic cycle tag)
+    const validCycles = ['empire', 'technology', 'economic', 'business', 'market', 'company'];
+    if (body.tags && body.tags.length > 0) {
+      if (body.tags.length !== 1) {
+        return NextResponse.json(
+          { error: 'Must provide exactly one economic cycle tag' },
+          { status: 400 }
+        );
+      }
+      if (!validCycles.includes(body.tags[0].toLowerCase())) {
+        return NextResponse.json(
+          { error: 'Tag must be one of: empire, technology, economic, business, market, company' },
+          { status: 400 }
+        );
+      }
+    }
+    
     // Insert question
     const { data: question, error: insertError } = await supabase
       .from('scenario_questions')

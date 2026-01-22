@@ -412,11 +412,12 @@ describe('Scenario Testing Integration', () => {
 
 ## 9. Priority Implementation Order
 
-### Phase 1 (Immediate) ✅
+### Phase 1 (Immediate) ✅ COMPLETED
 1. ✅ Create S&P 500 return calculator API
 2. ✅ Update AI enrichment to fetch S&P 500 returns
 3. ✅ Store S&P 500 return in question metadata
 4. ✅ Display real S&P 500 return on top portfolios page
+5. ✅ On-the-fly calculation for questions without stored S&P 500 data
 
 ### Phase 2 (Next)
 5. Remove sample leaderboard data, show empty state

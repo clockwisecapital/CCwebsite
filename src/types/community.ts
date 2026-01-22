@@ -20,7 +20,7 @@ export interface ScenarioQuestionBase {
   description: string;
   question_text: string;
   historical_period: HistoricalPeriod[];
-  tags: string[];
+  tags: string[]; // Single economic cycle tag: "empire", "technology", "economic", "business", "market", or "company"
   likes_count: number;
   comments_count: number;
   tests_count: number;
@@ -53,7 +53,7 @@ export interface CreateScenarioQuestionInput {
   description?: string;
   question_text: string;
   historical_period?: HistoricalPeriod[];
-  tags?: string[];
+  tags?: string[]; // Single economic cycle tag: "empire", "technology", "economic", "business", "market", or "company"
   metadata?: Record<string, any>;
 }
 
@@ -62,7 +62,7 @@ export interface UpdateScenarioQuestionInput {
   description?: string;
   question_text?: string;
   historical_period?: HistoricalPeriod[];
-  tags?: string[];
+  tags?: string[]; // Single economic cycle tag: "empire", "technology", "economic", "business", "market", or "company"
   is_active?: boolean;
 }
 

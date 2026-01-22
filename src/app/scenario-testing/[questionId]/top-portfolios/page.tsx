@@ -44,25 +44,61 @@ export default function TopPortfoliosPage() {
   const [showTestResults, setShowTestResults] = useState(false);
   const [testResults, setTestResults] = useState<TestResultData | null>(null);
   const [portfolioComparison, setPortfolioComparison] = useState<PortfolioComparison | null>(null);
+  const [sp500BenchmarkData, setSp500BenchmarkData] = useState<{
+    avgReturn: number | null;
+    testCount: number;
+  }>({ avgReturn: null, testCount: 0 });
+
+  // Fetch question details
+  const fetchQuestionDetails = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: HeadersInit = {};
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const response = await fetch(`/api/community/questions/${questionId}`, { headers });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setQuestion(data.question);
+      }
+    } catch (error) {
+      console.error('Failed to fetch question:', error);
+    }
+  };
+  
+  // Fetch S&P 500 benchmark average from actual tests
+  const fetchSP500Benchmark = async () => {
+    try {
+      console.log('📊 Fetching S&P 500 benchmark data for question:', questionId);
+      
+      // Query the benchmarks directly from Supabase
+      const { data: benchmarks, error } = await supabase
+        .from('question_sp500_benchmarks' as any)
+        .select('expected_return, score')
+        .eq('question_id', questionId);
+      
+      if (error || !benchmarks || benchmarks.length === 0) {
+        setSp500BenchmarkData({ avgReturn: null, testCount: 0 });
+        return;
+      }
+      
+      const avgReturn = benchmarks.reduce((sum: number, b: any) => sum + (b.expected_return || 0), 0) / benchmarks.length;
+      
+      setSp500BenchmarkData({
+        avgReturn,
+        testCount: benchmarks.length
+      });
+      
+      console.log('✅ S&P 500 average return:', (avgReturn * 100).toFixed(1) + '%', 
+                 `(${benchmarks.length} tests)`);
+    } catch (error) {
+      console.error('Failed to fetch S&P 500 benchmark:', error);
+    }
+  };
 
   useEffect(() => {
-    const fetchQuestionDetails = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const headers: HeadersInit = {};
-        if (session?.access_token) {
-          headers['Authorization'] = `Bearer ${session.access_token}`;
-        }
-
-        const response = await fetch(`/api/community/questions/${questionId}`, { headers });
-        const data = await response.json();
-        if (response.ok && data.success) {
-          setQuestion(data.question);
-        }
-      } catch (error) {
-        console.error('Failed to fetch question:', error);
-      }
-    };
 
     // Check for pending test results from sessionStorage (from questions page)
     const checkForPendingResults = () => {
@@ -94,7 +130,7 @@ export default function TopPortfoliosPage() {
       }
     };
 
-    Promise.all([fetchQuestionDetails(), fetchLeaderboard()])
+    Promise.all([fetchQuestionDetails(), fetchLeaderboard(), fetchSP500Benchmark()])
       .then(() => {
         checkForPendingResults();
       })
@@ -162,10 +198,13 @@ export default function TopPortfoliosPage() {
       setPortfolioComparison(result.portfolioComparison);
       setShowTestResults(true);
       
-      // Save test result to leaderboard (don't await, run in background)
-      saveTestResultToLeaderboard(portfolioId, portfolioName, result).catch(err => 
-        console.error('Failed to save to leaderboard:', err)
-      );
+      // Save test result to leaderboard and refresh data
+      saveTestResultToLeaderboard(portfolioId, portfolioName, result)
+        .then(() => {
+          // Refresh all data to show updated counts
+          Promise.all([fetchQuestionDetails(), fetchLeaderboard(), fetchSP500Benchmark()]);
+        })
+        .catch(err => console.error('Failed to save to leaderboard:', err));
       
     } catch (error) {
       console.error('Failed to run test:', error);
@@ -372,13 +411,17 @@ export default function TopPortfoliosPage() {
                 </div>
                 <div className="bg-gray-900/50 border border-gray-700 rounded-lg sm:rounded-xl p-2.5 sm:p-3 md:p-4 text-center hover:border-blue-500/50 transition-colors">
                   <p className="text-lg sm:text-xl md:text-2xl font-bold text-blue-400">
-                    {question.metadata?.sp500_return 
-                      ? `${question.metadata.sp500_return >= 0 ? '+' : ''}${(question.metadata.sp500_return * 100).toFixed(1)}%`
-                      : '+4.0%'}
+                    {sp500BenchmarkData.avgReturn !== null 
+                      ? `${sp500BenchmarkData.avgReturn >= 0 ? '+' : ''}${(sp500BenchmarkData.avgReturn * 100).toFixed(1)}%`
+                      : sp500BenchmarkData.testCount === 0
+                        ? 'Calculating...'
+                        : '...'}
                   </p>
                   <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-400 mt-0.5">
-                    <span className="hidden xs:inline">S&P 500 Return</span>
-                    <span className="xs:hidden">S&P 500</span>
+                    <span className="hidden xs:inline">
+                      S&P 500 Avg {sp500BenchmarkData.testCount > 0 && `(${sp500BenchmarkData.testCount} tests)`}
+                    </span>
+                    <span className="xs:hidden">S&P 500 Avg</span>
                   </p>
                 </div>
                 <div className="bg-gray-900/50 border border-gray-700 rounded-lg sm:rounded-xl p-2.5 sm:p-3 md:p-4 text-center hover:border-purple-500/50 transition-colors">

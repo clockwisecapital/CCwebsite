@@ -6,6 +6,69 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
 
+/**
+ * Run S&P 500 benchmark test for a question
+ * This runs in the background to benchmark user portfolio performance
+ */
+async function runSP500BenchmarkTest(questionId: string) {
+  try {
+    console.log('📊 Running S&P 500 benchmark test for question:', questionId);
+    
+    const supabase = await createServerSupabaseClient();
+    
+    // Get question details
+    const { data: question } = await supabase
+      .from('scenario_questions')
+      .select('title, question_text')
+      .eq('id', questionId)
+      .single();
+    
+    if (!question) return;
+    
+    // Create a standard S&P 500 portfolio (100% SPY)
+    const sp500Holdings = [
+      {
+        ticker: 'SPY',
+        name: 'SPDR S&P 500 ETF',
+        weight: 1.0, // 100%
+        assetClass: 'us-large-cap' // Use proper asset class for Kronos
+      }
+    ];
+    
+    // Run Kronos scoring directly (not through HTTP API)
+    const { scorePortfolio } = await import('@/lib/kronos/scoring');
+    const scoreResult = await scorePortfolio(
+      question.question_text || question.title,
+      sp500Holdings,
+      true // Use AI
+    );
+    
+    // Save S&P 500 benchmark result (use any to bypass TypeScript table check)
+    const { error: insertError } = await (supabase as any).from('question_sp500_benchmarks').insert({
+      question_id: questionId,
+      expected_return: scoreResult.portfolioReturn,
+      upside: 0, // ScoreResult doesn't have Monte Carlo data in basic scoring
+      downside: 0,
+      score: scoreResult.score,
+      test_data: scoreResult
+    });
+    
+    if (insertError) {
+      console.error('Failed to save S&P 500 benchmark:', insertError);
+      return;
+    }
+    
+    console.log('✅ S&P 500 benchmark saved:', {
+      return: (scoreResult.portfolioReturn * 100).toFixed(1) + '%',
+      score: scoreResult.score.toFixed(1)
+    });
+    
+  } catch (error) {
+    console.error('S&P 500 benchmark test error:', error);
+    // Don't throw - this is a background operation
+  }
+}
+
 interface SaveTestResultRequest {
   portfolioId: string;
   portfolioName: string;
@@ -156,11 +219,18 @@ export async function POST(
     console.log('📊 Returned comparison_data keys:', Object.keys(data.comparison_data || {}));
     
     // Increment tests_count on the question
-    // Note: increment_tests_count RPC function should be created in database
+    console.log('📈 Incrementing tests_count for question:', questionId);
     const { error: rpcError } = await supabase.rpc('increment_tests_count' as any, { question_id: questionId });
     if (rpcError) {
-      console.warn('Failed to increment test count:', rpcError);
+      console.error('❌ Failed to increment test count:', rpcError);
+    } else {
+      console.log('✅ Successfully incremented tests_count');
     }
+    
+    // Also run S&P 500 benchmark test in background (don't await - fire and forget)
+    runSP500BenchmarkTest(questionId).catch(err => 
+      console.warn('S&P 500 benchmark test failed:', err)
+    );
     
     return NextResponse.json({
       success: true,

@@ -183,21 +183,14 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
         </button>
       </div>
 
-      {/* Tags */}
+      {/* Economic Cycle Tag */}
       {question.tags && question.tags.length > 0 && (
         <div className="px-3 sm:px-4 md:px-5 pb-3 sm:pb-4">
-          <div className="flex flex-wrap gap-1.5 sm:gap-2">
-            {question.tags.map((tag, index) => (
-              <span
-                key={index}
-                className="inline-flex items-center px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold
-                  bg-gray-700/50 border border-gray-600/50 text-gray-300 hover:bg-gray-600/50 hover:border-gray-500/50 
-                  transition-colors cursor-default"
-              >
-                #{tag}
-              </span>
-            ))}
-          </div>
+          <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold
+            bg-purple-500/20 border border-purple-500/30 text-purple-300 capitalize"
+          >
+            {question.tags[0]} Cycle
+          </span>
         </div>
       )}
 

@@ -45,27 +45,26 @@ ${periodsInfo}
 Please analyze the question and provide:
 1. A concise, engaging title (5-50 characters) that captures the essence of the question
 2. The most relevant historical period ID from the list above that best matches the scenario described
-3. 3-5 relevant tags (single words or short phrases) that categorize this question
+3. A single tag representing the Economic Cycle category that best fits this question
 
 Return ONLY a JSON object in this exact format:
 {
   "title": "Short engaging title here",
   "historicalPeriodId": 1,
-  "tags": ["tag1", "tag2", "tag3"]
+  "tags": ["economic"]
 }
 
 Guidelines:
 - Title should be clear, specific, and engaging (not just a restatement of the question)
 - Choose the historical period that best matches the economic conditions, market dynamics, or time period mentioned or implied in the question
-- Tags should be lowercase, relevant investment/economic terms (e.g., "recession", "tech-bubble", "inflation", "bonds", "growth")
-- **CRITICAL: The FIRST tag MUST be one of these 6 cycle categories: "empire", "technology", "economic", "business", "market", or "company"**
+- **CRITICAL: You must select EXACTLY ONE tag from these 6 Economic Cycle categories:**
   - "empire": Questions about geopolitical shifts, global power dynamics, international relations
   - "technology": Questions about technological innovation, AI, tech bubbles, digital transformation
   - "economic": Questions about macroeconomic conditions, GDP, inflation, recession, monetary policy
   - "business": Questions about corporate performance, earnings, business cycles, sector trends
   - "market": Questions about market dynamics, volatility, crashes, bull/bear markets, investor sentiment
   - "company": Questions about specific companies, stock picks, individual holdings
-- The remaining 2-4 tags should be additional relevant investment/economic terms
+- The tags array should contain exactly one element (the cycle category), lowercase
 - If the question is about current/future scenarios, choose the most similar historical analog
 - Be concise and precise`;
 
@@ -91,20 +90,23 @@ Guidelines:
     const aiResult = JSON.parse(jsonMatch[0]);
 
     // Validate the response
-    if (!aiResult.title || !aiResult.historicalPeriodId || !Array.isArray(aiResult.tags)) {
+    if (!aiResult.title || !aiResult.historicalPeriodId || !aiResult.tags || aiResult.tags.length === 0) {
       return NextResponse.json(
         { error: 'Invalid AI response format' },
         { status: 500 }
       );
     }
 
-    // Validate that the first tag is one of the 6 cycles
+    // Validate that the tag is one of the valid cycles
     const validCycles = ['empire', 'technology', 'economic', 'business', 'market', 'company'];
-    const firstTag = aiResult.tags[0]?.toLowerCase();
-    if (!firstTag || !validCycles.includes(firstTag)) {
-      console.warn(`AI did not provide a valid cycle tag. First tag was: ${firstTag}. Defaulting to 'market'.`);
-      // Default to 'market' if no valid cycle tag provided
-      aiResult.tags = ['market', ...aiResult.tags.filter((t: string) => t.toLowerCase() !== firstTag)];
+    const cycleTag = aiResult.tags[0]?.toLowerCase();
+    
+    if (!cycleTag || !validCycles.includes(cycleTag)) {
+      console.warn(`AI did not provide a valid cycle tag. Tag was: ${cycleTag}. Defaulting to 'market'.`);
+      aiResult.tags = ['market'];
+    } else {
+      // Ensure tag is lowercase
+      aiResult.tags = [cycleTag];
     }
 
     // Verify the historical period exists
@@ -153,7 +155,7 @@ Guidelines:
         title: aiResult.title.substring(0, 200), // Ensure max length
         historicalPeriod,
         historicalPeriodId: aiResult.historicalPeriodId,
-        tags: aiResult.tags.slice(0, 10).map((tag: string) => tag.toLowerCase().trim()),
+        tags: aiResult.tags, // Single cycle tag only
         description: selectedPhase.synopsis,
         sp500Return // Include S&P 500 return in response
       }

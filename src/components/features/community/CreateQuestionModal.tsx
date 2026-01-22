@@ -151,7 +151,7 @@ export default function CreateQuestionModal({ isOpen, onClose, onSubmit }: Creat
                   AI-Powered Question Intelligence
                 </p>
                 <p className="text-[10px] sm:text-xs text-gray-300 leading-relaxed">
-                  Tell me your question and I'll scenario test your portfolio.
+                  Tell me your question and I'll identify the Economic Cycle and scenario test your portfolio.
                 </p>
               </div>
             </div>
@@ -232,22 +232,18 @@ export default function CreateQuestionModal({ isOpen, onClose, onSubmit }: Creat
                 </p>
               </div>
 
-              {/* Tags */}
+              {/* Economic Cycle Tag */}
               <div className="p-3 sm:p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
                 <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
                   <FiTag className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400" />
-                  <p className="text-[10px] sm:text-xs font-semibold text-purple-400">Suggested Tags</p>
+                  <p className="text-[10px] sm:text-xs font-semibold text-purple-400">Economic Cycle Tag</p>
                 </div>
-                <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                  {aiEnrichment.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center px-2 sm:px-3 py-0.5 sm:py-1 bg-purple-500/20 border 
-                        border-purple-500/30 text-purple-300 text-[10px] sm:text-sm rounded-lg"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 bg-purple-500/20 border 
+                    border-purple-500/30 text-purple-300 text-sm sm:text-base font-bold rounded-lg capitalize"
+                  >
+                    {aiEnrichment.tags[0]} Cycle
+                  </span>
                 </div>
               </div>
 
