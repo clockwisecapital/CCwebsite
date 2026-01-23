@@ -257,6 +257,9 @@ export default function CommunityFeedPage() {
         headers['Authorization'] = `Bearer ${session.access_token}`;
       }
       
+      // portfolioComparison now includes clockwisePortfolios from the API
+      console.log('💾 Saving to leaderboard with clockwisePortfolios:', result.portfolioComparison?.clockwisePortfolios?.length || 0);
+      
       const response = await fetch(`/api/community/questions/${questionId}/test-results`, {
         method: 'POST',
         headers,
@@ -274,7 +277,7 @@ export default function CommunityFeedPage() {
       const data = await response.json();
       
       if (data.success) {
-        console.log('📊 Result saved to leaderboard:', data.message);
+        console.log('📊 Result saved to leaderboard (with all Clockwise portfolios):', data.message);
       }
     } catch (error) {
       console.error('Failed to save leaderboard result:', error);
@@ -305,7 +308,7 @@ export default function CommunityFeedPage() {
     setIsRunningTest(true);
 
     try {
-      // Run real Kronos scoring
+      // Run real Kronos scoring (now includes all 6 portfolios)
       const { runScenarioTest } = await import('@/lib/kronos/integration');
       
       const result = await runScenarioTest(
@@ -337,7 +340,9 @@ export default function CommunityFeedPage() {
       console.log('✅ Kronos test complete:', {
         score: result.testResult.score,
         scenario: result.kronosResponse.scenarioName,
-        analog: result.kronosResponse.analogName
+        analog: result.kronosResponse.analogName,
+        clockwisePortfoliosFromAPI: result.kronosResponse.clockwisePortfolios?.length || 0,
+        clockwisePortfoliosInComparison: result.portfolioComparison?.clockwisePortfolios?.length || 0
       });
       
       // Save test result to leaderboard (don't await, run in background)
@@ -760,6 +765,26 @@ export default function CommunityFeedPage() {
             )}
           </div>
         </div>
+
+        {/* Portfolio Ready Banner */}
+        {user && (
+          <div className="mb-3 sm:mb-4 px-3 sm:px-4 py-2.5 sm:py-3 bg-gradient-to-r from-teal-500/10 via-blue-500/10 to-teal-500/10 
+            backdrop-blur-sm border border-teal-500/30 rounded-lg">
+            <div className="flex items-center gap-2.5">
+              <div className="flex-shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-teal-500/20 border border-teal-500/50 
+                flex items-center justify-center">
+                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm sm:text-base font-semibold text-white">
+                  Your portfolio is ready for testing! Select any question below.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stats Bar */}
         {user && (

@@ -6,7 +6,6 @@ import {
   FiThumbsUp, 
   FiMessageSquare, 
   FiBarChart2, 
-  FiShare2,
   FiClock,
   FiAward,
 } from 'react-icons/fi';
@@ -156,19 +155,6 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
             </div>
           </div>
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            navigator.clipboard.writeText(
-              `${window.location.origin}/scenario-testing/${question.id}`
-            );
-          }}
-          className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 text-[10px] sm:text-xs font-semibold text-gray-300 
-            border border-gray-600 rounded-full hover:bg-gray-700 hover:border-teal-500 transition-colors flex-shrink-0"
-        >
-          <FiShare2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-          <span className="hidden xs:inline">Share</span>
-        </button>
       </div>
 
       {/* Question Banner - Clickable to view top portfolios */}

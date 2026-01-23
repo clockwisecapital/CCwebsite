@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import IntakeTab from './IntakeTab';
 import ReviewTab from './ReviewTab';
-import ScenarioTestingTab from './ScenarioTestingTab';
 import UnifiedVideoPlayer, { type VideoConfig } from './UnifiedVideoPlayer';
 import { getVideoPath } from '@/hooks/useAvatarVariant';
 import CreatePasswordModal from '@/components/features/auth/CreatePasswordModal';
@@ -75,6 +75,7 @@ const DASHBOARD_STATE_KEY = 'kronos-dashboard-state';
 
 export default function PortfolioDashboard() {
   const { user } = useAuth();
+  const router = useRouter();
   const [stateLoaded, setStateLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<'intake' | 'review' | 'analyze' | 'scenarios'>('intake');
   const [intakeData, setIntakeData] = useState<IntakeFormData | null>(null);
@@ -717,15 +718,21 @@ export default function PortfolioDashboard() {
               </button>
 
               <button
-                onClick={() => intakeData && setActiveTab('scenarios')}
+                onClick={() => {
+                  if (intakeData) {
+                    // Set portfolio ID in sessionStorage so banner shows
+                    if (savedPortfolioId) {
+                      sessionStorage.setItem('scenarioTestPortfolioId', savedPortfolioId);
+                    }
+                    router.push('/scenario-testing/questions');
+                  }
+                }}
                 disabled={!intakeData}
                 className={`
                   flex-1 px-3 sm:px-6 md:px-8 py-3 md:py-4 text-xs sm:text-sm font-medium border-b-2 transition-colors
-                  ${activeTab === 'scenarios'
-                    ? 'border-teal-500 text-teal-400'
-                    : intakeData
-                      ? 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                      : 'border-transparent text-gray-600 cursor-not-allowed'
+                  ${intakeData
+                    ? 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                    : 'border-transparent text-gray-600 cursor-not-allowed'
                   }
                 `}
               >
@@ -784,18 +791,6 @@ export default function PortfolioDashboard() {
                 portfolioId={savedPortfolioId || undefined}
                 user={user}
                 onFinishAccountClick={handleFinishAccountClick}
-              />
-            )}
-
-            {activeTab === 'scenarios' && intakeData && (
-              <ScenarioTestingTab
-                portfolioData={intakeData.portfolio}
-                portfolioId={savedPortfolioId || undefined}
-                onNext={() => setActiveTab('analyze')}
-                onBack={() => setActiveTab('review')}
-                email={emailData?.email}
-                firstName={emailData?.firstName}
-                lastName={emailData?.lastName}
               />
             )}
             

@@ -271,6 +271,83 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScoreResp
       } catch (error) {
         console.warn('⚠️ TIME portfolio scoring failed, returning user score only', error);
       }
+      
+      // Score the 4 additional Clockwise portfolios
+      console.log(`\n📊 Scoring 4 additional Clockwise portfolios...`);
+      try {
+        const { MAX_GROWTH_PORTFOLIO, GROWTH_PORTFOLIO, MODERATE_PORTFOLIO, MAX_INCOME_PORTFOLIO } = await import('@/lib/clockwise-portfolios');
+        const { scoreAssetAllocationPortfolio } = await import('@/lib/kronos/asset-allocation-scoring');
+        
+        const [maxGrowthResult, growthResult, moderateResult, maxIncomeResult] = await Promise.all([
+          scoreAssetAllocationPortfolio(body.question, MAX_GROWTH_PORTFOLIO.allocations, 'Max Growth'),
+          scoreAssetAllocationPortfolio(body.question, GROWTH_PORTFOLIO.allocations, 'Growth'),
+          scoreAssetAllocationPortfolio(body.question, MODERATE_PORTFOLIO.allocations, 'Moderate'),
+          scoreAssetAllocationPortfolio(body.question, MAX_INCOME_PORTFOLIO.allocations, 'Max Income')
+        ]);
+        
+        // Helper to convert allocations to holdings format
+        const allocToHoldings = (allocs: any) => {
+          const map: Record<string, string> = { stocks: 'SPY', bonds: 'AGG', commodities: 'DBC', realEstate: 'VNQ', cash: 'CASH' };
+          return Object.entries(allocs).filter(([_, w]) => (w as number) > 0).map(([a, w]) => ({
+            ticker: map[a] || a,
+            weight: w as number,
+            name: map[a] || a,
+            assetClass: a
+          }));
+        };
+        
+        (response as any).clockwisePortfolios = [
+          {
+            id: 'time',
+            name: 'TIME Portfolio',
+            score: response.timePortfolio?.score || 0,
+            expectedReturn: response.timePortfolio?.portfolioReturn || 0,
+            upside: (response.timePortfolio?.portfolioReturn || 0) * 1.5,
+            downside: response.timePortfolio?.portfolioDrawdown || 0,
+            holdings: response.timeHoldings || []
+          },
+          {
+            id: 'max-growth',
+            name: 'Max Growth',
+            score: maxGrowthResult.score,
+            expectedReturn: maxGrowthResult.portfolioReturn,
+            upside: maxGrowthResult.portfolioReturn * 1.5,
+            downside: maxGrowthResult.portfolioDrawdown,
+            holdings: allocToHoldings(MAX_GROWTH_PORTFOLIO.allocations)
+          },
+          {
+            id: 'growth',
+            name: 'Growth',
+            score: growthResult.score,
+            expectedReturn: growthResult.portfolioReturn,
+            upside: growthResult.portfolioReturn * 1.5,
+            downside: growthResult.portfolioDrawdown,
+            holdings: allocToHoldings(GROWTH_PORTFOLIO.allocations)
+          },
+          {
+            id: 'moderate',
+            name: 'Moderate',
+            score: moderateResult.score,
+            expectedReturn: moderateResult.portfolioReturn,
+            upside: moderateResult.portfolioReturn * 1.5,
+            downside: moderateResult.portfolioDrawdown,
+            holdings: allocToHoldings(MODERATE_PORTFOLIO.allocations)
+          },
+          {
+            id: 'max-income',
+            name: 'Max Income',
+            score: maxIncomeResult.score,
+            expectedReturn: maxIncomeResult.portfolioReturn,
+            upside: maxIncomeResult.portfolioReturn * 1.5,
+            downside: maxIncomeResult.portfolioDrawdown,
+            holdings: allocToHoldings(MAX_INCOME_PORTFOLIO.allocations)
+          }
+        ];
+        
+        console.log(`✅ All Clockwise portfolios scored: TIME=${response.timePortfolio?.score}, Max Growth=${maxGrowthResult.score}, Growth=${growthResult.score}, Moderate=${moderateResult.score}, Max Income=${maxIncomeResult.score}`);
+      } catch (error) {
+        console.warn('⚠️ Failed to score additional Clockwise portfolios', error);
+      }
     }
     
     return NextResponse.json(response);

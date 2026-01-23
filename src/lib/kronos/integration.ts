@@ -74,6 +74,20 @@ export interface KronosScoreResponse {
   scenarioName?: string;
   analogName?: string;
   analogPeriod?: string;
+  clockwisePortfolios?: Array<{
+    id: string;
+    name: string;
+    score: number;
+    expectedReturn: number;
+    upside: number;
+    downside: number;
+    holdings: Array<{
+      ticker: string;
+      weight: number;
+      name?: string;
+      assetClass?: string;
+    }>;
+  }>;
   error?: string;
 }
 
@@ -118,6 +132,20 @@ export interface UIPortfolioComparison {
     positions: any[];
     topPositions: any[];
   };
+  clockwisePortfolios?: Array<{
+    id: string;
+    name: string;
+    score: number;
+    expectedReturn: number;
+    upside: number;
+    downside: number;
+    holdings: Array<{
+      ticker: string;
+      weight: number;
+      name?: string;
+      assetClass?: string;
+    }>;
+  }>;
 }
 
 // ============================================================================
@@ -130,12 +158,13 @@ export interface UIPortfolioComparison {
 export async function getPortfolioHoldings(portfolioId: string): Promise<PortfolioHolding[]> {
   // Import here to avoid circular dependencies
   const { supabase } = await import('@/lib/supabase/client');
+  const { extractHoldingsFromPortfolio } = await import('./portfolio-extractor');
   
   try {
-    // Fetch portfolio data from database
+    // Fetch portfolio data from database (including intake_data for proxy portfolios)
     const { data: portfolio, error: portfolioError } = await supabase
       .from('portfolios')
-      .select('portfolio_data')
+      .select('id, portfolio_data, intake_data, name')
       .eq('id', portfolioId)
       .single();
     
@@ -143,41 +172,33 @@ export async function getPortfolioHoldings(portfolioId: string): Promise<Portfol
       throw new Error(`Portfolio not found: ${portfolioId}`);
     }
     
-    // Extract holdings from JSONB portfolio_data
-    const portfolioData = portfolio.portfolio_data as any;
-    
-    if (!portfolioData) {
+    if (!portfolio.portfolio_data) {
       throw new Error('Portfolio has no data');
     }
     
-    // Check if portfolio has specific holdings with tickers
-    if (!portfolioData.holdings || portfolioData.holdings.length === 0) {
-      throw new Error(
-        'Portfolio does not have specific holdings with ticker symbols. ' +
-        'Please edit your portfolio to add specific stocks/ETFs to test against scenarios.'
-      );
-    }
+    // Use portfolio extractor to handle both specific holdings and proxy portfolios
+    const holdings = extractHoldingsFromPortfolio(portfolio);
     
-    // Convert to Kronos format
-    const holdings: PortfolioHolding[] = portfolioData.holdings.map((h: any) => ({
-      ticker: h.ticker || h.symbol || h.name,
-      weight: (h.weight !== undefined) ? h.weight : 
-              (h.percentage !== undefined) ? (h.percentage / 100) : 
-              (h.allocation !== undefined) ? h.allocation : 0,
-      name: h.name || h.ticker || h.symbol,
-      assetClass: h.assetClass || h.asset_class
+    // Convert to PortfolioHolding format expected by integration layer
+    const portfolioHoldings: PortfolioHolding[] = holdings.map(h => ({
+      ticker: h.ticker,
+      weight: h.weight,
+      name: h.ticker,
+      assetClass: h.assetClass
     }));
     
     // Validate weights sum to approximately 1.0
-    const totalWeight = holdings.reduce((sum, h) => sum + h.weight, 0);
+    const totalWeight = portfolioHoldings.reduce((sum, h) => sum + h.weight, 0);
     
     if (Math.abs(totalWeight - 1.0) > 0.05) {
       console.warn(`Portfolio weights sum to ${totalWeight.toFixed(3)}, normalizing...`);
       // Normalize
-      holdings.forEach(h => h.weight = h.weight / totalWeight);
+      portfolioHoldings.forEach(h => h.weight = h.weight / totalWeight);
     }
     
-    return holdings;
+    console.log(`✅ Extracted ${portfolioHoldings.length} holdings from portfolio ${portfolio.name || portfolioId}`);
+    
+    return portfolioHoldings;
   } catch (error) {
     console.error('Error fetching portfolio holdings:', error);
     throw error;
@@ -378,7 +399,8 @@ export function transformKronosToUIComparison(
           simulations: 5000
         }
       })) || []
-    }
+    },
+    clockwisePortfolios: kronosResponse.clockwisePortfolios || []
   };
 }
 
@@ -388,6 +410,10 @@ export function transformKronosToUIComparison(
 
 /**
  * Complete flow: score portfolio and return UI-ready data
+ * DEPRECATED: Use /api/kronos/run-scenario-test endpoint instead for complete test with all portfolios
+ * 
+ * This function is kept for backward compatibility but should not be used from client components
+ * as it requires server-side database access for Clockwise portfolios.
  */
 export async function runScenarioTest(
   portfolioId: string,
@@ -398,8 +424,12 @@ export async function runScenarioTest(
   testResult: UITestResult;
   portfolioComparison: UIPortfolioComparison | null;
   kronosResponse: KronosScoreResponse;
+  clockwisePortfolios?: any[]; // All 5 Clockwise portfolio results
 }> {
-  // Score the portfolio
+  console.log('\n🎯 Running scenario test (legacy mode - no Clockwise portfolios)...');
+  console.warn('⚠️ Use /api/kronos/run-scenario-test endpoint for complete test with all portfolios');
+  
+  // Score the user portfolio (includes TIME portfolio comparison)
   const kronosResponse = await scorePortfolioById(portfolioId, question, true);
   
   // Transform to UI formats
@@ -409,6 +439,7 @@ export async function runScenarioTest(
   return {
     testResult,
     portfolioComparison,
-    kronosResponse
+    kronosResponse,
+    clockwisePortfolios: [] // Empty - use API endpoint instead
   };
 }

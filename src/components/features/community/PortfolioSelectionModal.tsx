@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FiX, FiPlus, FiChevronRight } from 'react-icons/fi';
-import SimplePortfolioForm, { type SimplePortfolioFormData } from './SimplePortfolioForm';
+import KronosStylePortfolioForm, { type KronosPortfolioFormData } from './KronosStylePortfolioForm';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth/AuthContext';
 
@@ -66,7 +66,7 @@ export default function PortfolioSelectionModal({
     }
   };
 
-  const handleCreatePortfolio = async (formData: SimplePortfolioFormData) => {
+  const handleCreatePortfolio = async (formData: KronosPortfolioFormData) => {
     setIsCreating(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -75,7 +75,9 @@ export default function PortfolioSelectionModal({
         headers['Authorization'] = `Bearer ${session.access_token}`;
       }
 
-      // Create portfolio with simple data including holdings
+      // Create portfolio with Kronos-style data
+      // For portfolios created this way, we'll set a default allocation (100% stocks for proxy system)
+      // or if they have specific holdings, those will be used instead
       const response = await fetch('/api/portfolios/create', {
         method: 'POST',
         headers,
@@ -84,15 +86,21 @@ export default function PortfolioSelectionModal({
           description: formData.description,
           portfolio_data: JSON.stringify({
             totalValue: formData.totalValue,
-            stocks: formData.stocks,
-            bonds: formData.bonds,
-            cash: formData.cash,
-            alternatives: formData.alternatives,
+            stocks: 100,  // Default for proxy system when using value ranges
+            bonds: 0,
+            cash: 0,
+            realEstate: 0,
+            commodities: 0,
+            alternatives: 0,
             holdings: formData.specificHoldings && formData.specificHoldings.length > 0 
               ? formData.specificHoldings 
               : [],
           }),
-          intake_data: JSON.stringify(formData),
+          intake_data: JSON.stringify({
+            ...formData,
+            riskTolerance: 'medium',  // Default risk tolerance
+            experienceLevel: 'Intermediate',  // Default experience level
+          }),
         }),
       });
 
@@ -193,7 +201,7 @@ export default function PortfolioSelectionModal({
               <p className="text-sm text-gray-400 mb-6">
                 Fill in your portfolio information to test this scenario
               </p>
-              <SimplePortfolioForm
+              <KronosStylePortfolioForm
                 onSubmit={handleCreatePortfolio}
                 isLoading={isCreating}
               />

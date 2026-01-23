@@ -1,30 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FiArrowLeft, FiTrendingUp, FiTrendingDown, FiAward, FiCheckCircle, FiAlertCircle, FiZap } from 'react-icons/fi';
+import { FiArrowLeft, FiZap } from 'react-icons/fi';
 import { useRouter, useParams } from 'next/navigation';
-
-interface PortfolioMetrics {
-  name: string;
-  score: number;
-  expectedReturn: number;
-  expectedBestYear: number;
-  expectedWorstYear: number;
-  upside: number;
-  downside: number;
-  topPositions: Array<{
-    ticker: string;
-    name: string;
-    weight: number;
-    expectedReturn: number;
-  }>;
-}
-
-interface ComparisonInsight {
-  icon: React.ReactNode;
-  text: string;
-  color: 'green' | 'orange' | 'blue' | 'red';
-}
+import PortfolioCard, { type PortfolioCardData } from '@/components/features/community/PortfolioCard';
 
 const PortfolioComparison = () => {
   const router = useRouter();
@@ -32,9 +11,10 @@ const PortfolioComparison = () => {
   const questionId = params.questionId as string;
   const portfolioId = params.portfolioId as string;
 
-  const [selectedPortfolio, setSelectedPortfolio] = useState<PortfolioMetrics | null>(null);
-  const [timePortfolio, setTimePortfolio] = useState<PortfolioMetrics | null>(null);
+  const [userPortfolio, setUserPortfolio] = useState<PortfolioCardData | null>(null);
+  const [clockwisePortfolios, setClockwisePortfolios] = useState<PortfolioCardData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedPortfolios, setExpandedPortfolios] = useState<Set<string>>(new Set(['user', 'time']));
 
   useEffect(() => {
     const fetchComparison = async () => {
@@ -78,7 +58,8 @@ const PortfolioComparison = () => {
               });
             }
             
-            setSelectedPortfolio({
+            setUserPortfolio({
+              id: 'user',
               name: portfolioTest.portfolioName,
               score: portfolioTest.score,
               expectedReturn: portfolioTest.expectedReturn,
@@ -89,48 +70,60 @@ const PortfolioComparison = () => {
               topPositions: userTopPositions
             });
             
-            // Extract TIME portfolio data from comparison_data if available
-            if (portfolioTest.comparisonData && portfolioTest.comparisonData.timePortfolio) {
-              console.log('✅ Found TIME portfolio data in comparisonData');
-              const timeData = portfolioTest.comparisonData.timePortfolio;
+            // Build array of all Clockwise portfolios from SAVED test data
+            const clockwise: PortfolioCardData[] = [];
+            
+            console.log('📊 Loading Clockwise portfolios from saved test data...');
+            console.log('📊 comparisonData available:', !!portfolioTest.comparisonData);
+            console.log('📊 clockwisePortfolios available:', !!portfolioTest.comparisonData?.clockwisePortfolios);
+            
+            // Check if we have clockwisePortfolios in the saved data
+            if (portfolioTest.comparisonData?.clockwisePortfolios && Array.isArray(portfolioTest.comparisonData.clockwisePortfolios)) {
+              console.log('✅ Found', portfolioTest.comparisonData.clockwisePortfolios.length, 'Clockwise portfolios in saved data');
               
-              setTimePortfolio({
-                name: 'TIME Portfolio',
-                score: timeData.score || 88,
-                expectedReturn: timeData.expectedReturn || 0.094,
-                expectedBestYear: timeData.upside || 0.445,
-                expectedWorstYear: timeData.downside || -0.171,
-                upside: timeData.upside || 0.441,
-                downside: timeData.downside || -0.171,
-                topPositions: timeData.topPositions?.slice(0, 5).map((pos: any) => ({
-                  ticker: pos.ticker,
-                  name: pos.name || pos.ticker,
-                  weight: pos.weight,
-                  expectedReturn: pos.expectedReturn || 0
-                })) || [
-                  { ticker: 'VTI', name: 'U.S. Total Market', weight: 40, expectedReturn: 0.098 },
-                  { ticker: 'TLT', name: 'Long-Term Treasuries', weight: 15, expectedReturn: 0.038 },
-                  { ticker: 'GLD', name: 'Gold', weight: 12.5, expectedReturn: 0.068 },
-                ]
+              portfolioTest.comparisonData.clockwisePortfolios.forEach((p: any) => {
+                clockwise.push({
+                  id: p.id,
+                  name: p.name,
+                  score: p.score,
+                  expectedReturn: p.expectedReturn,
+                  expectedBestYear: p.upside,
+                  expectedWorstYear: p.downside,
+                  upside: p.upside,
+                  downside: p.downside,
+                  topPositions: p.holdings?.filter((h: any) => h.weight > 0).slice(0, 5).map((h: any) => ({
+                    ticker: h.ticker,
+                    name: h.ticker,
+                    weight: typeof h.weight === 'number' && h.weight < 1 ? h.weight * 100 : h.weight,
+                    expectedReturn: p.expectedReturn || 0
+                  })) || []
+                });
               });
             } else {
-              console.log('⚠️ No comparisonData found, using fallback');
-              // Fallback to placeholder if no comparison data
-              setTimePortfolio({
-                name: 'TIME Portfolio',
-                score: 88,
-                expectedReturn: 0.094,
-                expectedBestYear: 0.445,
-                expectedWorstYear: -0.171,
-                upside: 0.441,
-                downside: -0.171,
-                topPositions: [
-                  { ticker: 'VTI', name: 'U.S. Total Market', weight: 40, expectedReturn: 0.098 },
-                  { ticker: 'TLT', name: 'Long-Term Treasuries', weight: 15, expectedReturn: 0.038 },
-                  { ticker: 'GLD', name: 'Gold', weight: 12.5, expectedReturn: 0.068 },
-                ]
-              });
+              // Fallback: Add TIME Portfolio from old comparisonData structure
+              console.warn('⚠️ No clockwisePortfolios in saved data, using legacy TIME-only structure');
+              if (portfolioTest.comparisonData?.timePortfolio) {
+                const timeData = portfolioTest.comparisonData.timePortfolio;
+                clockwise.push({
+                  id: 'time',
+                  name: 'TIME Portfolio',
+                  score: timeData.score || 88,
+                  expectedReturn: timeData.expectedReturn || 0.094,
+                  expectedBestYear: timeData.upside || 0.445,
+                  expectedWorstYear: timeData.downside || -0.171,
+                  upside: timeData.upside || 0.441,
+                  downside: timeData.downside || -0.171,
+                  topPositions: timeData.topPositions?.slice(0, 5).map((pos: any) => ({
+                    ticker: pos.ticker,
+                    name: pos.name || pos.ticker,
+                    weight: pos.weight,
+                    expectedReturn: pos.expectedReturn || 0
+                  })) || []
+                });
+              }
             }
+            
+            setClockwisePortfolios(clockwise);
           }
         }
       } catch (error) {
@@ -143,61 +136,18 @@ const PortfolioComparison = () => {
     fetchComparison();
   }, [questionId, portfolioId]);
 
-  const getInsights = (): ComparisonInsight[] => {
-    if (!selectedPortfolio || !timePortfolio) return [];
-    
-    const returnDiff = (timePortfolio.expectedReturn - selectedPortfolio.expectedReturn) * 100;
-    const upsideDiff = (timePortfolio.upside - selectedPortfolio.upside) * 100;
-    const downsideDiff = Math.abs(timePortfolio.downside - selectedPortfolio.downside) * 100;
-    const scoreDiff = timePortfolio.score - selectedPortfolio.score;
-    
-    return [
-      {
-        icon: <FiTrendingUp className="w-5 h-5" />,
-        text: returnDiff > 0 
-          ? `TIME offers +${returnDiff.toFixed(1)}% higher expected 5-year return`
-          : `Your portfolio offers +${Math.abs(returnDiff).toFixed(1)}% higher expected 5-year return`,
-        color: returnDiff > 0 ? 'green' : 'blue'
-      },
-      {
-        icon: <FiAlertCircle className="w-5 h-5" />,
-        text: timePortfolio.downside < selectedPortfolio.downside
-          ? `TIME has ${downsideDiff.toFixed(1)}% more downside risk in worst-case scenarios`
-          : `Your portfolio has ${downsideDiff.toFixed(1)}% more downside risk in worst-case scenarios`,
-        color: 'orange'
-      },
-      {
-        icon: <FiZap className="w-5 h-5" />,
-        text: upsideDiff > 0
-          ? `TIME captures +${upsideDiff.toFixed(1)}% more upside in best-case years`
-          : `Your portfolio captures +${Math.abs(upsideDiff).toFixed(1)}% more upside in best-case years`,
-        color: upsideDiff > 0 ? 'blue' : 'green'
-      },
-      {
-        icon: <FiAward className="w-5 h-5" />,
-        text: scoreDiff > 0
-          ? `TIME scores ${Math.abs(scoreDiff).toFixed(0)} points higher for this specific scenario`
-          : `Your portfolio scores ${Math.abs(scoreDiff).toFixed(0)} points higher for this specific scenario`,
-        color: scoreDiff > 0 ? 'green' : 'blue'
+  const toggleExpanded = (portfolioId: string) => {
+    setExpandedPortfolios(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(portfolioId)) {
+        newSet.delete(portfolioId);
+      } else {
+        newSet.add(portfolioId);
       }
-    ];
+      return newSet;
+    });
   };
 
-  const formatPercent = (value: number, includeSign: boolean = false) => {
-    const percent = (value * 100).toFixed(1);
-    if (includeSign && value >= 0) {
-      return `+${percent}%`;
-    }
-    return `${percent}%`;
-  };
-
-  const getColorClass = (value: number, positive = true) => {
-    if (value === 0) return 'text-gray-400';
-    if (positive) {
-      return value > 0 ? 'text-green-400' : 'text-red-400';
-    }
-    return value > 0 ? 'text-red-400' : 'text-green-400';
-  };
 
   if (loading) {
     return (
@@ -210,7 +160,7 @@ const PortfolioComparison = () => {
     );
   }
 
-  if (!selectedPortfolio || !timePortfolio) {
+  if (!userPortfolio || clockwisePortfolios.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0a0e1a] via-[#0f1420] to-[#0a0e1a] pt-20 flex items-center justify-center">
         <div className="text-center">
@@ -225,6 +175,7 @@ const PortfolioComparison = () => {
       </div>
     );
   }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0e1a] via-[#0f1420] to-[#0a0e1a] pt-20">
@@ -252,164 +203,62 @@ const PortfolioComparison = () => {
         <div className="bg-gradient-to-r from-teal-500/10 to-blue-500/10 border border-teal-500/50 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 mb-4 sm:mb-6 md:mb-8">
           <h3 className="text-base sm:text-lg md:text-xl font-bold text-white mb-4 sm:mb-6 md:mb-8 flex items-center gap-2">
             <FiZap className="w-4 h-4 sm:w-5 sm:h-5 text-teal-400" />
-            Head-to-Head Comparison
+            Portfolio Comparison
           </h3>
 
-          {/* Score Comparison */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-teal-500/20">
-            {/* Left Portfolio */}
-            <div>
-              <p className="text-gray-400 text-xs sm:text-sm mb-2 truncate">{selectedPortfolio.name}</p>
-              <div className="flex items-baseline gap-2 sm:gap-3 mb-4 sm:mb-6">
-                <span className="text-2xl sm:text-3xl font-bold text-white">{selectedPortfolio.score}</span>
-                <span className="text-gray-400 text-xs sm:text-sm">VS</span>
-              </div>
-              {/* Metrics */}
-              <div className="space-y-3 sm:space-y-4">
-                <div>
-                  <p className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Expected Return (5yr)</p>
-                  <p className={`text-sm sm:text-base font-bold ${getColorClass(selectedPortfolio.expectedReturn)}`}>
-                    {formatPercent(selectedPortfolio.expectedReturn)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Expected Best Year (5yr)</p>
-                  <p className="text-sm sm:text-base font-bold text-green-400">{formatPercent(selectedPortfolio.expectedBestYear)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Expected Worst Year (5yr)</p>
-                  <p className="text-sm sm:text-base font-bold text-red-400">{formatPercent(selectedPortfolio.expectedWorstYear)}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Portfolio (TIME) */}
-            <div>
-              <p className="text-teal-400 text-xs sm:text-sm mb-2 font-semibold sm:text-right truncate">{timePortfolio.name}</p>
-              <div className="flex items-baseline gap-2 sm:gap-3 sm:justify-end mb-4 sm:mb-6">
-                <span className="text-gray-400 text-xs sm:text-sm">vs</span>
-                <span className="text-2xl sm:text-3xl font-bold text-teal-400">{timePortfolio.score}</span>
-              </div>
-              {/* Metrics */}
-              <div className="space-y-3 sm:space-y-4">
-                <div className="sm:text-right">
-                  <p className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Expected Return (5yr)</p>
-                  <p className={`text-sm sm:text-base font-bold ${getColorClass(timePortfolio.expectedReturn)}`}>
-                    {formatPercent(timePortfolio.expectedReturn)}
-                  </p>
-                </div>
-                <div className="sm:text-right">
-                  <p className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Expected Best Year (5yr)</p>
-                  <p className="text-sm sm:text-base font-bold text-green-400">{formatPercent(timePortfolio.expectedBestYear)}</p>
-                </div>
-                <div className="sm:text-right">
-                  <p className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Expected Worst Year (5yr)</p>
-                  <p className="text-sm sm:text-base font-bold text-red-400">{formatPercent(timePortfolio.expectedWorstYear)}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Key Insights */}
-          <div className="space-y-2 sm:space-y-3">
-            {getInsights().map((insight, idx) => {
-              const bgColor = {
-                green: 'bg-green-500/20 border-green-500/50',
-                orange: 'bg-orange-500/20 border-orange-500/50',
-                blue: 'bg-blue-500/20 border-blue-500/50',
-                red: 'bg-red-500/20 border-red-500/50'
-              }[insight.color];
-
-              const textColor = {
-                green: 'text-green-300',
-                orange: 'text-orange-300',
-                blue: 'text-blue-300',
-                red: 'text-red-300'
-              }[insight.color];
-
+          {/* Mobile: Stacked View */}
+          <div className="md:hidden space-y-4">
+            {/* User Portfolio */}
+            <PortfolioCard
+              portfolio={userPortfolio}
+              isUser={true}
+              isExpanded={expandedPortfolios.has('user')}
+              canToggle={false}
+            />
+            {/* Clockwise Portfolios */}
+            {clockwisePortfolios.map(portfolio => {
+              const isTime = portfolio.id === 'time';
+              const canToggle = !isTime;
               return (
-                <div key={idx} className={`flex items-start gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg border ${bgColor}`}>
-                  <div className={`flex-shrink-0 mt-0.5 sm:mt-1 ${textColor}`}>
-                    {insight.icon}
-                  </div>
-                  <p className={`text-xs sm:text-sm font-medium ${textColor}`}>{insight.text}</p>
-                </div>
+                <PortfolioCard
+                  key={portfolio.id}
+                  portfolio={portfolio}
+                  isExpanded={expandedPortfolios.has(portfolio.id)}
+                  onToggle={() => toggleExpanded(portfolio.id)}
+                  canToggle={canToggle}
+                />
               );
             })}
           </div>
 
-          {/* Summary */}
-          <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-teal-500/20 border border-teal-500/30 rounded-lg">
-            <p className="text-xs sm:text-sm md:text-base text-teal-300">
-              <span className="font-bold text-teal-400">{timePortfolio.name}</span> delivers <span className="font-bold text-green-400">+2.6% higher expected returns</span> with <span className="font-bold text-orange-400">4.3% more downside risk</span>
-            </p>
-          </div>
-        </div>
-
-        {/* Portfolio Composition */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mb-4 sm:mb-6 md:mb-8">
-          {/* Left Portfolio */}
-          <div className="bg-gray-900/50 border border-gray-700 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6">
-            <h4 className="text-sm sm:text-base font-bold text-white mb-3 sm:mb-4 flex items-center gap-2 truncate">
-              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-gray-400 rounded-full flex-shrink-0"></div>
-              <span className="truncate">{selectedPortfolio.name}</span>
-            </h4>
-            <div className="space-y-2 sm:space-y-3">
-              {selectedPortfolio.topPositions.length === 0 ? (
-                <div className="text-center py-6 sm:py-8 text-gray-400 text-xs sm:text-sm">
-                  No specific holdings data available
-                </div>
-              ) : (
-                selectedPortfolio.topPositions.map((position, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-white text-xs sm:text-sm">{position.ticker}</p>
-                      <p className="text-[10px] sm:text-xs text-gray-400 truncate">{position.name}</p>
-                    </div>
-                    <div className="text-right flex-shrink-0 ml-2">
-                      <p className="font-bold text-gray-200 text-xs sm:text-sm">{position.weight.toFixed(1)}%</p>
-                      <p className={`text-[10px] sm:text-xs font-semibold ${getColorClass(position.expectedReturn)}`}>
-                        {formatPercent(position.expectedReturn)}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Right Portfolio (TIME) */}
-          <div className="bg-teal-900/20 border border-teal-600/50 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6">
-            <h4 className="text-sm sm:text-base font-bold text-teal-300 mb-3 sm:mb-4 flex items-center gap-2 truncate">
-              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-teal-400 rounded-full flex-shrink-0"></div>
-              <span className="truncate">{timePortfolio.name}</span>
-            </h4>
-            <div className="space-y-2 sm:space-y-3">
-              {timePortfolio.topPositions.map((position, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2.5 sm:p-3 bg-teal-900/30 rounded-lg hover:bg-teal-900/50 transition-colors">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-teal-200 text-xs sm:text-sm">{position.ticker}</p>
-                    <p className="text-[10px] sm:text-xs text-teal-400 truncate">{position.name}</p>
-                  </div>
-                  <div className="text-right flex-shrink-0 ml-2">
-                    <p className="font-bold text-teal-200 text-xs sm:text-sm">{position.weight}%</p>
-                    <p className={`text-[10px] sm:text-xs font-semibold ${getColorClass(position.expectedReturn)}`}>
-                      {formatPercent(position.expectedReturn)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
+          {/* Desktop: Grid View */}
+          <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+            {/* User Portfolio */}
+            <PortfolioCard
+              portfolio={userPortfolio}
+              isUser={true}
+              isExpanded={true}
+              canToggle={false}
+            />
+            {/* Clockwise Portfolios */}
+            {clockwisePortfolios.map(portfolio => (
+              <PortfolioCard
+                key={portfolio.id}
+                portfolio={portfolio}
+                isExpanded={true}
+                canToggle={false}
+              />
+            ))}
           </div>
         </div>
 
         {/* CTA Section */}
         <div className="bg-gradient-to-r from-teal-900/40 to-blue-900/40 border border-teal-600/50 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 text-center">
           <h3 className="text-base sm:text-lg md:text-xl font-bold text-white mb-2">
-            Ready to optimize your portfolio?
+            Ready to implement your portfolio?
           </h3>
           <p className="text-xs sm:text-sm md:text-base text-gray-300 mb-4 sm:mb-6">
-            Get personalized recommendations from our advisors
+            Get personalized advice from our financial experts
           </p>
           <button className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-teal-500 hover:bg-teal-600 text-black text-sm sm:text-base font-bold rounded-lg sm:rounded-xl transition-all duration-300 hover:scale-105">
             Talk to an Advisor

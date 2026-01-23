@@ -5,7 +5,7 @@
  */
 
 import type { Holding } from './types';
-import { mapTickerToKronosAssetClass } from './scoring';
+import { mapTickerToKronosAssetClass } from './asset-class-mappings';
 
 // =====================================================================================
 // TYPES
@@ -150,7 +150,7 @@ function extractFromAllocation(allocation: PortfolioData): Holding[] {
   // Map allocation to representative ETFs
   if (allocation.stocks && allocation.stocks > 0) {
     holdings.push({
-      ticker: 'VTI',
+      ticker: 'SPY',
       weight: allocation.stocks / 100,
       assetClass: 'us-large-cap'
     });
@@ -200,7 +200,7 @@ function extractFromAllocation(allocation: PortfolioData): Holding[] {
   if (holdings.length === 0) {
     console.warn('No allocation data found, creating default 60/40 portfolio');
     holdings.push(
-      { ticker: 'VTI', weight: 0.6, assetClass: 'us-large-cap' },
+      { ticker: 'SPY', weight: 0.6, assetClass: 'us-large-cap' },
       { ticker: 'AGG', weight: 0.4, assetClass: 'aggregate-bonds' }
     );
   }
