@@ -68,33 +68,44 @@ export default function TopPortfoliosPage() {
     }
   };
   
-  // Fetch S&P 500 benchmark average from actual tests
-  const fetchSP500Benchmark = async () => {
+  // Calculate S&P 500 average from benchmark returns in test results
+  const calculateSP500Average = (testResults: QuestionLeaderboardEntry[]) => {
     try {
-      console.log('📊 Fetching S&P 500 benchmark data for question:', questionId);
+      console.log('📊 Calculating S&P 500 average from test results');
       
-      // Query the benchmarks directly from Supabase
-      const { data: benchmarks, error } = await supabase
-        .from('question_sp500_benchmarks' as any)
-        .select('expected_return, score')
-        .eq('question_id', questionId);
-      
-      if (error || !benchmarks || benchmarks.length === 0) {
+      if (!testResults || testResults.length === 0) {
         setSp500BenchmarkData({ avgReturn: null, testCount: 0 });
         return;
       }
       
-      const avgReturn = benchmarks.reduce((sum: number, b: any) => sum + (b.expected_return || 0), 0) / benchmarks.length;
+      // Extract benchmark returns from comparison data
+      const benchmarkReturns = testResults
+        .map(test => {
+          // Get benchmark return from comparison data
+          const comparisonData = test.comparison_data as any;
+          return comparisonData?.timePortfolio?.benchmarkReturn || 
+                 comparisonData?.userPortfolio?.benchmarkReturn;
+        })
+        .filter((ret): ret is number => ret !== null && ret !== undefined);
+      
+      if (benchmarkReturns.length === 0) {
+        // No benchmark data available yet
+        setSp500BenchmarkData({ avgReturn: null, testCount: 0 });
+        return;
+      }
+      
+      const avgReturn = benchmarkReturns.reduce((sum, ret) => sum + ret, 0) / benchmarkReturns.length;
       
       setSp500BenchmarkData({
         avgReturn,
-        testCount: benchmarks.length
+        testCount: benchmarkReturns.length
       });
       
       console.log('✅ S&P 500 average return:', (avgReturn * 100).toFixed(1) + '%', 
-                 `(${benchmarks.length} tests)`);
+                 `(${benchmarkReturns.length} tests)`);
     } catch (error) {
-      console.error('Failed to fetch S&P 500 benchmark:', error);
+      console.error('Failed to calculate S&P 500 average:', error);
+      setSp500BenchmarkData({ avgReturn: null, testCount: 0 });
     }
   };
 
@@ -130,7 +141,7 @@ export default function TopPortfoliosPage() {
       }
     };
 
-    Promise.all([fetchQuestionDetails(), fetchLeaderboard(), fetchSP500Benchmark()])
+    Promise.all([fetchQuestionDetails(), fetchLeaderboard()])
       .then(() => {
         checkForPendingResults();
       })
@@ -201,8 +212,8 @@ export default function TopPortfoliosPage() {
       // Save test result to leaderboard and refresh data
       saveTestResultToLeaderboard(portfolioId, portfolioName, result)
         .then(() => {
-          // Refresh all data to show updated counts
-          Promise.all([fetchQuestionDetails(), fetchLeaderboard(), fetchSP500Benchmark()]);
+          // Refresh all data to show updated counts (fetchLeaderboard will also calculate S&P 500 average)
+          Promise.all([fetchQuestionDetails(), fetchLeaderboard()]);
         })
         .catch(err => console.error('Failed to save to leaderboard:', err));
       
@@ -284,9 +295,11 @@ export default function TopPortfoliosPage() {
           expected_return: p.expectedReturn,
           upside: p.upside,
           downside: p.downside,
-          test_date: p.createdAt
+          test_date: p.createdAt,
+          comparison_data: p.comparisonData  // Include comparison data for S&P 500 calculation
         }));
         setLeaderboard(transformedData);
+        calculateSP500Average(transformedData);  // Calculate S&P 500 average from test results
       } else {
         // Use sample data if no real data yet
         setLeaderboard(getSampleLeaderboard());

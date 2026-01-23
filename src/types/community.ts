@@ -217,7 +217,9 @@ export interface QuestionLeaderboardEntry {
   expected_return: number;
   upside: number;
   downside: number;
-  tested_at: string;
+  tested_at?: string;
+  test_date?: string;
+  comparison_data?: any;  // Includes benchmark data for S&P 500 calculation
 }
 
 // =====================================================================================
