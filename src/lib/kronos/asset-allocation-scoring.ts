@@ -17,6 +17,7 @@ import { scorePortfolio } from '@/lib/kronos/scoring';
 export function mapAssetClassToKronos(assetType: keyof AssetAllocation): string {
   const mapping: Record<keyof AssetAllocation, string> = {
     stocks: 'us-large-cap',        // Use US Large Cap as stocks proxy
+    equityHedges: 'us-large-cap',  // Hedges map to stocks (will be inverse exposure)
     bonds: 'aggregate-bonds',       // Use AGG-style aggregate bonds
     commodities: 'commodities',     // Generic commodities basket
     realEstate: 'us-large-cap',     // Use stocks as real estate proxy (REITs not in historical data)
@@ -36,6 +37,7 @@ export function assetAllocationToHoldings(allocations: AssetAllocation): Holding
   // Representative tickers for each asset class (for display purposes)
   const assetClassTickers: Record<keyof AssetAllocation, string> = {
     stocks: 'SPY',      // S&P 500 ETF
+    equityHedges: 'SH', // ProShares Short S&P 500 (inverse/hedge)
     bonds: 'AGG',       // iShares Core U.S. Aggregate Bond
     commodities: 'DBC', // Invesco DB Commodity Index
     realEstate: 'VNQ',  // Vanguard Real Estate ETF
@@ -80,6 +82,7 @@ export async function scoreAssetAllocationPortfolio(
   console.log(`\n📊 Scoring asset-allocation portfolio: ${portfolioName}`);
   console.log(`Allocations:`, {
     stocks: `${(allocations.stocks * 100).toFixed(1)}%`,
+    equityHedges: `${(allocations.equityHedges * 100).toFixed(1)}%`,
     bonds: `${(allocations.bonds * 100).toFixed(1)}%`,
     commodities: `${(allocations.commodities * 100).toFixed(1)}%`,
     realEstate: `${(allocations.realEstate * 100).toFixed(1)}%`,

@@ -118,6 +118,7 @@ export interface UIPortfolioComparison {
     upside: number;
     downside: number;
     score?: number;
+    benchmarkReturn?: number;
     isUsingProxy: boolean;
     positions: any[];
     topPositions: any[];
@@ -128,6 +129,7 @@ export interface UIPortfolioComparison {
     upside: number;
     downside: number;
     score?: number;
+    benchmarkReturn?: number;
     isUsingProxy: boolean;
     positions: any[];
     topPositions: any[];
@@ -356,6 +358,7 @@ export function transformKronosToUIComparison(
       upside: userMC.upside,        // Real Monte Carlo 95th percentile
       downside: userMC.downside,    // Real Monte Carlo 5th percentile
       score: userPortfolio.score,
+      benchmarkReturn: userPortfolio.benchmarkReturn,
       isUsingProxy: false,
       positions: [],
       topPositions: kronosResponse.userHoldings?.slice(0, 5).map(h => ({
@@ -381,6 +384,7 @@ export function transformKronosToUIComparison(
       upside: timeMC.upside,        // Real Monte Carlo 95th percentile
       downside: timeMC.downside,    // Real Monte Carlo 5th percentile
       score: timePortfolio.score,
+      benchmarkReturn: timePortfolio.benchmarkReturn,
       isUsingProxy: false,
       positions: [],
       topPositions: kronosResponse.timeHoldings?.slice(0, 5).map(h => ({
@@ -410,10 +414,7 @@ export function transformKronosToUIComparison(
 
 /**
  * Complete flow: score portfolio and return UI-ready data
- * DEPRECATED: Use /api/kronos/run-scenario-test endpoint instead for complete test with all portfolios
- * 
- * This function is kept for backward compatibility but should not be used from client components
- * as it requires server-side database access for Clockwise portfolios.
+ * Now uses cached Clockwise portfolio scores for fast results
  */
 export async function runScenarioTest(
   portfolioId: string,
@@ -424,22 +425,91 @@ export async function runScenarioTest(
   testResult: UITestResult;
   portfolioComparison: UIPortfolioComparison | null;
   kronosResponse: KronosScoreResponse;
-  clockwisePortfolios?: any[]; // All 5 Clockwise portfolio results
+  clockwisePortfolios?: any[];
 }> {
-  console.log('\n🎯 Running scenario test (legacy mode - no Clockwise portfolios)...');
-  console.warn('⚠️ Use /api/kronos/run-scenario-test endpoint for complete test with all portfolios');
+  console.log('\n🎯 Running scenario test with cached Clockwise portfolios...');
   
   // Score the user portfolio (includes TIME portfolio comparison)
   const kronosResponse = await scorePortfolioById(portfolioId, question, true);
+  
+  // Fetch cached Clockwise portfolio scores based on the analog
+  let clockwisePortfolios: any[] = [];
+  
+  if (kronosResponse.userPortfolio) {
+    try {
+      console.log(`🔍 Fetching cached Clockwise scores for analog: ${kronosResponse.analogName}`);
+      
+      // Determine analog ID from the scenario
+      const analogId = getAnalogIdFromScenarioResponse(kronosResponse);
+      
+      if (analogId) {
+        const cacheResponse = await fetch('/api/kronos/cached-clockwise-scores', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ analogId })
+        });
+        
+        if (cacheResponse.ok) {
+          const cacheData = await cacheResponse.json();
+          
+          if (cacheData.success && cacheData.portfolios) {
+            clockwisePortfolios = cacheData.portfolios;
+            console.log(`✅ Loaded ${clockwisePortfolios.length} Clockwise portfolios from ${cacheData.source}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('⚠️ Failed to fetch cached Clockwise scores:', error);
+      // Continue without Clockwise portfolios - not a fatal error
+    }
+  }
   
   // Transform to UI formats
   const testResult = transformKronosToUIResult(kronosResponse, portfolioName, questionTitle);
   const portfolioComparison = transformKronosToUIComparison(kronosResponse);
   
+  // Add Clockwise portfolios to comparison if we have them
+  if (portfolioComparison && clockwisePortfolios.length > 0) {
+    portfolioComparison.clockwisePortfolios = clockwisePortfolios;
+  }
+  
+  // Also add to kronosResponse for consistency
+  kronosResponse.clockwisePortfolios = clockwisePortfolios;
+  
   return {
     testResult,
     portfolioComparison,
     kronosResponse,
-    clockwisePortfolios: [] // Empty - use API endpoint instead
+    clockwisePortfolios
   };
+}
+
+/**
+ * Helper: Extract analog ID from Kronos response
+ * Maps analog names back to IDs for cache lookup
+ */
+function getAnalogIdFromScenarioResponse(response: KronosScoreResponse): string | null {
+  const analogName = response.analogName?.toLowerCase() || '';
+  
+  // Map analog names to IDs
+  if (analogName.includes('covid')) return 'COVID_CRASH';
+  if (analogName.includes('dot-com') || analogName.includes('dot com')) return 'DOT_COM_BUST';
+  if (analogName.includes('rate shock') || analogName.includes('2022')) return 'RATE_SHOCK';
+  if (analogName.includes('stagflation') || analogName.includes('1973')) return 'STAGFLATION';
+  
+  // Fallback: try to extract from scenario ID if available
+  if (response.scenarioId) {
+    const scenarioId = response.scenarioId;
+    if (scenarioId === 'market-volatility') return 'COVID_CRASH';
+    if (scenarioId === 'ai-supercycle' || scenarioId === 'tech-concentration') return 'DOT_COM_BUST';
+    if (scenarioId === 'cash-vs-bonds') return 'RATE_SHOCK';
+    if (scenarioId === 'inflation-hedge' || scenarioId === 'recession-risk') return 'STAGFLATION';
+  }
+  
+  console.warn(`⚠️ Could not determine analog ID from response:`, {
+    analogName: response.analogName,
+    scenarioId: response.scenarioId
+  });
+  
+  return null;
 }

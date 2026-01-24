@@ -7,6 +7,85 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
 
 /**
+ * Calculate and save S&P 500 average from all test results
+ * Simple approach: fetch all tests, calculate average, save to question
+ */
+async function updateSP500Average(questionId: string) {
+  try {
+    console.log('📊 Calculating S&P 500 average for question:', questionId);
+    const supabase = await createServerSupabaseClient();
+    
+    // Fetch all test results for this question
+    const { data: tests, error } = await supabase
+      .from('question_tests')
+      .select('comparison_data')
+      .eq('question_id', questionId);
+    
+    if (error || !tests || tests.length === 0) {
+      console.log('⚠️ No test results found, S&P 500 average not available yet');
+      return;
+    }
+    
+    // Extract benchmark returns from comparison data
+    const benchmarkReturns = tests
+      .map((test: any, index: number) => {
+        const compData = test.comparison_data;
+        const userReturn = compData?.userPortfolio?.benchmarkReturn;
+        const timeReturn = compData?.timePortfolio?.benchmarkReturn;
+        console.log(`  Test ${index + 1} benchmark data:`, { 
+          hasCompData: !!compData, 
+          userReturn, 
+          timeReturn,
+          userKeys: compData?.userPortfolio ? Object.keys(compData.userPortfolio) : [],
+          timeKeys: compData?.timePortfolio ? Object.keys(compData.timePortfolio) : []
+        });
+        return userReturn || timeReturn;
+      })
+      .filter((ret): ret is number => ret !== null && ret !== undefined);
+    
+    console.log(`📊 Found ${benchmarkReturns.length} valid benchmark returns out of ${tests.length} tests`);
+    
+    if (benchmarkReturns.length === 0) {
+      console.log('⚠️ No benchmark data in test results yet');
+      return;
+    }
+    
+    // Calculate average
+    const avgReturn = benchmarkReturns.reduce((sum, ret) => sum + ret, 0) / benchmarkReturns.length;
+    
+    // First, get current metadata
+    const { data: questionData } = await supabase
+      .from('scenario_questions')
+      .select('metadata')
+      .eq('id', questionId)
+      .single();
+    
+    // Merge with existing metadata
+    const currentMetadata = (questionData?.metadata as any) || {};
+    const updatedMetadata = {
+      ...currentMetadata,
+      sp500_avg_return: avgReturn,
+      sp500_test_count: benchmarkReturns.length,
+      sp500_updated_at: new Date().toISOString()
+    };
+    
+    // Save to question metadata
+    const { error: updateError } = await supabase
+      .from('scenario_questions')
+      .update({ metadata: updatedMetadata })
+      .eq('id', questionId);
+    
+    if (updateError) {
+      console.error('❌ Failed to save S&P 500 average:', updateError);
+    } else {
+      console.log(`✅ S&P 500 average saved: ${(avgReturn * 100).toFixed(1)}% (${benchmarkReturns.length} tests)`);
+    }
+  } catch (error) {
+    console.error('❌ Error calculating S&P 500 average:', error);
+  }
+}
+
+/**
  * Run S&P 500 benchmark test for a question
  * This runs in the background to benchmark user portfolio performance
  */
@@ -142,6 +221,8 @@ export async function POST(
         
         console.log('🔄 Updating existing test in database');
         console.log('📊 comparison_data keys:', Object.keys(updatePayload.comparison_data || {}));
+        console.log('📊 comparison_data.userPortfolio.benchmarkReturn:', updatePayload.comparison_data?.userPortfolio?.benchmarkReturn);
+        console.log('📊 comparison_data.timePortfolio.benchmarkReturn:', updatePayload.comparison_data?.timePortfolio?.benchmarkReturn);
         
         const { data, error } = await supabase
           .from('question_tests')
@@ -161,6 +242,9 @@ export async function POST(
         console.log('✅ Updated in database, returned data has comparison_data:', !!data.comparison_data);
         console.log('📊 Returned comparison_data keys:', Object.keys(data.comparison_data || {}));
         
+        // Always calculate S&P 500 average (even when updating)
+        await updateSP500Average(questionId);
+        
         return NextResponse.json({
           success: true,
           testResult: data,
@@ -168,8 +252,12 @@ export async function POST(
           message: 'Score improved! Updated leaderboard.'
         });
       } else {
-        // Score not better, don't update
+        // Score not better, don't update - but still recalculate S&P 500 average
         console.log('⏭️ Score not better than existing, skipping update');
+        
+        // Calculate S&P 500 average from ALL tests (including this one conceptually)
+        await updateSP500Average(questionId);
+        
         return NextResponse.json({
           success: true,
           testResult: existing,
@@ -200,6 +288,8 @@ export async function POST(
       comparison_data: insertPayload.comparison_data ? 'Present' : 'Missing'
     });
     console.log('📊 comparison_data keys:', Object.keys(insertPayload.comparison_data || {}));
+    console.log('📊 comparison_data.userPortfolio.benchmarkReturn:', insertPayload.comparison_data?.userPortfolio?.benchmarkReturn);
+    console.log('📊 comparison_data.timePortfolio.benchmarkReturn:', insertPayload.comparison_data?.timePortfolio?.benchmarkReturn);
     
     const { data, error } = await supabase
       .from('question_tests')
@@ -227,10 +317,8 @@ export async function POST(
       console.log('✅ Successfully incremented tests_count');
     }
     
-    // Also run S&P 500 benchmark test in background (don't await - fire and forget)
-    runSP500BenchmarkTest(questionId).catch(err => 
-      console.warn('S&P 500 benchmark test failed:', err)
-    );
+    // Calculate and save S&P 500 average (simple and synchronous)
+    await updateSP500Average(questionId);
     
     return NextResponse.json({
       success: true,

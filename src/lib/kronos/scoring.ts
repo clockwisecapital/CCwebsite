@@ -23,7 +23,9 @@ import {
 import {
   fetchAllAssetClassReturns,
   fetchSP500Benchmark,
-  validateAssetReturns
+  validateAssetReturns,
+  calculateScenarioDuration,
+  annualizeReturn
 } from './data-sources';
 import {
   classifyQuestionWithAI,
@@ -378,24 +380,38 @@ export async function scorePortfolio(
   // Step 2: Get historical analog (AI-enhanced)
   const { analog, aiMatch } = await getHistoricalAnalog(scenarioId, question, useAI);
   
-  // Step 3: Fetch asset returns and benchmark
+  // Step 2.5: Calculate scenario duration for annualization
+  const scenarioDuration = calculateScenarioDuration(
+    analog.dateRange.start,
+    analog.dateRange.end
+  );
+  console.log(`⏱️  Scenario duration: ${scenarioDuration.toFixed(2)} years (${analog.dateRange.start} to ${analog.dateRange.end})`);
+  
+  // Step 3: Fetch asset returns and benchmark (cumulative)
   console.log('\n📊 Fetching historical data...');
   const [assetReturns, benchmarkData] = await Promise.all([
     getAssetReturns(analog.id),
     fetchSP500Benchmark(analog.id, analog.dateRange)
   ]);
   
-  // Step 4: Calculate portfolio return
+  // Step 4: Calculate portfolio return (cumulative)
   console.log('\n💼 Calculating portfolio return...');
-  const portfolioReturn = calculatePortfolioReturn(holdings, assetReturns);
-  const portfolioDrawdown = estimatePortfolioDrawdown(portfolioReturn);
+  const portfolioReturnCumulative = calculatePortfolioReturn(holdings, assetReturns);
+  const portfolioDrawdown = estimatePortfolioDrawdown(portfolioReturnCumulative);
   
-  // Step 5: Calculate score
+  // Step 4.5: Annualize returns to 1-year equivalent
+  console.log('\n📈 Annualizing returns to 1-year equivalent...');
+  const portfolioReturn = annualizeReturn(portfolioReturnCumulative, scenarioDuration);
+  const benchmarkReturn = annualizeReturn(benchmarkData.return, scenarioDuration);
+  console.log(`   Portfolio: ${(portfolioReturnCumulative * 100).toFixed(2)}% cumulative → ${(portfolioReturn * 100).toFixed(2)}%/yr`);
+  console.log(`   Benchmark: ${(benchmarkData.return * 100).toFixed(2)}% cumulative → ${(benchmarkReturn * 100).toFixed(2)}%/yr`);
+  
+  // Step 5: Calculate score (using annualized returns, original drawdowns)
   console.log('\n🎲 Calculating score...');
   const { score, returnScore, drawdownScore } = calculateScore(
     portfolioReturn,
     portfolioDrawdown,
-    benchmarkData.return,
+    benchmarkReturn,
     benchmarkData.drawdown
   );
   
@@ -438,8 +454,8 @@ export async function scorePortfolio(
   }
   
   console.log(`\n✅ Scoring complete: ${score}/100 (${scoreLabel.label})`);
-  console.log(`   Portfolio: ${(portfolioReturn * 100).toFixed(2)}% | Benchmark: ${(benchmarkData.return * 100).toFixed(2)}%`);
-  console.log(`   Outperformance: ${(result.outperformance * 100).toFixed(2)}%\n`);
+  console.log(`   Portfolio: ${(portfolioReturn * 100).toFixed(2)}%/yr | Benchmark: ${(benchmarkReturn * 100).toFixed(2)}%/yr`);
+  console.log(`   Outperformance: ${(result.outperformance * 100).toFixed(2)}%/yr\n`);
   
   return result;
 }

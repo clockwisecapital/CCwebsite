@@ -62,50 +62,73 @@ export default function TopPortfoliosPage() {
       const data = await response.json();
       if (response.ok && data.success) {
         setQuestion(data.question);
+        loadSP500Average(data.question);  // Load S&P 500 average from question metadata
       }
     } catch (error) {
       console.error('Failed to fetch question:', error);
     }
   };
   
-  // Calculate S&P 500 average from benchmark returns in test results
-  const calculateSP500Average = (testResults: QuestionLeaderboardEntry[]) => {
-    try {
-      console.log('📊 Calculating S&P 500 average from test results');
-      
-      if (!testResults || testResults.length === 0) {
-        setSp500BenchmarkData({ avgReturn: null, testCount: 0 });
-        return;
-      }
-      
-      // Extract benchmark returns from comparison data
-      const benchmarkReturns = testResults
-        .map(test => {
-          // Get benchmark return from comparison data
-          const comparisonData = test.comparison_data as any;
-          return comparisonData?.timePortfolio?.benchmarkReturn || 
-                 comparisonData?.userPortfolio?.benchmarkReturn;
-        })
-        .filter((ret): ret is number => ret !== null && ret !== undefined);
-      
-      if (benchmarkReturns.length === 0) {
-        // No benchmark data available yet
-        setSp500BenchmarkData({ avgReturn: null, testCount: 0 });
-        return;
-      }
-      
+  // Simple: Just read S&P 500 average from question metadata (already calculated)
+  const loadSP500Average = (questionData: any) => {
+    const metadata = questionData?.metadata;
+    console.log('📊 Question metadata:', metadata);
+    
+    if (metadata?.sp500_avg_return !== undefined) {
+      setSp500BenchmarkData({
+        avgReturn: metadata.sp500_avg_return,
+        testCount: metadata.sp500_test_count || 0
+      });
+      console.log('✅ S&P 500 average loaded from metadata:', (metadata.sp500_avg_return * 100).toFixed(1) + '%', 
+                 `(${metadata.sp500_test_count || 0} tests)`);
+    } else {
+      console.log('⚠️ No S&P 500 data in metadata yet, will calculate from test results');
+      setSp500BenchmarkData({ avgReturn: null, testCount: 0 });
+    }
+  };
+  
+  // Fallback: Calculate from test results if metadata is empty
+  const calculateSP500FromTests = (testResults: QuestionLeaderboardEntry[]) => {
+    // Only calculate if metadata didn't have it
+    if (sp500BenchmarkData.avgReturn !== null) {
+      console.log('⏭️ Skipping fallback - already have S&P 500 from metadata');
+      return;
+    }
+    
+    console.log('📊 Calculating S&P 500 from test results (fallback)', { testResultsCount: testResults?.length });
+    
+    if (!testResults || testResults.length === 0) {
+      console.log('⚠️ No test results available for fallback calculation');
+      return;
+    }
+    
+    const benchmarkReturns = testResults
+      .map((test, index) => {
+        const compData = test.comparison_data as any;
+        const userReturn = compData?.userPortfolio?.benchmarkReturn;
+        const timeReturn = compData?.timePortfolio?.benchmarkReturn;
+        console.log(`  Test ${index + 1}:`, { 
+          hasCompData: !!compData, 
+          userReturn, 
+          timeReturn,
+          using: userReturn || timeReturn 
+        });
+        return userReturn || timeReturn;
+      })
+      .filter((ret): ret is number => ret !== null && ret !== undefined);
+    
+    console.log('📊 Extracted benchmark returns:', { count: benchmarkReturns.length, returns: benchmarkReturns });
+    
+    if (benchmarkReturns.length > 0) {
       const avgReturn = benchmarkReturns.reduce((sum, ret) => sum + ret, 0) / benchmarkReturns.length;
-      
       setSp500BenchmarkData({
         avgReturn,
         testCount: benchmarkReturns.length
       });
-      
-      console.log('✅ S&P 500 average return:', (avgReturn * 100).toFixed(1) + '%', 
+      console.log('✅ S&P 500 calculated from tests:', (avgReturn * 100).toFixed(1) + '%', 
                  `(${benchmarkReturns.length} tests)`);
-    } catch (error) {
-      console.error('Failed to calculate S&P 500 average:', error);
-      setSp500BenchmarkData({ avgReturn: null, testCount: 0 });
+    } else {
+      console.log('⚠️ No valid benchmark returns found in test results');
     }
   };
 
@@ -212,7 +235,7 @@ export default function TopPortfoliosPage() {
       // Save test result to leaderboard and refresh data
       saveTestResultToLeaderboard(portfolioId, portfolioName, result)
         .then(() => {
-          // Refresh all data to show updated counts (fetchLeaderboard will also calculate S&P 500 average)
+          // Refresh all data to show updated counts and S&P 500 average
           Promise.all([fetchQuestionDetails(), fetchLeaderboard()]);
         })
         .catch(err => console.error('Failed to save to leaderboard:', err));
@@ -296,10 +319,12 @@ export default function TopPortfoliosPage() {
           upside: p.upside,
           downside: p.downside,
           test_date: p.createdAt,
-          comparison_data: p.comparisonData  // Include comparison data for S&P 500 calculation
+          comparison_data: p.comparisonData
         }));
         setLeaderboard(transformedData);
-        calculateSP500Average(transformedData);  // Calculate S&P 500 average from test results
+        
+        // Fallback: Calculate S&P 500 from test results if not in metadata
+        calculateSP500FromTests(transformedData);
       } else {
         // Use sample data if no real data yet
         setLeaderboard(getSampleLeaderboard());
@@ -426,13 +451,11 @@ export default function TopPortfoliosPage() {
                   <p className="text-lg sm:text-xl md:text-2xl font-bold text-blue-400">
                     {sp500BenchmarkData.avgReturn !== null 
                       ? `${sp500BenchmarkData.avgReturn >= 0 ? '+' : ''}${(sp500BenchmarkData.avgReturn * 100).toFixed(1)}%`
-                      : sp500BenchmarkData.testCount === 0
-                        ? 'Calculating...'
-                        : '...'}
+                      : '--'}
                   </p>
                   <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-400 mt-0.5">
                     <span className="hidden xs:inline">
-                      S&P 500 Avg {sp500BenchmarkData.testCount > 0 && `(${sp500BenchmarkData.testCount} tests)`}
+                      S&P 500 Avg {sp500BenchmarkData.testCount > 0 ? `(${sp500BenchmarkData.testCount} tests)` : '(No tests yet)'}
                     </span>
                     <span className="xs:hidden">S&P 500 Avg</span>
                   </p>

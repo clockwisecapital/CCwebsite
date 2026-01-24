@@ -6,11 +6,12 @@
  */
 
 export interface AssetAllocation {
-  stocks: number;      // Equity allocation (e.g., 0.80 = 80%)
-  bonds: number;       // Fixed income allocation
-  commodities: number; // Commodity allocation (Gold, etc.)
-  realEstate: number;  // Real estate/REIT allocation
-  cash: number;        // Cash allocation
+  stocks: number;       // Equity allocation - gross long (e.g., 0.835 = 83.5%)
+  equityHedges: number; // Equity hedges/short positions (e.g., 0.043 = 4.3%)
+  bonds: number;        // Fixed income allocation
+  commodities: number;  // Commodity allocation (Gold, etc.)
+  realEstate: number;   // Real estate/REIT allocation
+  cash: number;         // Cash allocation
 }
 
 export interface ClockwisePortfolio {
@@ -36,17 +37,19 @@ export const TIME_PORTFOLIO = {
 /**
  * Max Growth Portfolio
  * Highest equity allocation for maximum growth potential
+ * Net Equity Exposure: 70.9% (83.5% long - hedge effect)
  */
 export const MAX_GROWTH_PORTFOLIO: ClockwisePortfolio = {
   id: 'max-growth',
   name: 'Max Growth',
-  description: 'Aggressive growth portfolio with 80% stocks',
+  description: 'Aggressive growth portfolio with 83.5% gross long stocks',
   allocations: {
-    stocks: 0.80,
-    bonds: 0.10,
-    commodities: 0.08,
-    realEstate: 0.01,
-    cash: 0.01
+    stocks: 0.835,
+    equityHedges: 0.043,
+    bonds: 0.050,
+    commodities: 0.050,
+    realEstate: 0.000,
+    cash: 0.022
   },
   riskLevel: 'aggressive'
 };
@@ -54,17 +57,19 @@ export const MAX_GROWTH_PORTFOLIO: ClockwisePortfolio = {
 /**
  * Growth Portfolio
  * Growth-oriented with moderate risk
+ * Net Equity Exposure: 65.5% (75.6% long - hedge effect)
  */
 export const GROWTH_PORTFOLIO: ClockwisePortfolio = {
   id: 'growth',
   name: 'Growth',
-  description: 'Growth portfolio with 70% stocks',
+  description: 'Growth portfolio with 75.6% gross long stocks',
   allocations: {
-    stocks: 0.70,
-    bonds: 0.20,
-    commodities: 0.08,
-    realEstate: 0.01,
-    cash: 0.01
+    stocks: 0.756,
+    equityHedges: 0.035,
+    bonds: 0.140,
+    commodities: 0.050,
+    realEstate: 0.000,
+    cash: 0.020
   },
   riskLevel: 'moderate-aggressive'
 };
@@ -72,17 +77,19 @@ export const GROWTH_PORTFOLIO: ClockwisePortfolio = {
 /**
  * Moderate Portfolio
  * Balanced allocation between growth and income
+ * Net Equity Exposure: 53.1% (60.7% long - hedge effect)
  */
 export const MODERATE_PORTFOLIO: ClockwisePortfolio = {
   id: 'moderate',
   name: 'Moderate',
-  description: 'Balanced portfolio with 60% stocks',
+  description: 'Balanced portfolio with 60.7% gross long stocks',
   allocations: {
-    stocks: 0.60,
-    bonds: 0.30,
-    commodities: 0.08,
-    realEstate: 0.01,
-    cash: 0.01
+    stocks: 0.607,
+    equityHedges: 0.026,
+    bonds: 0.310,
+    commodities: 0.040,
+    realEstate: 0.000,
+    cash: 0.017
   },
   riskLevel: 'moderate'
 };
@@ -90,17 +97,19 @@ export const MODERATE_PORTFOLIO: ClockwisePortfolio = {
 /**
  * Max Income Portfolio
  * Income-focused with higher bond allocation
+ * Net Equity Exposure: 46.8% (51.8% long - hedge effect)
  */
 export const MAX_INCOME_PORTFOLIO: ClockwisePortfolio = {
   id: 'max-income',
   name: 'Max Income',
-  description: 'Income-focused portfolio with 50% stocks',
+  description: 'Income-focused portfolio with 51.8% gross long stocks',
   allocations: {
-    stocks: 0.50,
-    bonds: 0.40,
-    commodities: 0.08,
-    realEstate: 0.01,
-    cash: 0.01
+    stocks: 0.518,
+    equityHedges: 0.017,
+    bonds: 0.410,
+    commodities: 0.040,
+    realEstate: 0.000,
+    cash: 0.015
   },
   riskLevel: 'moderate-conservative'
 };
@@ -147,6 +156,7 @@ export function validateAllocations(allocations: AssetAllocation): boolean {
 export function mapToKronosAssetClass(assetType: keyof AssetAllocation): string {
   const mapping = {
     stocks: 'stocks',
+    equityHedges: 'stocks', // Hedges map to stocks (inverse exposure)
     bonds: 'bonds',
     commodities: 'commodities',
     realEstate: 'realEstate',

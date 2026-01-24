@@ -12,6 +12,30 @@ import { scorePortfolio, mapTickerToKronosAssetClass, mapTickerToKronosAssetClas
 import { getHoldingWeights } from '@/lib/supabase/database';
 import type { Holding } from '@/lib/kronos/types';
 
+// =====================================================================================
+// HELPER FUNCTIONS
+// =====================================================================================
+
+/**
+ * Map scenario ID and analog name to analog ID for cache lookup
+ */
+function getAnalogIdFromScenarioId(scenarioId: string, analogName: string): string | null {
+  // Try to extract from analog name first
+  const analogLower = analogName.toLowerCase();
+  if (analogLower.includes('covid')) return 'COVID_CRASH';
+  if (analogLower.includes('dot-com') || analogLower.includes('dot com')) return 'DOT_COM_BUST';
+  if (analogLower.includes('rate shock') || analogLower.includes('2022')) return 'RATE_SHOCK';
+  if (analogLower.includes('stagflation') || analogLower.includes('1973')) return 'STAGFLATION';
+  
+  // Fallback to scenario ID mapping
+  if (scenarioId === 'market-volatility') return 'COVID_CRASH';
+  if (scenarioId === 'ai-supercycle' || scenarioId === 'tech-concentration') return 'DOT_COM_BUST';
+  if (scenarioId === 'cash-vs-bonds') return 'RATE_SHOCK';
+  if (scenarioId === 'inflation-hedge' || scenarioId === 'recession-risk') return 'STAGFLATION';
+  
+  return null;
+}
+
 // Fallback TIME Portfolio Holdings - used if database fetch fails
 const FALLBACK_TIME_PORTFOLIO: Holding[] = [
   { ticker: 'VTI', weight: 0.40, assetClass: 'us-large-cap' },      // 40%
@@ -272,81 +296,50 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScoreResp
         console.warn('⚠️ TIME portfolio scoring failed, returning user score only', error);
       }
       
-      // Score the 4 additional Clockwise portfolios
-      console.log(`\n📊 Scoring 4 additional Clockwise portfolios...`);
+      // Fetch cached Clockwise portfolios (fast lookup!)
+      console.log(`\n📊 Fetching cached Clockwise portfolios...`);
       try {
-        const { MAX_GROWTH_PORTFOLIO, GROWTH_PORTFOLIO, MODERATE_PORTFOLIO, MAX_INCOME_PORTFOLIO } = await import('@/lib/clockwise-portfolios');
-        const { scoreAssetAllocationPortfolio } = await import('@/lib/kronos/asset-allocation-scoring');
+        // Determine analog ID from user result
+        const analogId = getAnalogIdFromScenarioId(userResult.scenarioId || '', userResult.analogName || '');
         
-        const [maxGrowthResult, growthResult, moderateResult, maxIncomeResult] = await Promise.all([
-          scoreAssetAllocationPortfolio(body.question, MAX_GROWTH_PORTFOLIO.allocations, 'Max Growth'),
-          scoreAssetAllocationPortfolio(body.question, GROWTH_PORTFOLIO.allocations, 'Growth'),
-          scoreAssetAllocationPortfolio(body.question, MODERATE_PORTFOLIO.allocations, 'Moderate'),
-          scoreAssetAllocationPortfolio(body.question, MAX_INCOME_PORTFOLIO.allocations, 'Max Income')
-        ]);
-        
-        // Helper to convert allocations to holdings format
-        const allocToHoldings = (allocs: any) => {
-          const map: Record<string, string> = { stocks: 'SPY', bonds: 'AGG', commodities: 'DBC', realEstate: 'VNQ', cash: 'CASH' };
-          return Object.entries(allocs).filter(([_, w]) => (w as number) > 0).map(([a, w]) => ({
-            ticker: map[a] || a,
-            weight: w as number,
-            name: map[a] || a,
-            assetClass: a
-          }));
-        };
-        
-        (response as any).clockwisePortfolios = [
-          {
-            id: 'time',
-            name: 'TIME Portfolio',
-            score: response.timePortfolio?.score || 0,
-            expectedReturn: response.timePortfolio?.portfolioReturn || 0,
-            upside: (response.timePortfolio?.portfolioReturn || 0) * 1.5,
-            downside: response.timePortfolio?.portfolioDrawdown || 0,
-            holdings: response.timeHoldings || []
-          },
-          {
-            id: 'max-growth',
-            name: 'Max Growth',
-            score: maxGrowthResult.score,
-            expectedReturn: maxGrowthResult.portfolioReturn,
-            upside: maxGrowthResult.portfolioReturn * 1.5,
-            downside: maxGrowthResult.portfolioDrawdown,
-            holdings: allocToHoldings(MAX_GROWTH_PORTFOLIO.allocations)
-          },
-          {
-            id: 'growth',
-            name: 'Growth',
-            score: growthResult.score,
-            expectedReturn: growthResult.portfolioReturn,
-            upside: growthResult.portfolioReturn * 1.5,
-            downside: growthResult.portfolioDrawdown,
-            holdings: allocToHoldings(GROWTH_PORTFOLIO.allocations)
-          },
-          {
-            id: 'moderate',
-            name: 'Moderate',
-            score: moderateResult.score,
-            expectedReturn: moderateResult.portfolioReturn,
-            upside: moderateResult.portfolioReturn * 1.5,
-            downside: moderateResult.portfolioDrawdown,
-            holdings: allocToHoldings(MODERATE_PORTFOLIO.allocations)
-          },
-          {
-            id: 'max-income',
-            name: 'Max Income',
-            score: maxIncomeResult.score,
-            expectedReturn: maxIncomeResult.portfolioReturn,
-            upside: maxIncomeResult.portfolioReturn * 1.5,
-            downside: maxIncomeResult.portfolioDrawdown,
-            holdings: allocToHoldings(MAX_INCOME_PORTFOLIO.allocations)
+        if (analogId) {
+          console.log(`🔍 Looking up cached scores for analog: ${analogId}`);
+          
+          const { getCachedClockwiseScores } = await import('@/lib/kronos/cache-utils');
+          const cacheResult = await getCachedClockwiseScores(analogId);
+          
+          if (cacheResult.found && cacheResult.portfolios.length > 0) {
+            // Build clockwise portfolios array with TIME + cached portfolios
+            (response as any).clockwisePortfolios = [
+              {
+                id: 'time',
+                name: 'TIME Portfolio',
+                score: response.timePortfolio?.score || 0,
+                expectedReturn: response.timePortfolio?.portfolioReturn || 0,
+                upside: (response.timePortfolio?.portfolioReturn || 0) * 1.5,
+                downside: response.timePortfolio?.portfolioDrawdown || 0,
+                holdings: response.timeHoldings || []
+              },
+              ...cacheResult.portfolios.map(p => ({
+                id: p.portfolio_id,
+                name: p.portfolio_name,
+                score: p.score,
+                expectedReturn: p.portfolio_return,
+                upside: p.estimated_upside || p.portfolio_return * 1.5,
+                downside: p.estimated_downside || p.portfolio_drawdown,
+                holdings: p.holdings
+              }))
+            ];
+            
+            console.log(`✅ Loaded ${cacheResult.portfolios.length} Clockwise portfolios from ${cacheResult.source} (TIME + cached)`);
+          } else {
+            console.warn(`⚠️ Cache miss for ${analogId}, skipping Clockwise portfolios`);
           }
-        ];
-        
-        console.log(`✅ All Clockwise portfolios scored: TIME=${response.timePortfolio?.score}, Max Growth=${maxGrowthResult.score}, Growth=${growthResult.score}, Moderate=${moderateResult.score}, Max Income=${maxIncomeResult.score}`);
+        } else {
+          console.warn('⚠️ Could not determine analog ID, skipping Clockwise portfolios');
+        }
       } catch (error) {
-        console.warn('⚠️ Failed to score additional Clockwise portfolios', error);
+        console.warn('⚠️ Failed to fetch cached Clockwise portfolios', error);
       }
     }
     

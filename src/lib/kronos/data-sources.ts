@@ -337,6 +337,48 @@ export async function fetchAllAssetClassReturns(
 }
 
 /**
+ * Calculate duration in years between two dates
+ */
+export function calculateScenarioDuration(
+  startDate: string,
+  endDate: string
+): number {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffMs = end.getTime() - start.getTime();
+  const diffYears = diffMs / (1000 * 60 * 60 * 24 * 365.25); // Account for leap years
+  return Math.max(diffYears, 0.01); // Minimum 0.01 to avoid division by zero
+}
+
+/**
+ * Annualize a cumulative return using CAGR
+ * @param cumulativeReturn - Total return over the period (e.g., 1.8 for 180%)
+ * @param years - Duration in years
+ * @returns Annualized 1-year equivalent return
+ */
+export function annualizeReturn(
+  cumulativeReturn: number,
+  years: number
+): number {
+  // If already 1 year or less, no conversion needed
+  if (years <= 1) {
+    return cumulativeReturn;
+  }
+  
+  // Handle edge case: complete loss
+  if (cumulativeReturn <= -1) {
+    return -1;
+  }
+  
+  // CAGR formula: (1 + r)^(1/n) - 1
+  const annualized = Math.pow(1 + cumulativeReturn, 1 / years) - 1;
+  
+  console.log(`📊 Annualized: ${(cumulativeReturn * 100).toFixed(2)}% over ${years.toFixed(2)}yr → ${(annualized * 100).toFixed(2)}%/yr`);
+  
+  return annualized;
+}
+
+/**
  * Fetch S&P 500 benchmark return and max drawdown
  * 
  * @param analogId - Historical analog ID (for caching)

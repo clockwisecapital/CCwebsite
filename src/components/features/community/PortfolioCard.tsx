@@ -113,17 +113,17 @@ export default function PortfolioCard({
         <div className="space-y-3 sm:space-y-4">
           {/* Metrics */}
           <div>
-            <p className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Expected Return (5yr)</p>
+            <p className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Expected Return</p>
             <p className={`text-sm sm:text-base font-bold ${getColorClass(portfolio.expectedReturn)}`}>
               {formatPercent(portfolio.expectedReturn)}
             </p>
           </div>
           <div>
-            <p className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Expected Best Year (5yr)</p>
+            <p className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Expected Best Year</p>
             <p className="text-sm sm:text-base font-bold text-green-400">{formatPercent(portfolio.expectedBestYear)}</p>
           </div>
           <div>
-            <p className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Expected Worst Year (5yr)</p>
+            <p className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Expected Worst Year</p>
             <p className="text-sm sm:text-base font-bold text-red-400">{formatPercent(portfolio.expectedWorstYear)}</p>
           </div>
 
