@@ -47,12 +47,44 @@ export default function TestResultsModal({
   const [clockwisePortfolios, setClockwisePortfolios] = useState<PortfolioCardData[]>([]);
   const [expandedPortfolios, setExpandedPortfolios] = useState<Set<string>>(new Set(['user', 'time']));
   const [loading, setLoading] = useState(true);
+  const [questionData, setQuestionData] = useState<any>(null);
 
   useEffect(() => {
     if (isOpen) {
       loadPortfolioData();
+      if (questionId) {
+        fetchQuestionData();
+      }
+    } else {
+      // Reset question data when modal closes
+      setQuestionData(null);
     }
-  }, [isOpen, results, portfolioComparison]);
+  }, [isOpen, results, portfolioComparison, questionId]);
+
+  const fetchQuestionData = async () => {
+    if (!questionId) return;
+    
+    try {
+      // Import supabase client for auth headers
+      const { supabase } = await import('@/lib/supabase/client');
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: HeadersInit = {};
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const response = await fetch(`/api/community/questions/${questionId}`, { headers });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setQuestionData(data.question);
+        console.log('✅ Question data loaded for modal:', data.question);
+      } else {
+        console.error('Failed to fetch question data:', data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch question data:', error);
+    }
+  };
 
   const loadPortfolioData = async () => {
     setLoading(true);
@@ -178,6 +210,45 @@ export default function TestResultsModal({
               <p className="text-xs text-gray-400">Portfolio Performance Analysis</p>
             </div>
           </div>
+
+          {/* Scenario Stats */}
+          <div className="mt-4">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              {/* Historical Analog */}
+              <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-2.5 sm:p-3 text-center">
+                <p className="text-xs sm:text-sm font-bold text-purple-400 break-words">
+                  {questionData?.historical_period?.[0] 
+                    ? `${questionData.historical_period[0].start}-${questionData.historical_period[0].end}`
+                    : results.historicalPeriod?.years || '--'}
+                </p>
+                <p className="text-[9px] sm:text-[10px] text-gray-400 mt-0.5 break-words">
+                  {questionData?.historical_period?.[0]?.label || results.historicalPeriod?.label || 'Historical Period'}
+                </p>
+              </div>
+              {/* S&P 500 Avg */}
+              <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-2.5 sm:p-3 text-center">
+                <p className="text-xs sm:text-sm font-bold text-blue-400">
+                  {questionData?.metadata?.sp500_avg_return !== undefined
+                    ? `${questionData.metadata.sp500_avg_return >= 0 ? '+' : ''}${(questionData.metadata.sp500_avg_return * 100).toFixed(1)}%`
+                    : portfolioComparison?.userPortfolio?.benchmarkReturn !== undefined
+                    ? `${portfolioComparison.userPortfolio.benchmarkReturn >= 0 ? '+' : ''}${(portfolioComparison.userPortfolio.benchmarkReturn * 100).toFixed(1)}%`
+                    : '--'}
+                </p>
+                <p className="text-[9px] sm:text-[10px] text-gray-400 mt-0.5">
+                  S&P 500 Avg
+                </p>
+              </div>
+              {/* Testing Count */}
+              <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-2.5 sm:p-3 text-center">
+                <p className="text-xs sm:text-sm font-bold text-white">
+                  {questionData?.tests_count?.toLocaleString() || '--'}
+                </p>
+                <p className="text-[9px] sm:text-[10px] text-gray-400 mt-0.5">
+                  Testing
+                </p>
+              </div>
+            </div>
+          </div>
           
           {/* Test Info */}
           <div className="flex items-center gap-4 mt-4 pt-4 border-t border-gray-800/30">
@@ -265,29 +336,6 @@ export default function TestResultsModal({
                   ))}
                 </div>
               </div>
-
-              {/* Historical Analog Info (if available) */}
-              {results.historicalAnalog && (
-                <div className="bg-blue-900/20 border border-blue-800/50 rounded-xl p-4 sm:p-5">
-                  <h4 className="text-sm font-bold text-blue-300 mb-3">Historical Analog Match</h4>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-400">Period</span>
-                      <span className="text-sm font-semibold text-white">{results.historicalAnalog.period}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-400">Similarity</span>
-                      <span className="text-sm font-semibold text-blue-400">{results.historicalAnalog.similarity}%</span>
-                    </div>
-                    {results.historicalAnalog.cycleName && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-400">Cycle</span>
-                        <span className="text-sm font-semibold text-white">{results.historicalAnalog.cycleName}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>

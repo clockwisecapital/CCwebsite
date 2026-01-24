@@ -440,12 +440,11 @@ export default function TopPortfoliosPage() {
             <div className="mb-4 sm:mb-6">
               {/* Single row - All 3 metrics */}
               <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4">
-                <div className="bg-gray-900/50 border border-gray-700 rounded-lg sm:rounded-xl p-2.5 sm:p-3 md:p-4 text-center hover:border-teal-500/50 transition-colors">
-                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-white">{question.tests_count.toLocaleString()}</p>
-                  <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-400 mt-0.5">
-                    <span className="hidden xs:inline">Investors Testing</span>
-                    <span className="xs:hidden">Testing</span>
+                <div className="bg-gray-900/50 border border-gray-700 rounded-lg sm:rounded-xl p-2.5 sm:p-3 md:p-4 text-center hover:border-purple-500/50 transition-colors">
+                  <p className="text-sm sm:text-base md:text-lg font-bold text-purple-400 break-words">
+                    {period ? `${period.start}-${period.end}` : '1995-2000'}
                   </p>
+                  <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-400 mt-0.5 break-words">{period?.label || 'Dot-Com Boom'}</p>
                 </div>
                 <div className="bg-gray-900/50 border border-gray-700 rounded-lg sm:rounded-xl p-2.5 sm:p-3 md:p-4 text-center hover:border-blue-500/50 transition-colors">
                   <p className="text-lg sm:text-xl md:text-2xl font-bold text-blue-400">
@@ -454,17 +453,16 @@ export default function TopPortfoliosPage() {
                       : '--'}
                   </p>
                   <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-400 mt-0.5">
-                    <span className="hidden xs:inline">
-                      S&P 500 Avg {sp500BenchmarkData.testCount > 0 ? `(${sp500BenchmarkData.testCount} tests)` : '(No tests yet)'}
-                    </span>
+                    <span className="hidden xs:inline">S&P 500 Avg Annual Return</span>
                     <span className="xs:hidden">S&P 500 Avg</span>
                   </p>
                 </div>
-                <div className="bg-gray-900/50 border border-gray-700 rounded-lg sm:rounded-xl p-2.5 sm:p-3 md:p-4 text-center hover:border-purple-500/50 transition-colors">
-                  <p className="text-sm sm:text-base md:text-lg font-bold text-purple-400 break-words">
-                    {period ? `${period.start}-${period.end}` : '1995-2000'}
+                <div className="bg-gray-900/50 border border-gray-700 rounded-lg sm:rounded-xl p-2.5 sm:p-3 md:p-4 text-center hover:border-teal-500/50 transition-colors">
+                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-white">{question.tests_count.toLocaleString()}</p>
+                  <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-400 mt-0.5">
+                    <span className="hidden xs:inline">Investors Testing</span>
+                    <span className="xs:hidden">Testing</span>
                   </p>
-                  <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-400 mt-0.5 break-words">{period?.label || 'Dot-Com Boom'}</p>
                 </div>
               </div>
             </div>

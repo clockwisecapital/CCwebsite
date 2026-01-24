@@ -429,40 +429,13 @@ export async function runScenarioTest(
 }> {
   console.log('\n🎯 Running scenario test with cached Clockwise portfolios...');
   
-  // Score the user portfolio (includes TIME portfolio comparison)
+  // Score the user portfolio (includes TIME portfolio comparison + cached Clockwise portfolios)
   const kronosResponse = await scorePortfolioById(portfolioId, question, true);
   
-  // Fetch cached Clockwise portfolio scores based on the analog
-  let clockwisePortfolios: any[] = [];
+  // Use clockwise portfolios from Kronos response (already includes TIME + cached portfolios)
+  const clockwisePortfolios = kronosResponse.clockwisePortfolios || [];
   
-  if (kronosResponse.userPortfolio) {
-    try {
-      console.log(`🔍 Fetching cached Clockwise scores for analog: ${kronosResponse.analogName}`);
-      
-      // Determine analog ID from the scenario
-      const analogId = getAnalogIdFromScenarioResponse(kronosResponse);
-      
-      if (analogId) {
-        const cacheResponse = await fetch('/api/kronos/cached-clockwise-scores', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ analogId })
-        });
-        
-        if (cacheResponse.ok) {
-          const cacheData = await cacheResponse.json();
-          
-          if (cacheData.success && cacheData.portfolios) {
-            clockwisePortfolios = cacheData.portfolios;
-            console.log(`✅ Loaded ${clockwisePortfolios.length} Clockwise portfolios from ${cacheData.source}`);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('⚠️ Failed to fetch cached Clockwise scores:', error);
-      // Continue without Clockwise portfolios - not a fatal error
-    }
-  }
+  console.log(`✅ Using ${clockwisePortfolios.length} portfolios from Kronos response (includes TIME + Clockwise)`);
   
   // Transform to UI formats
   const testResult = transformKronosToUIResult(kronosResponse, portfolioName, questionTitle);
@@ -471,10 +444,8 @@ export async function runScenarioTest(
   // Add Clockwise portfolios to comparison if we have them
   if (portfolioComparison && clockwisePortfolios.length > 0) {
     portfolioComparison.clockwisePortfolios = clockwisePortfolios;
+    console.log(`📊 Added ${clockwisePortfolios.length} portfolios to comparison data`);
   }
-  
-  // Also add to kronosResponse for consistency
-  kronosResponse.clockwisePortfolios = clockwisePortfolios;
   
   return {
     testResult,

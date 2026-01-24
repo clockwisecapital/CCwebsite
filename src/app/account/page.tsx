@@ -269,12 +269,22 @@ export default function AccountPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Header */}
         <div className="mb-8 sm:mb-12">
-          <h1 
-            style={{ fontSize: '28px' }}
-            className="font-bold text-white mb-2 bg-gradient-to-r from-white via-teal-100 to-blue-100 bg-clip-text text-transparent"
-          >
-            My Account
-          </h1>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-2">
+            <h1 
+              style={{ fontSize: '28px' }}
+              className="font-bold text-white bg-gradient-to-r from-white via-teal-100 to-blue-100 bg-clip-text text-transparent"
+            >
+              My Account
+            </h1>
+            <a
+              href="https://wwws.betterment.com/clockwise-capital-llc/app/signup/?advisor_token=wJVA-fvpQ9g"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-teal-500/25 hover:scale-105 w-full sm:w-auto text-sm sm:text-base"
+            >
+              New Account
+            </a>
+          </div>
           <p className="text-gray-400 text-sm sm:text-base">Manage your profile, questions, and portfolio tests</p>
         </div>
 
@@ -452,7 +462,7 @@ export default function AccountPage() {
             >
               <FiBriefcase className="w-4 h-4" />
               <span className="hidden sm:inline">Explore Portfolios</span>
-              <span className="sm:hidden">Portfolios</span>
+              <span className="sm:hidden">Explore</span>
               <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${
                 activeTab === 'portfolios' 
                   ? 'bg-white/20' 
