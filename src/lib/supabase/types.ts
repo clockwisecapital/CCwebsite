@@ -1019,9 +1019,101 @@ export interface Database {
         }
         Relationships: []
       }
+      clockwise_portfolio_cache: {
+        Row: {
+          id: string
+          portfolio_id: string
+          portfolio_name: string
+          analog_id: string
+          analog_name: string
+          analog_period: string
+          score: number
+          label: string
+          color: string
+          portfolio_return: number
+          benchmark_return: number
+          outperformance: number
+          portfolio_drawdown: number
+          benchmark_drawdown: number
+          return_score: number
+          drawdown_score: number
+          estimated_upside: number | null
+          estimated_downside: number | null
+          scenario_id: string | null
+          scenario_name: string | null
+          holdings: Json
+          version: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          portfolio_id: string
+          portfolio_name: string
+          analog_id: string
+          analog_name: string
+          analog_period: string
+          score: number
+          label: string
+          color: string
+          portfolio_return: number
+          benchmark_return: number
+          outperformance: number
+          portfolio_drawdown: number
+          benchmark_drawdown: number
+          return_score: number
+          drawdown_score: number
+          estimated_upside?: number | null
+          estimated_downside?: number | null
+          scenario_id?: string | null
+          scenario_name?: string | null
+          holdings: Json
+          version?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          portfolio_id?: string
+          portfolio_name?: string
+          analog_id?: string
+          analog_name?: string
+          analog_period?: string
+          score?: number
+          label?: string
+          color?: string
+          portfolio_return?: number
+          benchmark_return?: number
+          outperformance?: number
+          portfolio_drawdown?: number
+          benchmark_drawdown?: number
+          return_score?: number
+          drawdown_score?: number
+          estimated_upside?: number | null
+          estimated_downside?: number | null
+          scenario_id?: string | null
+          scenario_name?: string | null
+          holdings?: Json
+          version?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      clockwise_cache_stats: {
+        Row: {
+          version: number | null
+          total_entries: number | null
+          unique_analogs: number | null
+          unique_portfolios: number | null
+          first_entry: string | null
+          last_update: string | null
+          avg_score: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       link_conversation_to_user: {
@@ -1031,6 +1123,28 @@ export interface Database {
           p_email: string
         }
         Returns: boolean
+      }
+      get_current_cache_version: {
+        Args: Record<string, never>
+        Returns: number
+      }
+      get_cached_clockwise_scores: {
+        Args: {
+          p_analog_id: string
+          p_version?: number | null
+        }
+        Returns: Array<{
+          portfolio_id: string
+          portfolio_name: string
+          score: number
+          portfolio_return: number
+          portfolio_drawdown: number
+          estimated_upside: number | null
+          estimated_downside: number | null
+          holdings: Json
+          label: string
+          color: string
+        }>
       }
     }
     Enums: {
@@ -1114,6 +1228,12 @@ export type QuestionTestUpdate = Database['public']['Tables']['question_tests'][
 export type UserFollow = Database['public']['Tables']['user_follows']['Row']
 export type UserFollowInsert = Database['public']['Tables']['user_follows']['Insert']
 export type UserFollowUpdate = Database['public']['Tables']['user_follows']['Update']
+
+export type ClockwisePortfolioCache = Database['public']['Tables']['clockwise_portfolio_cache']['Row']
+export type ClockwisePortfolioCacheInsert = Database['public']['Tables']['clockwise_portfolio_cache']['Insert']
+export type ClockwisePortfolioCacheUpdate = Database['public']['Tables']['clockwise_portfolio_cache']['Update']
+
+export type ClockwiseCacheStats = Database['public']['Views']['clockwise_cache_stats']['Row']
 
 // Application-specific types
 export interface SessionData {

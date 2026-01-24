@@ -89,12 +89,14 @@ export async function GET(request: NextRequest): Promise<NextResponse<CacheStatu
         portfoliosCount: analogCounts[analog.id]?.count || 0,
         lastUpdated: analogCounts[analog.id]?.lastUpdated || null
       })),
-      statistics: stats.map(s => ({
-        version: s.version,
-        entries: s.total_entries,
-        avgScore: s.avg_score,
-        lastUpdate: s.last_update
-      }))
+      statistics: stats
+        .filter(s => s.version !== null && s.total_entries !== null)
+        .map(s => ({
+          version: s.version!,
+          entries: s.total_entries!,
+          avgScore: s.avg_score ?? 0,
+          lastUpdate: s.last_update ?? new Date().toISOString()
+        }))
     };
 
     console.log(`✅ Cache status: ${status} (${totalEntries}/${expectedEntries} entries)`);

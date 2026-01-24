@@ -574,6 +574,7 @@ export default function TopPortfoliosPage() {
           }}
           results={testResults}
           portfolioComparison={portfolioComparison || undefined}
+          questionId={questionId}
         />
       )}
 

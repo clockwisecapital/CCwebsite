@@ -4,6 +4,9 @@
  * Types for pre-computed portfolio scores against historical economic cycles
  */
 
+// JSON type compatible with Supabase
+type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+
 export interface CachedPortfolioScore {
   id?: string;
   portfolio_id: string;
@@ -27,19 +30,15 @@ export interface CachedPortfolioScore {
   drawdown_score: number;
   
   // Monte Carlo estimates
-  estimated_upside?: number;
-  estimated_downside?: number;
+  estimated_upside?: number | null;
+  estimated_downside?: number | null;
   
   // Scenario metadata
-  scenario_id?: string;
-  scenario_name?: string;
+  scenario_id?: string | null;
+  scenario_name?: string | null;
   
-  // Holdings snapshot
-  holdings: Array<{
-    ticker: string;
-    weight: number;
-    assetClass: string;
-  }>;
+  // Holdings snapshot (stored as JSON in database)
+  holdings: Json;
   
   // Cache management
   version: number;
@@ -63,15 +62,11 @@ export interface CacheInsertData {
   benchmark_drawdown: number;
   return_score: number;
   drawdown_score: number;
-  estimated_upside?: number;
-  estimated_downside?: number;
-  scenario_id?: string;
-  scenario_name?: string;
-  holdings: Array<{
-    ticker: string;
-    weight: number;
-    assetClass: string;
-  }>;
+  estimated_upside?: number | null;
+  estimated_downside?: number | null;
+  scenario_id?: string | null;
+  scenario_name?: string | null;
+  holdings: Json;
   version: number;
 }
 
@@ -83,11 +78,11 @@ export interface CacheLookupResult {
 }
 
 export interface CacheStats {
-  version: number;
-  total_entries: number;
-  unique_analogs: number;
-  unique_portfolios: number;
-  first_entry: string;
-  last_update: string;
-  avg_score: number;
+  version: number | null;
+  total_entries: number | null;
+  unique_analogs: number | null;
+  unique_portfolios: number | null;
+  first_entry: string | null;
+  last_update: string | null;
+  avg_score: number | null;
 }

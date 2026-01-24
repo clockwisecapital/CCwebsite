@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { FiX, FiBarChart2, FiZap } from 'react-icons/fi';
 import PortfolioCard, { type PortfolioCardData } from './PortfolioCard';
 
@@ -26,19 +27,22 @@ export interface TestResultData {
   };
 }
 
-interface TestResultsModalProps {
+export interface TestResultsModalProps {
   isOpen: boolean;
   onClose: () => void;
   results: TestResultData;
   portfolioComparison?: any; // Legacy - keeping for backward compatibility
+  questionId?: string;
 }
 
 export default function TestResultsModal({ 
   isOpen, 
   onClose, 
   results,
-  portfolioComparison 
+  portfolioComparison,
+  questionId 
 }: TestResultsModalProps) {
+  const router = useRouter();
   const [userPortfolio, setUserPortfolio] = useState<PortfolioCardData | null>(null);
   const [clockwisePortfolios, setClockwisePortfolios] = useState<PortfolioCardData[]>([]);
   const [expandedPortfolios, setExpandedPortfolios] = useState<Set<string>>(new Set(['user', 'time']));
@@ -297,13 +301,19 @@ export default function TestResultsModal({
           >
             Close
           </button>
-          <button
-            onClick={onClose}
-            className="px-5 py-2 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 
-              text-white font-semibold rounded-lg transition-all duration-300 hover:scale-105 text-sm shadow-lg"
-          >
-            View Leaderboard
-          </button>
+          {questionId && (
+            <button
+              onClick={() => {
+                router.push(`/scenario-testing/${questionId}/top-portfolios`);
+                onClose();
+              }}
+              className="px-5 py-2 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 
+                text-white font-semibold rounded-lg transition-all duration-300 hover:scale-105 text-sm shadow-lg"
+              aria-label="View top portfolios for this scenario"
+            >
+              Top Portfolios
+            </button>
+          )}
         </div>
       </div>
     </div>

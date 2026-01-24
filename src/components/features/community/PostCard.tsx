@@ -8,6 +8,7 @@ import {
   FiBarChart2, 
   FiClock,
   FiAward,
+  FiShare2,
 } from 'react-icons/fi';
 import type { ScenarioQuestionWithAuthor } from '@/types/community';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -28,6 +29,7 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
   const [localLikes, setLocalLikes] = useState(question.likes_count);
   const [isLiked, setIsLiked] = useState(question.is_liked_by_user || false);
   const [showPortfolioModal, setShowPortfolioModal] = useState(false);
+  const [showCopied, setShowCopied] = useState(false);
 
   // Sync local state when question prop changes (e.g., after page refresh)
   useEffect(() => {
@@ -130,6 +132,17 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
     router.push(`/scenario-testing/${question.id}/top-portfolios`);
   };
 
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText('https://clockwisecapital.com/kronos');
+      setShowCopied(true);
+      setTimeout(() => setShowCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+    }
+  };
+
   return (
     <div
       className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl sm:rounded-2xl border border-gray-700 
@@ -221,6 +234,18 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
           >
             <FiThumbsUp className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isLiking ? 'animate-pulse' : ''}`} />
             Like
+          </button>
+          <button
+            onClick={handleShare}
+            className="relative flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold transition-colors text-gray-400 hover:text-white"
+          >
+            <FiShare2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            Share
+            {showCopied && (
+              <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 px-2 py-1 text-xs bg-teal-500 text-white rounded whitespace-nowrap">
+                Copied!
+              </span>
+            )}
           </button>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2">

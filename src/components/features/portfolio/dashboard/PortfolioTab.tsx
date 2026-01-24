@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import type { PortfolioComparison } from '@/types/portfolio';
+import { convertToAssetClassIfClockwise, isClockwisePortfolio } from '@/lib/asset-class-aggregation';
 
 interface PortfolioTabProps {
   portfolioComparison?: PortfolioComparison | null;
@@ -49,6 +50,20 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
   if (portfolioComparison) {
     const timeHorizon = portfolioComparison.timeHorizon || 1;
     const timeLabel = timeHorizon === 1 ? '1yr' : `${timeHorizon}yr`;
+    
+    // Convert to asset classes if Clockwise portfolios
+    const userDisplayPositions = convertToAssetClassIfClockwise(
+      portfolioComparison.userPortfolio.topPositions, 
+      portfolioComparison.userPortfolio.name || 'User Portfolio'
+    );
+    const timeDisplayPositions = convertToAssetClassIfClockwise(
+      portfolioComparison.timePortfolio.topPositions, 
+      portfolioComparison.timePortfolio.name || 'TIME Portfolio'
+    );
+    
+    const showUserAsAssetClasses = isClockwisePortfolio(portfolioComparison.userPortfolio.name || '');
+    const showTimeAsAssetClasses = isClockwisePortfolio(portfolioComparison.timePortfolio.name || '');
+    
     return (
       <div className="space-y-6 md:space-y-8">
         {/* SECTION 1: Recommendation - Always Visible */}
@@ -123,9 +138,11 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
 
             {/* Top 5 Positions */}
             <div>
-              <h4 className="text-sm font-semibold text-gray-300 mb-3">Top 5 Positions</h4>
+              <h4 className="text-sm font-semibold text-gray-300 mb-3">
+                {showUserAsAssetClasses ? 'Asset Classes' : 'Top 5 Positions'}
+              </h4>
               <div className="space-y-3">
-                {portfolioComparison.userPortfolio.topPositions.map((position) => {
+                {userDisplayPositions.map((position) => {
                   // For single-holding portfolios (100% in one ticker), use portfolio metrics
                   // This ensures position and portfolio returns match exactly
                   const isSingleHolding = portfolioComparison.userPortfolio.topPositions.length === 1 && 
@@ -141,40 +158,44 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
                           <div className="flex items-center gap-2">
                             <span className="font-semibold text-white">{position.ticker}</span>
                           </div>
-                          <div className="text-xs text-gray-400">
-                            {position.assetClass ? `${position.assetClass} • ` : ''}{position.name}
-                          </div>
+                          {!showUserAsAssetClasses && (
+                            <div className="text-xs text-gray-400">
+                              {position.assetClass ? `${position.assetClass} • ` : ''}{position.name}
+                            </div>
+                          )}
                         </div>
                         <div className="text-right">
                           <div className="text-sm font-semibold text-gray-300">{position.weight.toFixed(1)}%</div>
                         </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-2 text-xs">
-                        <div>
-                          <div className="text-gray-400">Expected Return</div>
-                          <div className={`font-semibold ${displayExpectedReturn && displayExpectedReturn > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            {displayExpectedReturn !== null && displayExpectedReturn !== undefined ? formatPercent(displayExpectedReturn) : 'N/A'}
+                      {!showUserAsAssetClasses && (
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div>
+                            <div className="text-gray-400">Expected Return</div>
+                            <div className={`font-semibold ${displayExpectedReturn && displayExpectedReturn > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {displayExpectedReturn !== null && displayExpectedReturn !== undefined ? formatPercent(displayExpectedReturn) : 'N/A'}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-gray-400">Upside</div>
+                            <div className="font-semibold text-emerald-400">
+                              {/* For single-holding portfolio, use portfolio-level upside to ensure consistency */}
+                              {isSingleHolding
+                                ? formatPercent(portfolioComparison.userPortfolio.upside)
+                                : position.monteCarlo ? formatPercent(position.monteCarlo.upside) : 'N/A'}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-gray-400">Downside</div>
+                            <div className="font-semibold text-rose-400">
+                              {/* For single-holding portfolio, use portfolio-level downside to ensure consistency */}
+                              {isSingleHolding
+                                ? formatPercent(portfolioComparison.userPortfolio.downside)
+                                : position.monteCarlo ? formatPercent(position.monteCarlo.downside) : 'N/A'}
+                            </div>
                           </div>
                         </div>
-                        <div>
-                          <div className="text-gray-400">Upside</div>
-                          <div className="font-semibold text-emerald-400">
-                            {/* For single-holding portfolio, use portfolio-level upside to ensure consistency */}
-                            {isSingleHolding
-                              ? formatPercent(portfolioComparison.userPortfolio.upside)
-                              : position.monteCarlo ? formatPercent(position.monteCarlo.upside) : 'N/A'}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-gray-400">Downside</div>
-                          <div className="font-semibold text-rose-400">
-                            {/* For single-holding portfolio, use portfolio-level downside to ensure consistency */}
-                            {isSingleHolding
-                              ? formatPercent(portfolioComparison.userPortfolio.downside)
-                              : position.monteCarlo ? formatPercent(position.monteCarlo.downside) : 'N/A'}
-                          </div>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   );
                 })}
@@ -231,39 +252,45 @@ export default function PortfolioTab({ portfolioComparison, onNext, onBack, onSl
 
             {/* Top 5 Positions */}
             <div>
-              <h4 className="text-sm font-semibold text-teal-300 mb-3">Top 5 Positions</h4>
+              <h4 className="text-sm font-semibold text-teal-300 mb-3">
+                {showTimeAsAssetClasses ? 'Asset Classes' : 'Top 5 Positions'}
+              </h4>
               <div className="space-y-3">
-                {portfolioComparison.timePortfolio.topPositions.map((position) => (
+                {timeDisplayPositions.map((position) => (
                   <div key={position.ticker} className="bg-teal-900/10 rounded-lg p-3 border border-teal-800/50">
                     <div className="flex items-center justify-between mb-2">
                       <div>
                         <div className="font-semibold text-white">{position.ticker}</div>
-                        <div className="text-xs text-teal-400">{position.name}</div>
+                        {!showTimeAsAssetClasses && position.name && (
+                          <div className="text-xs text-teal-400">{position.name}</div>
+                        )}
                       </div>
                       <div className="text-right">
                         <div className="text-sm font-semibold text-teal-300">{position.weight.toFixed(1)}%</div>
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div>
-                        <div className="text-teal-400">Expected Return</div>
-                        <div className={`font-semibold ${position.expectedReturn && position.expectedReturn > 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-                          {position.expectedReturn ? formatPercent(position.expectedReturn) : 'N/A'}
+                    {!showTimeAsAssetClasses && (
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <div className="text-teal-400">Expected Return</div>
+                          <div className={`font-semibold ${position.expectedReturn && position.expectedReturn > 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                            {position.expectedReturn ? formatPercent(position.expectedReturn) : 'N/A'}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-teal-400">Upside</div>
+                          <div className="font-semibold text-emerald-300">
+                            {position.monteCarlo ? formatPercent(position.monteCarlo.upside) : 'N/A'}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-teal-400">Downside</div>
+                          <div className="font-semibold text-rose-300">
+                            {position.monteCarlo ? formatPercent(position.monteCarlo.downside) : 'N/A'}
+                          </div>
                         </div>
                       </div>
-                      <div>
-                        <div className="text-teal-400">Upside</div>
-                        <div className="font-semibold text-emerald-300">
-                          {position.monteCarlo ? formatPercent(position.monteCarlo.upside) : 'N/A'}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-teal-400">Downside</div>
-                        <div className="font-semibold text-rose-300">
-                          {position.monteCarlo ? formatPercent(position.monteCarlo.downside) : 'N/A'}
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>

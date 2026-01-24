@@ -41,6 +41,7 @@ export interface PositionAnalysis {
 
 export interface PortfolioComparison {
   userPortfolio: {
+    name?: string;                    // Portfolio name (for identifying Clockwise portfolios)
     totalValue: number;
     expectedReturn: number;           // Blended weighted average (Year 1 FactSet + Years 2+ long-term)
     upside: number;                   // Portfolio-level 95th percentile annual return (diversified)
@@ -52,6 +53,7 @@ export interface PortfolioComparison {
     proxyMessage?: string;            // Message explaining proxy usage
   };
   timePortfolio: {
+    name?: string;                    // Portfolio name (for identifying Clockwise portfolios)
     totalValue: number;
     expectedReturn: number;           // Blended weighted average (Year 1 FactSet + Years 2+ long-term)
     upside: number;                   // Portfolio-level 95th percentile annual return (diversified)

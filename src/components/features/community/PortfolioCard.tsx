@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { convertToAssetClassIfClockwise, isClockwisePortfolio } from '@/lib/asset-class-aggregation';
 
 export interface PortfolioCardData {
   id: string;
@@ -83,6 +84,10 @@ export default function PortfolioCard({
     return `${percent}%`;
   };
 
+  // Convert to asset classes if this is a Clockwise portfolio
+  const displayPositions = convertToAssetClassIfClockwise(portfolio.topPositions, portfolio.name);
+  const showAsAssetClasses = isClockwisePortfolio(portfolio.name);
+
   return (
     <div className={`border rounded-xl p-4 sm:p-5 transition-all duration-200 ${cardClasses} ${className}`}>
       {/* Header */}
@@ -130,23 +135,29 @@ export default function PortfolioCard({
           {/* Holdings - only show if available */}
           {portfolio.topPositions.length > 0 && (
             <div className="pt-3 border-t border-gray-700/50">
-              <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Top Holdings</h5>
+              <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                {showAsAssetClasses ? 'Asset Classes' : 'Top Holdings'}
+              </h5>
               <div className="space-y-2">
-                {portfolio.topPositions.map((position, idx) => (
+                {displayPositions.map((position, idx) => (
                   <div key={idx} className="flex items-center justify-between p-2 bg-gray-800/30 rounded-lg">
                     <div className="flex-1 min-w-0">
                       <p className={`font-semibold text-xs sm:text-sm ${isTime ? 'text-teal-200' : 'text-white'}`}>
                         {position.ticker}
                       </p>
-                      <p className="text-[10px] sm:text-xs text-gray-400 truncate">{position.name}</p>
+                      {!showAsAssetClasses && position.name && (
+                        <p className="text-[10px] sm:text-xs text-gray-400 truncate">{position.name}</p>
+                      )}
                     </div>
                     <div className="text-right flex-shrink-0 ml-2">
                       <p className={`font-bold text-xs sm:text-sm ${isTime ? 'text-teal-200' : 'text-gray-200'}`}>
                         {position.weight.toFixed(1)}%
                       </p>
-                      <p className={`text-[10px] sm:text-xs font-semibold ${getColorClass(position.expectedReturn)}`}>
-                        {formatPercent(position.expectedReturn)}
-                      </p>
+                      {!showAsAssetClasses && position.expectedReturn != null && (
+                        <p className={`text-[10px] sm:text-xs font-semibold ${getColorClass(position.expectedReturn)}`}>
+                          {formatPercent(position.expectedReturn)}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}

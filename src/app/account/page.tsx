@@ -16,7 +16,11 @@ import {
   FiClock,
   FiThumbsUp,
   FiMessageSquare,
-  FiBriefcase
+  FiBriefcase,
+  FiChevronDown,
+  FiChevronUp,
+  FiActivity,
+  FiTrash2
 } from 'react-icons/fi';
 
 interface UserProfile {
@@ -69,7 +73,10 @@ export default function AccountPage() {
   const [isSaving, setIsSaving] = useState(false);
   
   // Tab state
-  const [activeTab, setActiveTab] = useState<'portfolios' | 'questions' | 'tests'>('portfolios');
+  const [activeTab, setActiveTab] = useState<'portfolios' | 'questions'>('portfolios');
+  
+  // Expanded portfolio state
+  const [expandedPortfolio, setExpandedPortfolio] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -186,6 +193,44 @@ export default function AccountPage() {
     }
   };
 
+  const handleDeletePortfolio = async (portfolioId: string, portfolioName: string) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${portfolioName}"? This action cannot be undone.`
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: HeadersInit = {};
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const response = await fetch(`/api/portfolios/${portfolioId}`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete portfolio');
+      }
+
+      // Remove from local state
+      setPortfolios(prev => prev.filter(p => p.id !== portfolioId));
+      
+      // Close expanded view if this portfolio was open
+      if (expandedPortfolio === portfolioId) {
+        setExpandedPortfolio(null);
+      }
+
+      alert('Portfolio deleted successfully');
+    } catch (error) {
+      console.error('Error deleting portfolio:', error);
+      alert('Failed to delete portfolio. Please try again.');
+    }
+  };
+
   const getDisplayName = () => {
     if (profile?.first_name && profile?.last_name) {
       return `${profile.first_name} ${profile.last_name}`;
@@ -224,7 +269,10 @@ export default function AccountPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Header */}
         <div className="mb-8 sm:mb-12">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-2 bg-gradient-to-r from-white via-teal-100 to-blue-100 bg-clip-text text-transparent">
+          <h1 
+            style={{ fontSize: '28px' }}
+            className="font-bold text-white mb-2 bg-gradient-to-r from-white via-teal-100 to-blue-100 bg-clip-text text-transparent"
+          >
             My Account
           </h1>
           <p className="text-gray-400 text-sm sm:text-base">Manage your profile, questions, and portfolio tests</p>
@@ -246,7 +294,12 @@ export default function AccountPage() {
                   <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full border-2 border-gray-800" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white truncate">{getDisplayName()}</h2>
+                  <h2 
+                    style={{ fontSize: '22px' }}
+                    className="font-bold text-white truncate"
+                  >
+                    {getDisplayName()}
+                  </h2>
                   <p className="text-gray-400 flex items-center gap-2 mt-1 text-sm sm:text-base">
                     <FiMail className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                     <span className="truncate">{profile?.email}</span>
@@ -259,13 +312,24 @@ export default function AccountPage() {
               </div>
 
               {!isEditingProfile ? (
-                <button
-                  onClick={() => setIsEditingProfile(true)}
-                  className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-teal-500/25 hover:scale-105 w-full sm:w-auto text-sm sm:text-base"
-                >
-                  <FiEdit2 className="w-4 h-4" />
-                  Edit Profile
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                  <button
+                    onClick={() => setIsEditingProfile(true)}
+                    className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-teal-500/25 hover:scale-105 w-full sm:w-auto text-sm sm:text-base"
+                  >
+                    <FiEdit2 className="w-4 h-4" />
+                    Edit Profile
+                  </button>
+                  <a
+                    href="https://clients.betterment.com/clockwise-capital-llc/app/login"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-gray-500/25 w-full sm:w-auto text-sm sm:text-base"
+                  >
+                    <FiBriefcase className="w-4 h-4" />
+                    Portfolio Login
+                  </a>
+                </div>
               ) : null}
             </div>
 
@@ -353,7 +417,7 @@ export default function AccountPage() {
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 text-gray-400 text-xs sm:text-sm mb-2">
                     <FiBarChart2 className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
-                    <span>Tests Run</span>
+                    <span>Tests</span>
                   </div>
                   <p className="text-2xl sm:text-3xl font-bold text-white">{tests.length}</p>
                 </div>
@@ -364,7 +428,7 @@ export default function AccountPage() {
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 text-gray-400 text-xs sm:text-sm mb-2">
                     <FiThumbsUp className="w-4 h-4 sm:w-5 sm:h-5 text-pink-400" />
-                    <span>Total Likes</span>
+                    <span>Likes</span>
                   </div>
                   <p className="text-2xl sm:text-3xl font-bold text-white">
                     {questions.reduce((sum, q) => sum + q.likes_count, 0)}
@@ -382,12 +446,12 @@ export default function AccountPage() {
               onClick={() => setActiveTab('portfolios')}
               className={`relative flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold transition-all duration-300 whitespace-nowrap text-sm sm:text-base ${
                 activeTab === 'portfolios'
-                  ? 'bg-gradient-to-r from-teal-600 to-blue-600 text-white shadow-lg shadow-teal-500/25'
+                  ? 'bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-500/25'
                   : 'bg-gray-800/80 text-gray-400 hover:text-white hover:bg-gray-700/80 border border-gray-700/50'
               }`}
             >
               <FiBriefcase className="w-4 h-4" />
-              <span className="hidden sm:inline">My Portfolios</span>
+              <span className="hidden sm:inline">Explore Portfolios</span>
               <span className="sm:hidden">Portfolios</span>
               <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${
                 activeTab === 'portfolios' 
@@ -397,88 +461,131 @@ export default function AccountPage() {
                 {portfolios.length}
               </span>
             </button>
-            
+
             <button
-              onClick={() => setActiveTab('questions')}
-              className={`relative flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold transition-all duration-300 whitespace-nowrap text-sm sm:text-base ${
-                activeTab === 'questions'
-                  ? 'bg-gradient-to-r from-teal-600 to-blue-600 text-white shadow-lg shadow-teal-500/25'
-                  : 'bg-gray-800/80 text-gray-400 hover:text-white hover:bg-gray-700/80 border border-gray-700/50'
-              }`}
+              onClick={() => router.push('/kronos')}
+              className="relative flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold transition-all duration-300 whitespace-nowrap text-sm sm:text-base bg-teal-600 hover:bg-teal-700 text-white shadow-lg hover:shadow-teal-500/25"
             >
               <FiFileText className="w-4 h-4" />
-              <span className="hidden sm:inline">My Questions</span>
-              <span className="sm:hidden">Questions</span>
-              <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${
-                activeTab === 'questions' 
-                  ? 'bg-white/20' 
-                  : 'bg-gray-700'
-              }`}>
-                {questions.length}
-              </span>
-            </button>
-            
-            <button
-              onClick={() => setActiveTab('tests')}
-              className={`relative flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold transition-all duration-300 whitespace-nowrap text-sm sm:text-base ${
-                activeTab === 'tests'
-                  ? 'bg-gradient-to-r from-teal-600 to-blue-600 text-white shadow-lg shadow-teal-500/25'
-                  : 'bg-gray-800/80 text-gray-400 hover:text-white hover:bg-gray-700/80 border border-gray-700/50'
-              }`}
-            >
-              <FiBarChart2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Test History</span>
-              <span className="sm:hidden">Tests</span>
-              <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${
-                activeTab === 'tests' 
-                  ? 'bg-white/20' 
-                  : 'bg-gray-700'
-              }`}>
-                {tests.length}
-              </span>
+              <span className="hidden sm:inline">Core Portfolios</span>
+              <span className="sm:hidden">Portfolios</span>
             </button>
           </div>
         </div>
 
         {/* Content */}
         {activeTab === 'portfolios' && (
-          <div className="space-y-3 sm:space-y-4">
+          <div className="space-y-2">
             {portfolios.length > 0 ? (
-              portfolios.map((portfolio) => (
-                <div
-                  key={portfolio.id}
-                  onClick={() => router.push(`/dashboard`)}
-                  className="relative group bg-gradient-to-br from-gray-800/90 to-gray-900/90 rounded-xl sm:rounded-2xl border border-gray-700/50 p-4 sm:p-6 hover:border-teal-500/50 transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-teal-500/10 backdrop-blur-sm overflow-hidden"
-                >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-teal-500/5 to-blue-500/5 rounded-full blur-2xl group-hover:from-teal-500/10 group-hover:to-blue-500/10 transition-all duration-300" />
-                  
-                  <div className="relative z-10 flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <FiBriefcase className="w-5 h-5 text-teal-400 flex-shrink-0" />
-                        <h3 className="text-lg sm:text-xl font-bold text-white group-hover:text-teal-400 transition-colors truncate">
-                          {portfolio.name}
-                        </h3>
-                      </div>
-                      {portfolio.description && (
-                        <p className="text-gray-400 mb-3 text-sm sm:text-base line-clamp-2">{portfolio.description}</p>
-                      )}
-                      <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-400">
-                        <div className="flex items-center gap-1.5">
-                          <FiClock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                          <span>Created {getTimeAgo(portfolio.created_at)}</span>
-                        </div>
-                        {portfolio.portfolio_score && (
-                          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-teal-500/10 rounded-full border border-teal-500/20">
-                            <FiTrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-teal-400 flex-shrink-0" />
-                            <span className="text-teal-400 font-semibold">Score: {portfolio.portfolio_score}</span>
+              portfolios.map((portfolio) => {
+                const isExpanded = expandedPortfolio === portfolio.id;
+                const holdings = portfolio.allocation?.holdings || [];
+                
+                return (
+                  <div
+                    key={portfolio.id}
+                    className="relative bg-gradient-to-br from-gray-800/80 to-gray-900/80 rounded-lg border border-gray-700/50 hover:border-teal-500/50 transition-all duration-300 backdrop-blur-sm overflow-hidden"
+                  >
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-teal-500/5 to-blue-500/5 rounded-full blur-2xl transition-all duration-300" />
+                    
+                    {/* Header - Clickable to expand/collapse */}
+                    <div 
+                      onClick={() => setExpandedPortfolio(isExpanded ? null : portfolio.id)}
+                      className="relative z-10 p-3 sm:p-4 cursor-pointer"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <FiBriefcase className="w-4 h-4 text-teal-400 flex-shrink-0" />
+                            <h3 className="text-lg sm:text-xl font-semibold text-white transition-colors truncate">
+                              {portfolio.name}
+                            </h3>
                           </div>
-                        )}
+                          {portfolio.description && (
+                            <p className="text-gray-400 mb-2 text-xs sm:text-sm line-clamp-1">{portfolio.description}</p>
+                          )}
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
+                            <div className="flex items-center gap-1">
+                              <FiClock className="w-3 h-3 flex-shrink-0" />
+                              <span>{getTimeAgo(portfolio.created_at)}</span>
+                            </div>
+                            {portfolio.portfolio_score && (
+                              <div className="flex items-center gap-1 px-2 py-0.5 bg-teal-500/10 rounded-full border border-teal-500/20">
+                                <FiTrendingUp className="w-3 h-3 text-teal-400 flex-shrink-0" />
+                                <span className="text-teal-400 font-semibold">{portfolio.portfolio_score}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0">
+                          {isExpanded ? (
+                            <FiChevronUp className="w-5 h-5 text-gray-400" />
+                          ) : (
+                            <FiChevronDown className="w-5 h-5 text-gray-400" />
+                          )}
+                        </div>
                       </div>
                     </div>
+
+                    {/* Expanded Content - Holdings */}
+                    {isExpanded && (
+                      <div className="relative z-10 border-t border-gray-700/50 p-3 sm:p-4">
+                        <h4 className="text-sm font-semibold text-white mb-3">Portfolio Holdings</h4>
+                        
+                        {holdings.length > 0 ? (
+                          <div className="space-y-2 mb-4">
+                            {holdings.map((holding: any, index: number) => (
+                              <div key={index} className="flex items-center justify-between p-2 bg-gray-800/50 rounded-lg">
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-white">{holding.ticker || holding.symbol}</p>
+                                  {holding.name && (
+                                    <p className="text-xs text-gray-400 truncate">{holding.name}</p>
+                                  )}
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-sm font-semibold text-teal-400">
+                                    {holding.percentage ? `${holding.percentage.toFixed(1)}%` : 
+                                     holding.allocation ? `${(holding.allocation * 100).toFixed(1)}%` : 'N/A'}
+                                  </p>
+                                  {holding.value && (
+                                    <p className="text-xs text-gray-400">${holding.value.toLocaleString()}</p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-400 mb-4">No holdings data available</p>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push('/scenario-testing/questions');
+                            }}
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-lg transition-all duration-300 text-sm"
+                          >
+                            <FiActivity className="w-4 h-4" />
+                            Test Portfolio
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeletePortfolio(portfolio.id, portfolio.name);
+                            }}
+                            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-all duration-300 text-sm"
+                          >
+                            <FiTrash2 className="w-4 h-4" />
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="text-center py-12 sm:py-16 bg-gradient-to-br from-gray-800/90 to-gray-900/90 rounded-xl sm:rounded-2xl border border-gray-700/50 backdrop-blur-sm">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 bg-gradient-to-br from-teal-500/20 to-blue-500/20 rounded-full flex items-center justify-center border-2 border-teal-500/30">
@@ -487,7 +594,7 @@ export default function AccountPage() {
                 <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">No portfolios yet</p>
                 <button
                   onClick={() => router.push('/kronos')}
-                  className="px-6 sm:px-8 py-2.5 sm:py-3 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-teal-500/25 hover:scale-105 text-sm sm:text-base"
+                  className="px-6 sm:px-8 py-2.5 sm:py-3 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-teal-500/25 hover:scale-105 text-sm sm:text-base"
                 >
                   Create Your First Portfolio
                 </button>
@@ -496,122 +603,6 @@ export default function AccountPage() {
           </div>
         )}
 
-        {activeTab === 'questions' && (
-          <div className="space-y-3 sm:space-y-4">
-            {questions.length > 0 ? (
-              questions.map((question) => (
-                <div
-                  key={question.id}
-                  onClick={() => router.push(`/scenario-testing/${question.id}`)}
-                  className="relative group bg-gradient-to-br from-gray-800/90 to-gray-900/90 rounded-xl sm:rounded-2xl border border-gray-700/50 p-4 sm:p-6 hover:border-blue-500/50 transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-blue-500/10 backdrop-blur-sm overflow-hidden"
-                >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-full blur-2xl group-hover:from-blue-500/10 group-hover:to-purple-500/10 transition-all duration-300" />
-                  
-                  <div className="relative z-10">
-                    <div className="flex items-start gap-2 mb-2">
-                      <FiFileText className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                      <h3 className="text-lg sm:text-xl font-bold text-white group-hover:text-blue-400 transition-colors">
-                        {question.title}
-                      </h3>
-                    </div>
-                    <p className="text-gray-300 mb-4 text-sm sm:text-base line-clamp-2">{question.question_text}</p>
-                    <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm">
-                      <div className="flex items-center gap-1.5 text-gray-400">
-                        <FiClock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                        <span>{getTimeAgo(question.created_at)}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-pink-500/10 rounded-full border border-pink-500/20">
-                        <FiThumbsUp className="w-3 h-3 sm:w-4 sm:h-4 text-pink-400 flex-shrink-0" />
-                        <span className="text-pink-400 font-semibold">{question.likes_count}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/10 rounded-full border border-blue-500/20">
-                        <FiMessageSquare className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400 flex-shrink-0" />
-                        <span className="text-blue-400 font-semibold">{question.comments_count}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-purple-500/10 rounded-full border border-purple-500/20">
-                        <FiBarChart2 className="w-3 h-3 sm:w-4 sm:h-4 text-purple-400 flex-shrink-0" />
-                        <span className="text-purple-400 font-semibold">{question.tests_count}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-12 sm:py-16 bg-gradient-to-br from-gray-800/90 to-gray-900/90 rounded-xl sm:rounded-2xl border border-gray-700/50 backdrop-blur-sm">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full flex items-center justify-center border-2 border-blue-500/30">
-                  <FiFileText className="w-8 h-8 sm:w-10 sm:h-10 text-blue-400" />
-                </div>
-                <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">No questions created yet</p>
-                <button
-                  onClick={() => router.push('/scenario-testing/questions')}
-                  className="px-6 sm:px-8 py-2.5 sm:py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-blue-500/25 hover:scale-105 text-sm sm:text-base"
-                >
-                  Create Your First Question
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'tests' && (
-          <div className="space-y-3 sm:space-y-4">
-            {tests.length > 0 ? (
-              tests.map((test) => (
-                <div
-                  key={test.id}
-                  onClick={() => router.push(`/scenario-testing/${test.question_id}/results?testId=${test.id}&portfolioId=${test.portfolio_id}`)}
-                  className="relative group bg-gradient-to-br from-gray-800/90 to-gray-900/90 rounded-xl sm:rounded-2xl border border-gray-700/50 p-4 sm:p-6 hover:border-purple-500/50 transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-purple-500/10 backdrop-blur-sm overflow-hidden"
-                >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/5 to-pink-500/5 rounded-full blur-2xl group-hover:from-purple-500/10 group-hover:to-pink-500/10 transition-all duration-300" />
-                  
-                  <div className="relative z-10 flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start gap-2 mb-1">
-                        <FiBarChart2 className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
-                        <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-purple-400 transition-colors">
-                          {(test.question as any)?.title || 'Unknown Question'}
-                        </h3>
-                      </div>
-                      <p className="text-gray-400 mb-3 text-sm sm:text-base flex items-center gap-1.5">
-                        <FiBriefcase className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                        <span className="truncate">{(test.portfolio as any)?.name || 'Unknown Portfolio'}</span>
-                      </p>
-                      <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm">
-                        <div className="flex items-center gap-1.5 text-gray-400">
-                          <FiClock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                          <span>{getTimeAgo(test.created_at)}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 rounded-full border border-green-500/20">
-                          <FiTrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-green-400 flex-shrink-0" />
-                          <span className="text-green-400 font-semibold">{(test.expected_return * 100).toFixed(1)}%</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <div className="px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl border border-purple-500/30">
-                        <p className="text-2xl sm:text-3xl font-bold text-purple-300">{test.score}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">score</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-12 sm:py-16 bg-gradient-to-br from-gray-800/90 to-gray-900/90 rounded-xl sm:rounded-2xl border border-gray-700/50 backdrop-blur-sm">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full flex items-center justify-center border-2 border-purple-500/30">
-                  <FiBarChart2 className="w-8 h-8 sm:w-10 sm:h-10 text-purple-400" />
-                </div>
-                <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">No test results yet</p>
-                <button
-                  onClick={() => router.push('/scenario-testing/questions')}
-                  className="px-6 sm:px-8 py-2.5 sm:py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-purple-500/25 hover:scale-105 text-sm sm:text-base"
-                >
-                  Test Your First Portfolio
-                </button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

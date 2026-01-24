@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase/client';
 import PostCard from '@/components/features/community/PostCard';
 import CreateQuestionModal from '@/components/features/community/CreateQuestionModal';
 import TestResultsModal, { type TestResultData } from '@/components/features/community/TestResultsModal';
-import { FiPlus, FiTrendingUp, FiClock, FiThumbsUp, FiMessageSquare, FiUsers, FiTarget, FiFileText } from 'react-icons/fi';
+import { FiPlus, FiTrendingUp, FiClock, FiThumbsUp, FiMessageSquare, FiUsers, FiTarget, FiFileText, FiUser } from 'react-icons/fi';
 import type { ScenarioQuestionWithAuthor, FeedFilter, CreateScenarioQuestionInput } from '@/types/community';
 import type { PortfolioComparison } from '@/types/portfolio';
 
@@ -284,6 +284,9 @@ export default function CommunityFeedPage() {
     }
   };
 
+  // Store current question ID for test results modal
+  const [currentQuestionId, setCurrentQuestionId] = useState<string | null>(null);
+
   // Handle test
   const handleTest = async (questionId: string) => {
     // Check for portfolio from sessionStorage (from PostCard modal) or state (from top dropdown)
@@ -299,6 +302,9 @@ export default function CommunityFeedPage() {
     // Find the question
     const question = questions.find(q => q.id === questionId);
     if (!question) return;
+
+    // Store question ID for the modal
+    setCurrentQuestionId(questionId);
 
     const portfolioName = portfolioNameFromSession ||
                          userPortfolios.find(p => p.id === portfolioIdToUse)?.name || 
@@ -753,15 +759,26 @@ export default function CommunityFeedPage() {
               );
             })}
              {user && (
-              <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-teal-500 hover:bg-teal-600 
-                  text-white font-semibold rounded-lg transition-colors text-xs sm:text-sm ml-auto flex-shrink-0"
-              >
-                <FiPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden xs:inline">Post Question</span>
-                <span className="xs:hidden">Post</span>
-              </button>
+              <>
+                {/* My Account button - visible only on mobile */}
+                <button
+                  onClick={() => router.push('/account')}
+                  className="flex md:hidden items-center gap-1.5 px-3 py-2 bg-gray-700 hover:bg-gray-600 
+                    text-white font-semibold rounded-lg transition-colors text-xs ml-auto flex-shrink-0"
+                >
+                  <FiUser className="w-3.5 h-3.5" />
+                  <span>My Account</span>
+                </button>
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-teal-500 hover:bg-teal-600 
+                    text-white font-semibold rounded-lg transition-colors text-xs sm:text-sm md:ml-auto flex-shrink-0"
+                >
+                  <FiPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="hidden xs:inline">Post Question</span>
+                  <span className="xs:hidden">Post</span>
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -899,11 +916,13 @@ export default function CommunityFeedPage() {
           isOpen={showTestResults}
           onClose={() => {
             setShowTestResults(false);
+            setCurrentQuestionId(null);
             // Clear sessionStorage when modal is closed
             sessionStorage.removeItem('latestTestResult');
           }}
           results={testResults}
           portfolioComparison={portfolioComparison || undefined}
+          questionId={currentQuestionId || undefined}
         />
       )}
 

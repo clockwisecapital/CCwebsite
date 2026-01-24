@@ -44,12 +44,12 @@ async function testCache(analogId?: string) {
       console.log('❌ No cache data found');
     } else {
       stats.forEach(stat => {
-        console.log(`Version ${stat.version}:`);
-        console.log(`  Total Entries: ${stat.total_entries}`);
-        console.log(`  Unique Analogs: ${stat.unique_analogs}`);
-        console.log(`  Unique Portfolios: ${stat.unique_portfolios}`);
-        console.log(`  Average Score: ${stat.avg_score}/100`);
-        console.log(`  Last Updated: ${new Date(stat.last_update).toLocaleString()}`);
+        console.log(`Version ${stat.version ?? 'unknown'}:`);
+        console.log(`  Total Entries: ${stat.total_entries ?? 0}`);
+        console.log(`  Unique Analogs: ${stat.unique_analogs ?? 0}`);
+        console.log(`  Unique Portfolios: ${stat.unique_portfolios ?? 0}`);
+        console.log(`  Average Score: ${stat.avg_score ?? 0}/100`);
+        console.log(`  Last Updated: ${stat.last_update ? new Date(stat.last_update).toLocaleString() : 'N/A'}`);
         console.log('');
       });
     }

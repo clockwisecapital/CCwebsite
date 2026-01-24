@@ -140,7 +140,11 @@ function transformCachedScore(cached: CachedPortfolioScore): PortfolioScoreRespo
     drawdownScore: cached.drawdown_score,
     label: cached.label,
     color: cached.color,
-    holdings: cached.holdings
+    holdings: cached.holdings as Array<{
+      ticker: string;
+      weight: number;
+      assetClass: string;
+    }>
   };
 }
 
