@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "generate-cache": "tsx --env-file=.env.local scripts/generate-clockwise-cache.ts",
-    "test-cache": "tsx --env-file=.env.local scripts/test-cache.ts"
+    "test-cache": "tsx --env-file=.env.local scripts/test-cache.ts",
+    "generate-time-cache": "tsx --env-file=.env.local scripts/generate-time-analog-cache.ts",
+    "generate-all-caches": "npm run generate-cache && npm run generate-time-cache"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",

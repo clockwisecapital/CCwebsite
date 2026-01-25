@@ -232,14 +232,47 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScoreResp
     
     // Optionally score TIME portfolio for comparison (default: yes)
     if (body.includeTimeComparison !== false) {
-      console.log(`\n🤖 Scoring TIME portfolio for comparison...`);
+      console.log(`\n🤖 Fetching TIME portfolio comparison...`);
       
       try {
-        // Fetch real TIME portfolio from database
-        const timePortfolioHoldings = await getTimePortfolioHoldings();
-        const timeResult = await scorePortfolio(body.question, timePortfolioHoldings);
+        // Determine analog ID from user result
+        const analogId = getAnalogIdFromScenarioId(userResult.scenarioId || '', userResult.analogName || '');
         
-        response.timeHoldings = timePortfolioHoldings.map(h => ({
+        // Try to get cached TIME score first
+        let timeResult: any = null;
+        let timePortfolioHoldings: Holding[] | null = null;
+        
+        if (analogId) {
+          const { getCachedTimeAnalogScore } = await import('@/lib/services/time-portfolio-cache');
+          const cachedScore = await getCachedTimeAnalogScore(analogId);
+          
+          if (cachedScore) {
+            console.log(`✅ Using cached TIME score for ${analogId}`);
+            timeResult = {
+              score: cachedScore.score,
+              label: cachedScore.label,
+              color: cachedScore.color,
+              portfolioReturn: cachedScore.portfolio_return,
+              benchmarkReturn: cachedScore.benchmark_return,
+              outperformance: cachedScore.outperformance,
+              portfolioDrawdown: cachedScore.portfolio_drawdown,
+              benchmarkDrawdown: cachedScore.benchmark_drawdown,
+              returnScore: cachedScore.return_score,
+              drawdownScore: cachedScore.drawdown_score
+            };
+            
+            timePortfolioHoldings = cachedScore.holdings as Holding[];
+          }
+        }
+        
+        // If no cache hit, compute fresh
+        if (!timeResult) {
+          console.log(`⚠️ Cache miss, computing TIME portfolio score...`);
+          timePortfolioHoldings = await getTimePortfolioHoldings();
+          timeResult = await scorePortfolio(body.question, timePortfolioHoldings);
+        }
+        
+        response.timeHoldings = (timePortfolioHoldings || []).map(h => ({
           ticker: h.ticker,
           weight: h.weight,
           name: h.ticker,

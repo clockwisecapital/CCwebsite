@@ -260,10 +260,15 @@ const PortfolioComparison = () => {
           <p className="text-xs sm:text-sm md:text-base text-gray-300 mb-4 sm:mb-6">
             Get personalized advice from our financial experts
           </p>
-          <button className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-teal-500 hover:bg-teal-600 text-black text-sm sm:text-base font-bold rounded-lg sm:rounded-xl transition-all duration-300 hover:scale-105">
+          <a
+            href="https://calendly.com/clockwisecapital/appointments"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-teal-500 hover:bg-teal-600 text-black text-sm sm:text-base font-bold rounded-lg sm:rounded-xl transition-all duration-300 hover:scale-105"
+          >
             Talk to an Advisor
             <span>→</span>
-          </button>
+          </a>
         </div>
       </div>
     </div>

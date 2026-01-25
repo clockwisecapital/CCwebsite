@@ -265,6 +265,20 @@ export async function fetchAllAssetClassReturns(
 ): Promise<AssetReturns> {
   console.log(`📊 Fetching asset class returns for ${analogId} (${dateRange.start} to ${dateRange.end})`);
   
+  // Step 1: Check persistent Supabase cache first
+  try {
+    const { getCachedAssetReturns } = await import('./asset-returns-cache');
+    const cacheResult = await getCachedAssetReturns(analogId);
+    
+    if (cacheResult.found && cacheResult.assetReturns) {
+      console.log(`✅ Using persistent cached asset returns for ${analogId}`);
+      return cacheResult.assetReturns;
+    }
+  } catch (error) {
+    console.warn('⚠️ Could not check persistent cache:', error);
+  }
+  
+  // Step 2: Cache miss - fetch from Yahoo Finance
   const startDate = new Date(dateRange.start);
   const endDate = new Date(dateRange.end);
   
@@ -280,17 +294,17 @@ export async function fetchAllAssetClassReturns(
     console.log(`📦 Fetching batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(assetClasses.length / BATCH_SIZE)}: ${batch.join(', ')}`);
     
     const batchPromises = batch.map(async (assetClass) => {
-      // Check cache first
+      // Check in-memory cache first (for this request)
       const cacheKey = `${analogId}:${assetClass}`;
       if (historicalReturnCache[cacheKey] !== undefined) {
-        console.log(`📦 Using cached return for ${assetClass}`);
+        console.log(`📦 Using in-memory cached return for ${assetClass}`);
         return { assetClass, return: historicalReturnCache[cacheKey] };
       }
       
       // Fetch from Yahoo Finance
       const returnValue = await fetchHistoricalAssetClassReturn(assetClass, startDate, endDate);
       
-      // Cache the result (even if null)
+      // Cache the result in-memory (for this request)
       if (returnValue !== null) {
         historicalReturnCache[cacheKey] = returnValue;
       }
@@ -332,6 +346,14 @@ export async function fetchAllAssetClassReturns(
   
   console.log(`✅ Data sources: ${successCount} real-time ETFs, ${verifiedCount} verified historical indices, ${assetClasses.length - successCount - verifiedCount} estimates`);
   console.log(`✅ Total: ${assetClasses.length} asset class returns validated`);
+  
+  // Step 3: Store in persistent cache for next time
+  try {
+    const { setCachedAssetReturns } = await import('./asset-returns-cache');
+    await setCachedAssetReturns(analogId, assetReturns, dateRange, ASSET_CLASS_ETFS);
+  } catch (error) {
+    console.warn('⚠️ Could not store in persistent cache:', error);
+  }
   
   return assetReturns;
 }

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { supabase } from '@/lib/supabase/client';
+import CorePortfoliosModal from '@/components/features/core-portfolios/CorePortfoliosModal';
 import { 
   FiUser, 
   FiMail, 
@@ -77,6 +78,9 @@ export default function AccountPage() {
   
   // Expanded portfolio state
   const [expandedPortfolio, setExpandedPortfolio] = useState<string | null>(null);
+  
+  // Core Portfolios modal state
+  const [showCorePortfoliosModal, setShowCorePortfoliosModal] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -473,7 +477,7 @@ export default function AccountPage() {
             </button>
 
             <button
-              onClick={() => router.push('/kronos')}
+              onClick={() => setShowCorePortfoliosModal(true)}
               className="relative flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold transition-all duration-300 whitespace-nowrap text-sm sm:text-base bg-teal-600 hover:bg-teal-700 text-white shadow-lg hover:shadow-teal-500/25"
             >
               <FiFileText className="w-4 h-4" />
@@ -614,6 +618,12 @@ export default function AccountPage() {
         )}
 
       </div>
+
+      {/* Core Portfolios Modal */}
+      <CorePortfoliosModal
+        isOpen={showCorePortfoliosModal}
+        onClose={() => setShowCorePortfoliosModal(false)}
+      />
     </div>
   );
 }

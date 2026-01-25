@@ -374,6 +374,137 @@ export async function clearVolatilityCache(): Promise<void> {
 }
 
 // ============================================================================
+// TIME PORTFOLIO ANALOG CACHE (for Scenario Testing)
+// ============================================================================
+
+export interface CachedTimeAnalogScore {
+  id?: string;
+  analog_id: string;
+  analog_name: string;
+  analog_period: string;
+  holdings: any;
+  holdings_date: string;
+  score: number;
+  label: string;
+  color: string;
+  portfolio_return: number;
+  benchmark_return: number;
+  outperformance: number;
+  portfolio_drawdown: number;
+  benchmark_drawdown: number;
+  return_score: number;
+  drawdown_score: number;
+  scenario_id?: string;
+  scenario_name?: string;
+  version: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/**
+ * Get cached TIME portfolio score for a specific analog
+ */
+export async function getCachedTimeAnalogScore(
+  analogId: string,
+  version: number = 1
+): Promise<CachedTimeAnalogScore | null> {
+  try {
+    const supabase = createAdminSupabaseClient();
+    
+    // @ts-ignore - time_portfolio_analog_cache not yet in generated types
+    const { data, error } = await supabase
+      .from('time_portfolio_analog_cache')
+      .select('*')
+      .eq('analog_id', analogId)
+      .eq('version', version)
+      .single();
+    
+    if (error || !data) {
+      console.log(`📦 No TIME analog cache found for ${analogId}`);
+      return null;
+    }
+    
+    console.log(`✅ Cache HIT: TIME × ${analogId} (score: ${data.score}/100)`);
+    return data as CachedTimeAnalogScore;
+  } catch (error) {
+    console.error('Error fetching TIME analog cache:', error);
+    return null;
+  }
+}
+
+/**
+ * Store TIME portfolio analog score
+ */
+export async function setCachedTimeAnalogScore(
+  data: Omit<CachedTimeAnalogScore, 'id' | 'created_at' | 'updated_at'>
+): Promise<boolean> {
+  try {
+    const supabase = createAdminSupabaseClient();
+    
+    // @ts-ignore - time_portfolio_analog_cache not yet in generated types
+    const { error } = await supabase
+      .from('time_portfolio_analog_cache')
+      .upsert(data, { onConflict: 'analog_id,version' });
+    
+    if (error) {
+      console.error('Error caching TIME analog score:', error);
+      return false;
+    }
+    
+    console.log(`📦 Cached TIME × ${data.analog_id} (score: ${data.score}/100)`);
+    return true;
+  } catch (error) {
+    console.error('Error caching TIME analog score:', error);
+    return false;
+  }
+}
+
+/**
+ * Clear TIME analog cache for a specific version
+ */
+export async function clearTimeAnalogCache(version?: number): Promise<void> {
+  try {
+    const supabase = createAdminSupabaseClient();
+    
+    // @ts-ignore - time_portfolio_analog_cache not yet in generated types
+    let query = supabase.from('time_portfolio_analog_cache').delete();
+    
+    if (version !== undefined) {
+      query = query.eq('version', version);
+    } else {
+      query = query.neq('analog_id', ''); // Delete all
+    }
+    
+    await query;
+    console.log(`🗑️ TIME analog cache cleared${version ? ` (version ${version})` : ''}`);
+  } catch (error) {
+    console.error('Error clearing TIME analog cache:', error);
+  }
+}
+
+/**
+ * Check if TIME analog cache is populated for all analogs
+ */
+export async function isTimeAnalogCachePopulated(version: number = 1): Promise<boolean> {
+  try {
+    const supabase = createAdminSupabaseClient();
+    
+    // @ts-ignore - time_portfolio_analog_cache not yet in generated types
+    const { count, error } = await supabase
+      .from('time_portfolio_analog_cache')
+      .select('*', { count: 'exact', head: true })
+      .eq('version', version);
+    
+    if (error) return false;
+    
+    // Expect 4 entries (4 analogs)
+    return count === 4;
+  } catch {
+    return false;
+  }
+}
+
+// ============================================================================
 // COMBINED CACHE MANAGEMENT
 // ============================================================================
 
@@ -384,6 +515,7 @@ export async function clearAllCaches(): Promise<void> {
   await Promise.all([
     clearTimePortfolioCache(),
     clearVolatilityCache(),
+    clearTimeAnalogCache(),
   ]);
   console.log('🗑️ All portfolio caches cleared');
 }
