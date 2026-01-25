@@ -4,33 +4,21 @@
  * Runs all 4 Clockwise Core Portfolios through the REAL Kronos analyzer
  * Uses the same logic as the Kronos dashboard for consistent calculations
  * 
- * CACHING: Results cached for 24 hours since allocations don't change daily
+ * CACHING: Results cached in Supabase for 24 hours since allocations don't change daily
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ASSET_ALLOCATION_PORTFOLIOS } from '@/lib/clockwise-portfolios';
+import {
+  getAllCachedCorePortfolios,
+  batchSetCachedCorePortfolios,
+  isCorePortfoliosCacheValid,
+} from '@/lib/services/core-portfolios-cache';
 
 // Cache configuration - revalidate every 24 hours
 export const revalidate = 86400; // 24 hours in seconds
 
 const TIME_HORIZON_YEARS = 1; // 12 months
-
-// In-memory cache with timestamp
-interface CachedResponse {
-  success: boolean;
-  portfolios: any[];
-  timeHorizon: string;
-  methodology: string;
-  timestamp: string;
-  cached: boolean;
-}
-
-let cachedResults: {
-  data: CachedResponse;
-  timestamp: number;
-} | null = null;
-
-const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 /**
  * Convert Clockwise allocation to Kronos portfolio format
@@ -194,17 +182,45 @@ async function analyzePortfolio(portfolio: typeof ASSET_ALLOCATION_PORTFOLIOS[0]
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if we have valid cached data
-    const now = Date.now();
-    if (cachedResults && (now - cachedResults.timestamp < CACHE_DURATION)) {
-      const cacheAge = Math.floor((now - cachedResults.timestamp) / 1000 / 60); // minutes
-      console.log(`📦 Serving cached Core Portfolios data (${cacheAge} minutes old)`);
+    // Check if we have valid cached data in Supabase
+    const isCacheValid = await isCorePortfoliosCacheValid();
+    
+    if (isCacheValid) {
+      console.log('📦 Attempting to serve cached Core Portfolios data from DB...');
+      const cachedPortfolios = await getAllCachedCorePortfolios();
       
-      return NextResponse.json({
-        ...cachedResults.data,
-        cached: true,
-        cacheAge: `${cacheAge} minutes`
-      });
+      if (cachedPortfolios && cachedPortfolios.length > 0) {
+        const cacheAge = Math.floor((Date.now() - cachedPortfolios[0].updatedAt.getTime()) / 1000 / 60);
+        console.log(`✅ Serving ${cachedPortfolios.length} cached portfolios (${cacheAge} min old)`);
+        
+        // Transform cached data to match expected format
+        const portfolioResults = cachedPortfolios.map(cached => ({
+          id: cached.id,
+          name: cached.name,
+          description: cached.description,
+          riskLevel: cached.riskLevel,
+          expectedReturn: cached.expectedReturn,
+          expectedBestYear: cached.expectedBestYear,
+          expectedWorstYear: cached.expectedWorstYear,
+          upside: cached.upside,
+          downside: cached.downside,
+          volatility: cached.volatility,
+          topPositions: cached.topPositions || [],
+          allocations: cached.allocations,
+          assetAllocation: cached.assetAllocation,
+          kronosData: cached.kronosData,
+        }));
+        
+        return NextResponse.json({
+          success: true,
+          portfolios: portfolioResults,
+          timeHorizon: `${TIME_HORIZON_YEARS} year`,
+          methodology: 'Kronos Portfolio Analyzer with FactSet price targets + Monte Carlo simulations',
+          timestamp: cachedPortfolios[0].updatedAt.toISOString(),
+          cached: true,
+          cacheAge: `${cacheAge} minutes`
+        });
+      }
     }
 
     console.log('📊 Analyzing Core Portfolios using Kronos (cache miss or expired)...');
@@ -216,6 +232,32 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Analyzed ${portfolioResults.length} Core Portfolios`);
 
+    // Save to database cache
+    console.log('💾 Saving Core Portfolios to Supabase cache...');
+    const cacheData = portfolioResults.map(result => ({
+      id: result.id,
+      name: result.name,
+      description: result.description,
+      riskLevel: result.riskLevel,
+      allocations: result.allocations,
+      expectedReturn: result.expectedReturn,
+      expectedBestYear: result.expectedBestYear,
+      expectedWorstYear: result.expectedWorstYear,
+      upside: result.upside,
+      downside: result.downside,
+      volatility: result.volatility,
+      assetAllocation: result.topPositions?.reduce((acc, pos) => {
+        acc[pos.name || pos.ticker] = pos.weight / 100;
+        return acc;
+      }, {} as Record<string, number>),
+      topPositions: result.topPositions,
+      kronosData: result.kronosData,
+      timeHorizon: TIME_HORIZON_YEARS,
+    }));
+    
+    const cacheResult = await batchSetCachedCorePortfolios(cacheData);
+    console.log(`💾 Cached ${cacheResult.success}/${cacheData.length} portfolios to Supabase`);
+
     const responseData = {
       success: true,
       portfolios: portfolioResults,
@@ -224,14 +266,6 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
       cached: false
     };
-
-    // Cache the results
-    cachedResults = {
-      data: responseData,
-      timestamp: now
-    };
-
-    console.log('💾 Cached Core Portfolios data for 24 hours');
 
     return NextResponse.json(responseData);
 
