@@ -7,12 +7,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
 
 /**
- * Calculate and save S&P 500 average from all test results
+ * Calculate and save SPY ETF benchmark average from all test results
  * Simple approach: fetch all tests, calculate average, save to question
+ * Note: Field name is sp500_avg_return for backwards compatibility, but represents SPY ETF
  */
 async function updateSP500Average(questionId: string) {
   try {
-    console.log('📊 Calculating S&P 500 average for question:', questionId);
+    console.log('📊 Calculating SPY benchmark average for question:', questionId);
     const supabase = await createServerSupabaseClient();
     
     // Fetch all test results for this question
@@ -22,36 +23,61 @@ async function updateSP500Average(questionId: string) {
       .eq('question_id', questionId);
     
     if (error || !tests || tests.length === 0) {
-      console.log('⚠️ No test results found, S&P 500 average not available yet');
+      console.log('⚠️ No test results found, SPY benchmark average not available yet');
       return;
     }
     
-    // Extract benchmark returns from comparison data
-    const benchmarkReturns = tests
+    // Extract benchmark returns and best/worst year from comparison data
+    const benchmarkData = tests
       .map((test: any, index: number) => {
         const compData = test.comparison_data;
         const userReturn = compData?.userPortfolio?.benchmarkReturn;
         const timeReturn = compData?.timePortfolio?.benchmarkReturn;
+        const bestYear = compData?.userPortfolio?.benchmarkBestYear;
+        const worstYear = compData?.userPortfolio?.benchmarkWorstYear;
         console.log(`  Test ${index + 1} benchmark data:`, { 
           hasCompData: !!compData, 
           userReturn, 
           timeReturn,
+          bestYear,
+          worstYear,
           userKeys: compData?.userPortfolio ? Object.keys(compData.userPortfolio) : [],
           timeKeys: compData?.timePortfolio ? Object.keys(compData.timePortfolio) : []
         });
-        return userReturn || timeReturn;
+        return { 
+          avgReturn: userReturn || timeReturn,
+          bestYear,
+          worstYear
+        };
       })
-      .filter((ret): ret is number => ret !== null && ret !== undefined);
+      .filter((data): data is { avgReturn: number; bestYear: number | null | undefined; worstYear: number | null | undefined } => 
+        data.avgReturn !== null && data.avgReturn !== undefined);
     
-    console.log(`📊 Found ${benchmarkReturns.length} valid benchmark returns out of ${tests.length} tests`);
+    console.log(`📊 Found ${benchmarkData.length} valid SPY benchmark returns out of ${tests.length} tests`);
+    console.log('🔍 Benchmark data sample:', benchmarkData.slice(0, 3));
     
-    if (benchmarkReturns.length === 0) {
-      console.log('⚠️ No benchmark data in test results yet');
+    if (benchmarkData.length === 0) {
+      console.log('⚠️ No SPY benchmark data in test results yet');
       return;
     }
     
-    // Calculate average
-    const avgReturn = benchmarkReturns.reduce((sum, ret) => sum + ret, 0) / benchmarkReturns.length;
+    // Calculate average return across all tests
+    const avgReturn = benchmarkData.reduce((sum, data) => sum + data.avgReturn, 0) / benchmarkData.length;
+    
+    // Get best/worst year from ANY test that has these values
+    // (All tests for same question should have same best/worst since it's the same historical period)
+    const testsWithRange = benchmarkData.filter(data => 
+      data.bestYear !== null && data.bestYear !== undefined &&
+      data.worstYear !== null && data.worstYear !== undefined
+    );
+    
+    console.log(`🎯 Found ${testsWithRange.length} tests with best/worst year data`);
+    if (testsWithRange.length > 0) {
+      console.log('📈 Sample range data:', testsWithRange[0]);
+    }
+    
+    const bestYear = testsWithRange.length > 0 ? testsWithRange[0].bestYear : null;
+    const worstYear = testsWithRange.length > 0 ? testsWithRange[0].worstYear : null;
     
     // First, get current metadata
     const { data: questionData } = await supabase
@@ -64,8 +90,10 @@ async function updateSP500Average(questionId: string) {
     const currentMetadata = (questionData?.metadata as any) || {};
     const updatedMetadata = {
       ...currentMetadata,
-      sp500_avg_return: avgReturn,
-      sp500_test_count: benchmarkReturns.length,
+      sp500_avg_return: avgReturn, // Note: Field name kept for backwards compatibility, represents SPY ETF
+      spy_best_year: bestYear,     // Best year return for SPY in this scenario (from Monte Carlo)
+      spy_worst_year: worstYear,   // Worst year return for SPY in this scenario (from Monte Carlo)
+      sp500_test_count: benchmarkData.length,
       sp500_updated_at: new Date().toISOString()
     };
     
@@ -76,22 +104,24 @@ async function updateSP500Average(questionId: string) {
       .eq('id', questionId);
     
     if (updateError) {
-      console.error('❌ Failed to save S&P 500 average:', updateError);
+      console.error('❌ Failed to save SPY benchmark average:', updateError);
     } else {
-      console.log(`✅ S&P 500 average saved: ${(avgReturn * 100).toFixed(1)}% (${benchmarkReturns.length} tests)`);
+      const bestStr = (bestYear !== null && bestYear !== undefined) ? `${(bestYear * 100).toFixed(1)}%` : 'N/A';
+      const worstStr = (worstYear !== null && worstYear !== undefined) ? `${(worstYear * 100).toFixed(1)}%` : 'N/A';
+      console.log(`✅ SPY benchmark saved: Avg ${(avgReturn * 100).toFixed(1)}%, Best ${bestStr}, Worst ${worstStr} (${benchmarkData.length} tests)`);
     }
   } catch (error) {
-    console.error('❌ Error calculating S&P 500 average:', error);
+    console.error('❌ Error calculating SPY benchmark average:', error);
   }
 }
 
 /**
- * Run S&P 500 benchmark test for a question
+ * Run SPY ETF benchmark test for a question
  * This runs in the background to benchmark user portfolio performance
  */
 async function runSP500BenchmarkTest(questionId: string) {
   try {
-    console.log('📊 Running S&P 500 benchmark test for question:', questionId);
+    console.log('📊 Running SPY ETF benchmark test for question:', questionId);
     
     const supabase = await createServerSupabaseClient();
     
@@ -198,7 +228,7 @@ export async function POST(
     // Check if test already exists for this portfolio + question
     const { data: existing } = await supabase
       .from('question_tests')
-      .select('id, score')
+      .select('id, score, metadata')
       .eq('question_id', questionId)
       .eq('portfolio_id', body.portfolioId)
       .eq('user_id', user.id)
@@ -252,17 +282,36 @@ export async function POST(
           message: 'Score improved! Updated leaderboard.'
         });
       } else {
-        // Score not better, don't update - but still recalculate S&P 500 average
-        console.log('⏭️ Score not better than existing, skipping update');
+        // Score not better, but still update comparison_data (it contains important metadata)
+        console.log('⏭️ Score not better than existing, updating comparison_data only');
         
-        // Calculate S&P 500 average from ALL tests (including this one conceptually)
+        const { data, error } = await supabase
+          .from('question_tests')
+          .update({
+            comparison_data: body.comparisonData || {},
+            metadata: {
+              ...(existing.metadata as any || {}),
+              updated_at: new Date().toISOString()
+            }
+          })
+          .eq('id', existing.id)
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('Error updating comparison_data:', error);
+        } else {
+          console.log('✅ Updated comparison_data with latest benchmark stats');
+        }
+        
+        // Calculate S&P 500 average from ALL tests
         await updateSP500Average(questionId);
         
         return NextResponse.json({
           success: true,
-          testResult: existing,
+          testResult: data || existing,
           updated: false,
-          message: 'Previous score was better.'
+          message: 'Previous score was better. Metadata updated.'
         });
       }
     }

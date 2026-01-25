@@ -106,10 +106,10 @@ export interface ScoreResult {
   analogName: string;
   analogPeriod: string;             // Display string like "Feb-Mar 2020"
   portfolioReturn: number;          // Decimal
-  benchmarkReturn: number;          // S&P 500 return
+  benchmarkReturn: number;          // SPY ETF return
   outperformance: number;           // portfolioReturn - benchmarkReturn
   portfolioDrawdown: number;        // Estimated drawdown
-  benchmarkDrawdown: number;        // S&P 500 max drawdown
+  benchmarkDrawdown: number;        // SPY ETF max drawdown
   returnScore: number;              // Return component (0-100)
   drawdownScore: number;            // Drawdown component (0-100)
   breakdown?: {

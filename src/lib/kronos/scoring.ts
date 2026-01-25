@@ -320,8 +320,8 @@ export function estimatePortfolioDrawdown(portfolioReturn: number): number {
  * 
  * @param portfolioReturn - Portfolio return during period
  * @param portfolioDrawdown - Portfolio max drawdown
- * @param benchmarkReturn - S&P 500 return
- * @param benchmarkDrawdown - S&P 500 max drawdown
+ * @param benchmarkReturn - SPY ETF return
+ * @param benchmarkDrawdown - SPY ETF max drawdown
  * @returns Score from 0-100
  */
 export function calculateScore(
@@ -429,8 +429,8 @@ export async function scorePortfolio(
     analogName: analog.name,
     analogPeriod: `${analog.dateRange.start} to ${analog.dateRange.end}`,
     portfolioReturn,
-    benchmarkReturn: benchmarkData.return,
-    outperformance: portfolioReturn - benchmarkData.return,
+    benchmarkReturn, // Use annualized benchmark return (not cumulative)
+    outperformance: portfolioReturn - benchmarkReturn, // Compare annualized returns
     portfolioDrawdown,
     benchmarkDrawdown: benchmarkData.drawdown,
     returnScore,

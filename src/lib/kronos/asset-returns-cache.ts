@@ -45,7 +45,6 @@ export async function getCachedAssetReturns(
   try {
     const supabase = createAdminSupabaseClient();
     
-    // @ts-expect-error - asset_returns_cache not yet in generated types
     const { data, error } = await supabase
       .from('asset_returns_cache')
       .select('*')
@@ -82,7 +81,6 @@ export async function getCachedAssetReturn(
   try {
     const supabase = createAdminSupabaseClient();
     
-    // @ts-ignore - asset_returns_cache not yet in generated types
     const { data, error } = await supabase
       .from('asset_returns_cache')
       .select('return_value')
@@ -312,7 +310,6 @@ export async function getAssetReturnsCacheStats(): Promise<{
   try {
     const supabase = createAdminSupabaseClient();
     
-    // @ts-ignore - asset_returns_cache_stats not yet in generated types
     const { data, error } = await supabase
       .from('asset_returns_cache_stats')
       .select('*')
@@ -321,13 +318,13 @@ export async function getAssetReturnsCacheStats(): Promise<{
     if (error || !data) return null;
     
     return {
-      version: data.version,
-      totalEntries: data.total_entries,
-      uniqueAnalogs: data.unique_analogs,
-      uniqueAssetClasses: data.unique_asset_classes,
-      yahooEntries: data.yahoo_entries,
-      verifiedEntries: data.verified_entries,
-      validatedEntries: data.validated_entries,
+      version: data.version ?? 0,
+      totalEntries: data.total_entries ?? 0,
+      uniqueAnalogs: data.unique_analogs ?? 0,
+      uniqueAssetClasses: data.unique_asset_classes ?? 0,
+      yahooEntries: data.yahoo_entries ?? 0,
+      verifiedEntries: data.verified_entries ?? 0,
+      validatedEntries: data.validated_entries ?? 0,
     };
   } catch {
     return null;

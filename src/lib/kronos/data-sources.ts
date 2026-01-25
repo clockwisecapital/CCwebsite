@@ -401,13 +401,14 @@ export function annualizeReturn(
 }
 
 /**
- * Fetch S&P 500 benchmark return and max drawdown
+ * Fetch SPY ETF benchmark return and max drawdown
+ * Uses SPY ETF for apples-to-apples comparison with user portfolios
  * 
  * @param analogId - Historical analog ID (for caching)
  * @param dateRange - Period start and end dates
  * @returns Benchmark data with return and drawdown
  */
-// Predefined S&P 500 benchmark returns for common scenarios
+// Predefined SPY ETF benchmark returns for common scenarios (fallback values)
 const FALLBACK_SP500_BENCHMARKS: Record<string, BenchmarkData> = {
   'COVID_CRASH': { return: -0.339, drawdown: 0.339 },
   'DOT_COM_BUST': { return: -0.50, drawdown: 0.50 },
@@ -419,7 +420,7 @@ export async function fetchSP500Benchmark(
   analogId: string,
   dateRange: { start: string; end: string }
 ): Promise<BenchmarkData> {
-  console.log(`📈 Fetching S&P 500 benchmark for ${analogId}`);
+  console.log(`📈 Fetching SPY ETF benchmark for ${analogId}`);
   
   // Check cache
   const cacheKey = `${analogId}:SP500`;
@@ -433,26 +434,20 @@ export async function fetchSP500Benchmark(
     const startDate = new Date(dateRange.start);
     const endDate = new Date(dateRange.end);
     
-    // Fetch S&P 500 Total Return Index (^SP500TR)
-    const priceData = await fetchYahooFinanceData('^SP500TR', startDate, endDate);
+    // Fetch SPY ETF (using ETF for apples-to-apples comparison with user portfolios)
+    const spyData = await fetchYahooFinanceData('SPY', startDate, endDate);
     
-    if (!priceData || priceData.length < 2) {
-      console.warn('Using fallback S&P 500 data');
-      // Fallback to SPY if ^SP500TR fails
-      const spyData = await fetchYahooFinanceData('SPY', startDate, endDate);
-      if (!spyData || spyData.length < 2) {
-        throw new Error('Unable to fetch S&P 500 data');
-      }
-      return calculateBenchmarkMetrics(spyData, analogId);
+    if (!spyData || spyData.length < 2) {
+      throw new Error('Unable to fetch SPY data');
     }
     
-    return calculateBenchmarkMetrics(priceData, analogId);
+    return calculateBenchmarkMetrics(spyData, analogId);
     
   } catch (error) {
-    console.error('Error fetching S&P 500 benchmark:', error);
+    console.error('Error fetching SPY benchmark:', error);
     // Use scenario-specific fallback
     const fallback = FALLBACK_SP500_BENCHMARKS[analogId] || { return: -0.20, drawdown: 0.20 };
-    console.warn(`⚠️ Using fallback S&P 500 benchmark: ${(fallback.return * 100).toFixed(1)}% return, ${(fallback.drawdown * 100).toFixed(1)}% drawdown`);
+    console.warn(`⚠️ Using fallback SPY benchmark: ${(fallback.return * 100).toFixed(1)}% return, ${(fallback.drawdown * 100).toFixed(1)}% drawdown`);
     return fallback;
   }
 }

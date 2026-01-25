@@ -168,6 +168,14 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
             </div>
           </div>
         </div>
+        <div className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-gray-800/50 border border-gray-700 flex-shrink-0">
+          <FiBarChart2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-teal-400 mr-1.5 sm:mr-2" />
+          <span className="text-[10px] sm:text-xs font-semibold text-white">{question.tests_count}</span>
+          <span className="text-[10px] sm:text-xs text-gray-400 ml-1 sm:ml-1.5">
+            <span className="hidden xs:inline">Investors Testing</span>
+            <span className="xs:hidden">Testing</span>
+          </span>
+        </div>
       </div>
 
       {/* Question Banner - Clickable to view top portfolios */}
@@ -182,26 +190,16 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
         </button>
       </div>
 
-      {/* Economic Cycle Tag & Testing Count */}
-      <div className="flex items-center justify-between gap-2 px-3 sm:px-4 md:px-5 pb-3 sm:pb-4">
-        {question.tags && question.tags.length > 0 ? (
+      {/* Economic Cycle Tag */}
+      {question.tags && question.tags.length > 0 && (
+        <div className="px-3 sm:px-4 md:px-5 pb-3 sm:pb-4">
           <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold
             bg-purple-500/20 border border-purple-500/30 text-purple-300 capitalize"
           >
             {question.tags[0]} Cycle
           </span>
-        ) : (
-          <div />
-        )}
-        <div className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-gray-800/50 border border-gray-700">
-          <FiBarChart2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-teal-400 mr-1.5 sm:mr-2" />
-          <span className="text-[10px] sm:text-xs font-semibold text-white">{question.tests_count}</span>
-          <span className="text-[10px] sm:text-xs text-gray-400 ml-1 sm:ml-1.5">
-            <span className="hidden xs:inline">Investors Testing</span>
-            <span className="xs:hidden">Testing</span>
-          </span>
         </div>
-      </div>
+      )}
 
       {/* Historical Analog */}
       {question.historical_period && Array.isArray(question.historical_period) && 

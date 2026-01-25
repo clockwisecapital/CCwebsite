@@ -1100,6 +1100,189 @@ export interface Database {
         }
         Relationships: []
       }
+      time_portfolio_analog_cache: {
+        Row: {
+          id: string
+          analog_id: string
+          analog_name: string
+          analog_period: string
+          holdings: Json
+          holdings_date: string
+          score: number
+          label: string
+          color: string
+          portfolio_return: number
+          benchmark_return: number
+          outperformance: number
+          portfolio_drawdown: number
+          benchmark_drawdown: number
+          return_score: number
+          drawdown_score: number
+          scenario_id: string | null
+          scenario_name: string | null
+          version: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          analog_id: string
+          analog_name: string
+          analog_period: string
+          holdings: Json
+          holdings_date?: string
+          score: number
+          label: string
+          color: string
+          portfolio_return: number
+          benchmark_return: number
+          outperformance: number
+          portfolio_drawdown: number
+          benchmark_drawdown: number
+          return_score: number
+          drawdown_score: number
+          scenario_id?: string | null
+          scenario_name?: string | null
+          version?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          analog_id?: string
+          analog_name?: string
+          analog_period?: string
+          holdings?: Json
+          holdings_date?: string
+          score?: number
+          label?: string
+          color?: string
+          portfolio_return?: number
+          benchmark_return?: number
+          outperformance?: number
+          portfolio_drawdown?: number
+          benchmark_drawdown?: number
+          return_score?: number
+          drawdown_score?: number
+          scenario_id?: string | null
+          scenario_name?: string | null
+          version?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      asset_returns_cache: {
+        Row: {
+          id: string
+          analog_id: string
+          asset_class: string
+          start_date: string
+          end_date: string
+          return_value: number
+          source: string
+          etf_ticker: string | null
+          is_validated: boolean
+          validation_date: string | null
+          version: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          analog_id: string
+          asset_class: string
+          start_date: string
+          end_date: string
+          return_value: number
+          source?: string
+          etf_ticker?: string | null
+          is_validated?: boolean
+          validation_date?: string | null
+          version?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          analog_id?: string
+          asset_class?: string
+          start_date?: string
+          end_date?: string
+          return_value?: number
+          source?: string
+          etf_ticker?: string | null
+          is_validated?: boolean
+          validation_date?: string | null
+          version?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      core_portfolios_cache: {
+        Row: {
+          id: string
+          portfolio_id: string
+          portfolio_name: string
+          description: string | null
+          risk_level: string
+          allocations: Json
+          expected_return: number
+          expected_best_year: number
+          expected_worst_year: number
+          upside: number
+          downside: number
+          volatility: number
+          asset_allocation: Json | null
+          top_positions: Json | null
+          kronos_data: Json | null
+          time_horizon: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          portfolio_id: string
+          portfolio_name: string
+          description?: string | null
+          risk_level: string
+          allocations: Json
+          expected_return: number
+          expected_best_year: number
+          expected_worst_year: number
+          upside: number
+          downside: number
+          volatility: number
+          asset_allocation?: Json | null
+          top_positions?: Json | null
+          kronos_data?: Json | null
+          time_horizon?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          portfolio_id?: string
+          portfolio_name?: string
+          description?: string | null
+          risk_level?: string
+          allocations?: Json
+          expected_return?: number
+          expected_best_year?: number
+          expected_worst_year?: number
+          upside?: number
+          downside?: number
+          volatility?: number
+          asset_allocation?: Json | null
+          top_positions?: Json | null
+          kronos_data?: Json | null
+          time_horizon?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       clockwise_cache_stats: {
@@ -1111,6 +1294,43 @@ export interface Database {
           first_entry: string | null
           last_update: string | null
           avg_score: number | null
+        }
+        Relationships: []
+      }
+      time_analog_cache_stats: {
+        Row: {
+          version: number | null
+          total_entries: number | null
+          unique_analogs: number | null
+          avg_score: number | null
+          first_entry: string | null
+          last_update: string | null
+          latest_holdings_date: string | null
+        }
+        Relationships: []
+      }
+      asset_returns_cache_stats: {
+        Row: {
+          version: number | null
+          total_entries: number | null
+          unique_analogs: number | null
+          unique_asset_classes: number | null
+          yahoo_entries: number | null
+          verified_entries: number | null
+          validated_entries: number | null
+          first_entry: string | null
+          last_update: string | null
+        }
+        Relationships: []
+      }
+      core_portfolios_cache_stats: {
+        Row: {
+          total_portfolios: number | null
+          unique_risk_levels: number | null
+          avg_expected_return_pct: number | null
+          oldest_cache: string | null
+          newest_cache: string | null
+          oldest_age_hours: number | null
         }
         Relationships: []
       }
@@ -1233,7 +1453,22 @@ export type ClockwisePortfolioCache = Database['public']['Tables']['clockwise_po
 export type ClockwisePortfolioCacheInsert = Database['public']['Tables']['clockwise_portfolio_cache']['Insert']
 export type ClockwisePortfolioCacheUpdate = Database['public']['Tables']['clockwise_portfolio_cache']['Update']
 
+export type TimePortfolioAnalogCache = Database['public']['Tables']['time_portfolio_analog_cache']['Row']
+export type TimePortfolioAnalogCacheInsert = Database['public']['Tables']['time_portfolio_analog_cache']['Insert']
+export type TimePortfolioAnalogCacheUpdate = Database['public']['Tables']['time_portfolio_analog_cache']['Update']
+
+export type AssetReturnsCache = Database['public']['Tables']['asset_returns_cache']['Row']
+export type AssetReturnsCacheInsert = Database['public']['Tables']['asset_returns_cache']['Insert']
+export type AssetReturnsCacheUpdate = Database['public']['Tables']['asset_returns_cache']['Update']
+
+export type CorePortfoliosCache = Database['public']['Tables']['core_portfolios_cache']['Row']
+export type CorePortfoliosCacheInsert = Database['public']['Tables']['core_portfolios_cache']['Insert']
+export type CorePortfoliosCacheUpdate = Database['public']['Tables']['core_portfolios_cache']['Update']
+
 export type ClockwiseCacheStats = Database['public']['Views']['clockwise_cache_stats']['Row']
+export type TimeAnalogCacheStats = Database['public']['Views']['time_analog_cache_stats']['Row']
+export type AssetReturnsCacheStats = Database['public']['Views']['asset_returns_cache_stats']['Row']
+export type CorePortfoliosCacheStats = Database['public']['Views']['core_portfolios_cache_stats']['Row']
 
 // Application-specific types
 export interface SessionData {

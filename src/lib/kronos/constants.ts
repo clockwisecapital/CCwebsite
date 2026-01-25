@@ -101,13 +101,14 @@ export const SCENARIO_TO_ANALOG: Record<ScenarioId, string> = {
 };
 
 // =====================================================================================
-// S&P 500 BENCHMARKS
+// SPY ETF BENCHMARKS
 // =====================================================================================
 
 /**
- * S&P 500 benchmark returns and drawdowns for each historical analog
- * These will be calculated dynamically from Yahoo Finance, but here are reference values
+ * SPY ETF benchmark returns and drawdowns for each historical analog
+ * These will be calculated dynamically from Yahoo Finance (using SPY), but here are reference values
  * Note: Will be fetched in real-time, these are for validation
+ * Using SPY ETF for apples-to-apples comparison with user portfolios
  */
 export const SP500_BENCHMARKS_REFERENCE = {
   'COVID_CRASH': {

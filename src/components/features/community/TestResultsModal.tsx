@@ -225,26 +225,40 @@ export default function TestResultsModal({
                   {questionData?.historical_period?.[0]?.label || results.historicalPeriod?.label || 'Historical Period'}
                 </p>
               </div>
-              {/* S&P 500 Avg */}
+              {/* SPY Benchmark */}
               <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-2.5 sm:p-3 text-center">
                 <p className="text-xs sm:text-sm font-bold text-blue-400">
-                  {questionData?.metadata?.sp500_avg_return !== undefined
-                    ? `${questionData.metadata.sp500_avg_return >= 0 ? '+' : ''}${(questionData.metadata.sp500_avg_return * 100).toFixed(1)}%`
-                    : portfolioComparison?.userPortfolio?.benchmarkReturn !== undefined
+                  {portfolioComparison?.userPortfolio?.benchmarkReturn !== undefined
                     ? `${portfolioComparison.userPortfolio.benchmarkReturn >= 0 ? '+' : ''}${(portfolioComparison.userPortfolio.benchmarkReturn * 100).toFixed(1)}%`
                     : '--'}
                 </p>
                 <p className="text-[9px] sm:text-[10px] text-gray-400 mt-0.5">
-                  S&P 500 Avg
+                  SPY Benchmark
                 </p>
               </div>
-              {/* Testing Count */}
+              {/* SPY Best/Worst Year */}
               <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-2.5 sm:p-3 text-center">
-                <p className="text-xs sm:text-sm font-bold text-white">
-                  {questionData?.tests_count?.toLocaleString() || '--'}
-                </p>
+                <div className="flex items-center justify-center gap-2">
+                  <div className="text-center">
+                    <p className="text-[10px] sm:text-[11px] font-bold text-green-400">
+                      {portfolioComparison?.userPortfolio?.benchmarkBestYear !== undefined
+                        ? `${portfolioComparison.userPortfolio.benchmarkBestYear >= 0 ? '+' : ''}${(portfolioComparison.userPortfolio.benchmarkBestYear * 100).toFixed(1)}%`
+                        : '--'}
+                    </p>
+                    <p className="text-[8px] text-gray-500">Best</p>
+                  </div>
+                  <div className="h-6 w-px bg-gray-600"></div>
+                  <div className="text-center">
+                    <p className="text-[10px] sm:text-[11px] font-bold text-red-400">
+                      {portfolioComparison?.userPortfolio?.benchmarkWorstYear !== undefined
+                        ? `${portfolioComparison.userPortfolio.benchmarkWorstYear >= 0 ? '+' : ''}${(portfolioComparison.userPortfolio.benchmarkWorstYear * 100).toFixed(1)}%`
+                        : '--'}
+                    </p>
+                    <p className="text-[8px] text-gray-500">Worst</p>
+                  </div>
+                </div>
                 <p className="text-[9px] sm:text-[10px] text-gray-400 mt-0.5">
-                  Testing
+                  SPY Range
                 </p>
               </div>
             </div>

@@ -46,8 +46,10 @@ export default function TopPortfoliosPage() {
   const [portfolioComparison, setPortfolioComparison] = useState<PortfolioComparison | null>(null);
   const [sp500BenchmarkData, setSp500BenchmarkData] = useState<{
     avgReturn: number | null;
+    bestYear: number | null;
+    worstYear: number | null;
     testCount: number;
-  }>({ avgReturn: null, testCount: 0 });
+  }>({ avgReturn: null, bestYear: null, worstYear: null, testCount: 0 });
 
   // Fetch question details
   const fetchQuestionDetails = async () => {
@@ -69,7 +71,7 @@ export default function TopPortfoliosPage() {
     }
   };
   
-  // Simple: Just read S&P 500 average from question metadata (already calculated)
+  // Simple: Just read SPY benchmark data from question metadata (already calculated)
   const loadSP500Average = (questionData: any) => {
     const metadata = questionData?.metadata;
     console.log('📊 Question metadata:', metadata);
@@ -77,13 +79,19 @@ export default function TopPortfoliosPage() {
     if (metadata?.sp500_avg_return !== undefined) {
       setSp500BenchmarkData({
         avgReturn: metadata.sp500_avg_return,
+        bestYear: metadata.spy_best_year ?? null,
+        worstYear: metadata.spy_worst_year ?? null,
         testCount: metadata.sp500_test_count || 0
       });
-      console.log('✅ S&P 500 average loaded from metadata:', (metadata.sp500_avg_return * 100).toFixed(1) + '%', 
-                 `(${metadata.sp500_test_count || 0} tests)`);
+      console.log('✅ SPY benchmark loaded from metadata:', {
+        avg: (metadata.sp500_avg_return * 100).toFixed(1) + '%',
+        best: metadata.spy_best_year ? (metadata.spy_best_year * 100).toFixed(1) + '%' : 'N/A',
+        worst: metadata.spy_worst_year ? (metadata.spy_worst_year * 100).toFixed(1) + '%' : 'N/A',
+        tests: metadata.sp500_test_count || 0
+      });
     } else {
-      console.log('⚠️ No S&P 500 data in metadata yet, will calculate from test results');
-      setSp500BenchmarkData({ avgReturn: null, testCount: 0 });
+      console.log('⚠️ No SPY benchmark data in metadata yet, will calculate from test results');
+      setSp500BenchmarkData({ avgReturn: null, bestYear: null, worstYear: null, testCount: 0 });
     }
   };
   
@@ -123,6 +131,8 @@ export default function TopPortfoliosPage() {
       const avgReturn = benchmarkReturns.reduce((sum, ret) => sum + ret, 0) / benchmarkReturns.length;
       setSp500BenchmarkData({
         avgReturn,
+        bestYear: null, // Will be populated from metadata if available
+        worstYear: null,
         testCount: benchmarkReturns.length
       });
       console.log('✅ S&P 500 calculated from tests:', (avgReturn * 100).toFixed(1) + '%', 
@@ -453,15 +463,32 @@ export default function TopPortfoliosPage() {
                       : '--'}
                   </p>
                   <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-400 mt-0.5">
-                    <span className="hidden xs:inline">S&P 500 Avg Annual Return</span>
-                    <span className="xs:hidden">S&P 500 Avg</span>
+                    <span className="hidden xs:inline">SPY Benchmark Return</span>
+                    <span className="xs:hidden">SPY Benchmark</span>
                   </p>
                 </div>
                 <div className="bg-gray-900/50 border border-gray-700 rounded-lg sm:rounded-xl p-2.5 sm:p-3 md:p-4 text-center hover:border-teal-500/50 transition-colors">
-                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-white">{question.tests_count.toLocaleString()}</p>
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="text-center">
+                      <p className="text-xs sm:text-sm md:text-base font-bold text-green-400">
+                        {sp500BenchmarkData.bestYear !== null
+                          ? `${sp500BenchmarkData.bestYear >= 0 ? '+' : ''}${(sp500BenchmarkData.bestYear * 100).toFixed(1)}%`
+                          : '--'}
+                      </p>
+                      <p className="text-[8px] sm:text-[9px] text-gray-500">Best</p>
+                    </div>
+                    <div className="h-8 sm:h-10 md:h-12 w-px bg-gray-600"></div>
+                    <div className="text-center">
+                      <p className="text-xs sm:text-sm md:text-base font-bold text-red-400">
+                        {sp500BenchmarkData.worstYear !== null
+                          ? `${sp500BenchmarkData.worstYear >= 0 ? '+' : ''}${(sp500BenchmarkData.worstYear * 100).toFixed(1)}%`
+                          : '--'}
+                      </p>
+                      <p className="text-[8px] sm:text-[9px] text-gray-500">Worst</p>
+                    </div>
+                  </div>
                   <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-400 mt-0.5">
-                    <span className="hidden xs:inline">Investors Testing</span>
-                    <span className="xs:hidden">Testing</span>
+                    SPY Range
                   </p>
                 </div>
               </div>

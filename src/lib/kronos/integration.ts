@@ -119,6 +119,8 @@ export interface UIPortfolioComparison {
     downside: number;
     score?: number;
     benchmarkReturn?: number;
+    benchmarkBestYear?: number;
+    benchmarkWorstYear?: number;
     isUsingProxy: boolean;
     positions: any[];
     topPositions: any[];
@@ -130,6 +132,8 @@ export interface UIPortfolioComparison {
     downside: number;
     score?: number;
     benchmarkReturn?: number;
+    benchmarkBestYear?: number;
+    benchmarkWorstYear?: number;
     isUsingProxy: boolean;
     positions: any[];
     topPositions: any[];
@@ -157,8 +161,16 @@ export interface UIPortfolioComparison {
 /**
  * Convert database portfolio holdings to Kronos format
  */
+/**
+ * Convert database portfolio holdings to Kronos format (CLIENT-SAFE)
+ * Uses static asset class mappings only.
+ * 
+ * For AI-powered classification, use getPortfolioHoldingsWithAI() from integration-server.ts
+ * 
+ * @param portfolioId - Portfolio ID to fetch and extract holdings from
+ * @returns Array of holdings with static asset class classification
+ */
 export async function getPortfolioHoldings(portfolioId: string): Promise<PortfolioHolding[]> {
-  // Import here to avoid circular dependencies
   const { supabase } = await import('@/lib/supabase/client');
   const { extractHoldingsFromPortfolio } = await import('./portfolio-extractor');
   
@@ -178,8 +190,8 @@ export async function getPortfolioHoldings(portfolioId: string): Promise<Portfol
       throw new Error('Portfolio has no data');
     }
     
-    // Use portfolio extractor to handle both specific holdings and proxy portfolios
-    const holdings = extractHoldingsFromPortfolio(portfolio);
+    // Use client-safe extractor with static classification
+    const holdings = await extractHoldingsFromPortfolio(portfolio, false);
     
     // Convert to PortfolioHolding format expected by integration layer
     const portfolioHoldings: PortfolioHolding[] = holdings.map(h => ({
@@ -258,8 +270,21 @@ export async function scorePortfolioById(
   question: string,
   includeTimeComparison: boolean = true
 ): Promise<KronosScoreResponse> {
+  // Get holdings WITHOUT asset class classification
+  // Let the server API route handle AI classification
   const holdings = await getPortfolioHoldings(portfolioId);
-  return scorePortfolioWithKronos(question, holdings, includeTimeComparison);
+  
+  // Remove assetClass so the API route will classify with AI
+  const holdingsWithoutClass = holdings.map(h => ({
+    ticker: h.ticker,
+    weight: h.weight,
+    name: h.name
+    // assetClass intentionally omitted - let server classify with AI
+  }));
+  
+  console.log('📤 Sending holdings to API for AI classification:', holdingsWithoutClass);
+  
+  return scorePortfolioWithKronos(question, holdingsWithoutClass as PortfolioHolding[], includeTimeComparison);
 }
 
 // ============================================================================
@@ -272,7 +297,8 @@ export async function scorePortfolioById(
 export function transformKronosToUIResult(
   kronosResponse: KronosScoreResponse,
   portfolioName: string,
-  questionTitle: string
+  questionTitle: string,
+  comparison?: UIPortfolioComparison // Add comparison to get real Monte Carlo values
 ): UITestResult {
   if (!kronosResponse.userPortfolio) {
     throw new Error('No user portfolio data in Kronos response');
@@ -283,11 +309,17 @@ export function transformKronosToUIResult(
   // Calculate confidence based on score and data quality
   const confidence = Math.min(95, 70 + (userPortfolio.score / 100) * 25);
   
+  // Use REAL Monte Carlo upside/downside from comparison if available
+  const expectedUpside = comparison?.userPortfolio?.upside ?? 
+    (userPortfolio.portfolioReturn + (Math.abs(userPortfolio.portfolioReturn) * 1.5)); // Fallback estimate
+  const expectedDownside = comparison?.userPortfolio?.downside ?? 
+    userPortfolio.portfolioDrawdown; // Fallback
+  
   return {
     score: userPortfolio.score,
     expectedReturn: userPortfolio.portfolioReturn,
-    expectedUpside: userPortfolio.portfolioReturn + (Math.abs(userPortfolio.portfolioReturn) * 1.5), // Estimate
-    expectedDownside: userPortfolio.portfolioDrawdown,
+    expectedUpside,
+    expectedDownside,
     confidence: Math.round(confidence),
     portfolioName,
     questionTitle,
@@ -351,6 +383,33 @@ export function transformKronosToUIComparison(
     1
   );
   
+  // For SPY benchmark best/worst, check if user portfolio IS 100% SPY
+  // If so, use the same Monte Carlo to avoid variance between two simulations
+  const isSPYPortfolio = kronosResponse.userHoldings?.length === 1 && 
+                         kronosResponse.userHoldings[0].ticker === 'SPY' &&
+                         Math.abs(kronosResponse.userHoldings[0].weight - 1.0) < 0.01;
+  
+  let spyBestYear, spyWorstYear;
+  
+  if (isSPYPortfolio) {
+    // Use the same simulation to ensure perfect match
+    spyBestYear = userMC.upside;
+    spyWorstYear = userMC.downside;
+  } else {
+    // Run separate Monte Carlo for pure SPY benchmark
+    const spyMC = runPortfolioMonteCarloSimulation(
+      [{
+        weight: 1.0,
+        year1Return: userPortfolio.benchmarkReturn || 0,  // SPY benchmark return
+        year1Volatility: 0.18,
+        assetClass: 'stocks'
+      }],
+      1
+    );
+    spyBestYear = spyMC.upside;
+    spyWorstYear = spyMC.downside;
+  }
+  
   return {
     userPortfolio: {
       totalValue: 100000, // Placeholder - we don't have actual value
@@ -359,24 +418,34 @@ export function transformKronosToUIComparison(
       downside: userMC.downside,    // Real Monte Carlo 5th percentile
       score: userPortfolio.score,
       benchmarkReturn: userPortfolio.benchmarkReturn,
+      benchmarkBestYear: spyBestYear,    // SPY best year (matches portfolio if 100% SPY)
+      benchmarkWorstYear: spyWorstYear, // SPY worst year (matches portfolio if 100% SPY)
       isUsingProxy: false,
       positions: [],
-      topPositions: kronosResponse.userHoldings?.slice(0, 5).map(h => ({
-        ticker: h.ticker,
-        name: h.name || h.ticker,
-        weight: h.weight * 100,
-        currentPrice: 0,
-        targetPrice: null,
-        expectedReturn: userPortfolio.portfolioReturn,
-        monteCarlo: {
+      topPositions: kronosResponse.userHoldings?.slice(0, 5).map(h => {
+        // For benchmark tickers (SPY), use the actual benchmark return for accuracy
+        const isBenchmark = h.ticker === 'SPY' || h.assetClass === 'us-large-cap';
+        const holdingReturn = isBenchmark && userPortfolio.benchmarkReturn !== undefined
+          ? userPortfolio.benchmarkReturn
+          : userPortfolio.portfolioReturn;
+        
+        return {
           ticker: h.ticker,
-          median: userPortfolio.portfolioReturn,
-          upside: userMC.upside,      // Portfolio-level upside
-          downside: userMC.downside,  // Portfolio-level downside
-          volatility: userMC.volatility,
-          simulations: 5000
-        }
-      })) || []
+          name: h.name || h.ticker,
+          weight: h.weight * 100,
+          currentPrice: 0,
+          targetPrice: null,
+          expectedReturn: holdingReturn,
+          monteCarlo: {
+            ticker: h.ticker,
+            median: holdingReturn,
+            upside: userMC.upside,      // Portfolio-level upside
+            downside: userMC.downside,  // Portfolio-level downside
+            volatility: userMC.volatility,
+            simulations: 5000
+          }
+        };
+      }) || []
     },
     timePortfolio: {
       totalValue: 100000, // Placeholder
@@ -385,6 +454,8 @@ export function transformKronosToUIComparison(
       downside: timeMC.downside,    // Real Monte Carlo 5th percentile
       score: timePortfolio.score,
       benchmarkReturn: timePortfolio.benchmarkReturn,
+      benchmarkBestYear: spyBestYear,    // Same SPY range for consistency
+      benchmarkWorstYear: spyWorstYear, // Same SPY range for consistency
       isUsingProxy: false,
       positions: [],
       topPositions: kronosResponse.timeHoldings?.slice(0, 5).map(h => ({
@@ -437,9 +508,9 @@ export async function runScenarioTest(
   
   console.log(`✅ Using ${clockwisePortfolios.length} portfolios from Kronos response (includes TIME + Clockwise)`);
   
-  // Transform to UI formats
-  const testResult = transformKronosToUIResult(kronosResponse, portfolioName, questionTitle);
+  // Transform to UI formats (create comparison first to get real Monte Carlo values)
   const portfolioComparison = transformKronosToUIComparison(kronosResponse);
+  const testResult = transformKronosToUIResult(kronosResponse, portfolioName, questionTitle, portfolioComparison || undefined);
   
   // Add Clockwise portfolios to comparison if we have them
   if (portfolioComparison && clockwisePortfolios.length > 0) {

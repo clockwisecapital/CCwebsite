@@ -1,7 +1,10 @@
 /**
- * Portfolio Data Extraction
+ * Portfolio Data Extraction (Client-Safe)
  * 
  * Extracts holdings from portfolio_data JSONB and converts to Kronos Holding[] format
+ * Uses STATIC asset class mappings only (client-safe).
+ * 
+ * For AI-powered classification, use portfolio-extractor-server.ts (server-only).
  */
 
 import type { Holding } from './types';
@@ -51,13 +54,18 @@ export interface PortfolioRecord {
 // =====================================================================================
 
 /**
- * Extract holdings from portfolio database record
+ * Extract holdings from portfolio database record (CLIENT-SAFE)
  * Handles both specific holdings and allocation-based portfolios
+ * Uses static asset class mappings only.
  * 
  * @param portfolio - Portfolio record from database
- * @returns Array of Holdings with ticker, weight, and asset class
+ * @param _useAIClassification - Deprecated, kept for compatibility
+ * @returns Promise<Array of Holdings with ticker, weight, and asset class>
  */
-export function extractHoldingsFromPortfolio(portfolio: PortfolioRecord): Holding[] {
+export async function extractHoldingsFromPortfolio(
+  portfolio: PortfolioRecord,
+  _useAIClassification: boolean = false // Ignored, kept for compatibility
+): Promise<Holding[]> {
   // Try to get specific holdings from intake_data
   const intakeData = portfolio.intake_data as IntakeData;
   const portfolioData = portfolio.portfolio_data as PortfolioData;
@@ -70,7 +78,10 @@ export function extractHoldingsFromPortfolio(portfolio: PortfolioRecord): Holdin
     );
     
     if (specificHoldings.length > 0) {
-      return extractFromSpecificHoldings(specificHoldings, intakeData.portfolioTotalValue || portfolioData?.totalValue);
+      return await extractFromSpecificHoldings(
+        specificHoldings, 
+        intakeData.portfolioTotalValue || portfolioData?.totalValue
+      );
     }
   }
   
@@ -79,17 +90,21 @@ export function extractHoldingsFromPortfolio(portfolio: PortfolioRecord): Holdin
 }
 
 /**
- * Extract holdings from specific holdings array
+ * Extract holdings from specific holdings array (CLIENT-SAFE)
  * Converts tickers and percentages to Holding[] format
+ * Uses static asset class mappings only.
+ * 
+ * @param specificHoldings - Array of holdings with tickers and weights
+ * @param totalValue - Total portfolio value for weight calculation
  */
-function extractFromSpecificHoldings(
+async function extractFromSpecificHoldings(
   specificHoldings: Array<{ ticker?: string; percentage?: number; shares?: number; currentValue?: number }>,
   totalValue?: number
-): Holding[] {
+): Promise<Holding[]> {
   const holdings: Holding[] = [];
   let totalPercentage = 0;
   
-  // Calculate weights
+  // Calculate weights and classify tickers with static mappings
   for (const holding of specificHoldings) {
     if (!holding.ticker) continue;
     
@@ -110,10 +125,13 @@ function extractFromSpecificHoldings(
     }
     
     if (weight > 0) {
+      // Use static classification (client-safe)
+      const assetClass = mapTickerToKronosAssetClass(holding.ticker);
+      
       holdings.push({
         ticker: holding.ticker,
         weight,
-        assetClass: mapTickerToKronosAssetClass(holding.ticker)
+        assetClass
       });
       
       totalPercentage += weight;

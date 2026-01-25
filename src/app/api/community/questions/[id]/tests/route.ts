@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import type { CreateQuestionTestInput } from '@/types/community';
 import { scorePortfolio } from '@/lib/kronos/scoring';
-import { extractHoldingsFromPortfolio, validateHoldings, logHoldings, type PortfolioRecord } from '@/lib/kronos/portfolio-extractor';
+import { extractHoldingsWithAI, validateHoldings, logHoldings, type PortfolioRecord } from '@/lib/kronos/portfolio-extractor-server';
 
 // =====================================================================================
 // GET /api/community/questions/[id]/tests
@@ -181,7 +181,8 @@ export async function POST(
         intake_data: portfolio.intake_data
       };
       
-      const holdings = extractHoldingsFromPortfolio(portfolioRecord);
+      // Extract holdings with AI classification for sector-specific accuracy
+      const holdings = await extractHoldingsWithAI(portfolioRecord);
       
       // Validate holdings
       const validation = validateHoldings(holdings);
@@ -198,36 +199,59 @@ export async function POST(
       // Use question text for scoring
       const questionText = question.question_text || question.title;
       
-      // Score the portfolio
+      // Score the portfolio - this returns ScoreResult
       const scoreResult = await scorePortfolio(questionText, holdings);
       
       // Extract metrics from score result
       calculatedScore = scoreResult.score;
       expectedReturn = scoreResult.portfolioReturn;
       
-      // Estimate upside and downside based on the results
-      // For MVP, use simplified estimates
-      const returnMagnitude = Math.abs(scoreResult.portfolioReturn);
-      upside = expectedReturn + (returnMagnitude * 0.5);  // +50% above expected
-      downside = expectedReturn - (returnMagnitude * 0.5); // -50% below expected
+      // Transform ScoreResult to UIPortfolioComparison format to get Monte Carlo metrics
+      // We need to import the transformation function from integration layer
+      const { transformKronosToUIComparison } = await import('@/lib/kronos/integration');
       
-      // Store full score result in comparison_data
+      // Create a mock KronosScoreResponse to transform
+      const mockKronosResponse = {
+        success: true,
+        userPortfolio: scoreResult,
+        userHoldings: holdings.map(h => ({
+          ticker: h.ticker,
+          weight: h.weight,
+          assetClass: h.assetClass
+        }))
+      };
+      
+      // Transform to get full comparison data with Monte Carlo simulated best/worst year
+      const uiComparison = transformKronosToUIComparison(mockKronosResponse);
+      
+      // Extract upside/downside from Monte Carlo simulation
+      upside = uiComparison?.userPortfolio.upside || 0;
+      downside = uiComparison?.userPortfolio.downside || 0;
+      
+      // Store full comparison data including benchmarkBestYear and benchmarkWorstYear
       comparisonData = {
-        score: scoreResult.score,
-        label: scoreResult.label,
-        color: scoreResult.color,
-        scenarioId: scoreResult.scenarioId,
-        scenarioName: scoreResult.scenarioName,
-        analogId: scoreResult.analogId,
-        analogName: scoreResult.analogName,
-        analogPeriod: scoreResult.analogPeriod,
-        portfolioReturn: scoreResult.portfolioReturn,
-        benchmarkReturn: scoreResult.benchmarkReturn,
-        outperformance: scoreResult.outperformance,
-        portfolioDrawdown: scoreResult.portfolioDrawdown,
-        benchmarkDrawdown: scoreResult.benchmarkDrawdown,
-        returnScore: scoreResult.returnScore,
-        drawdownScore: scoreResult.drawdownScore,
+        userPortfolio: {
+          score: scoreResult.score,
+          label: scoreResult.label,
+          color: scoreResult.color,
+          scenarioId: scoreResult.scenarioId,
+          scenarioName: scoreResult.scenarioName,
+          analogId: scoreResult.analogId,
+          analogName: scoreResult.analogName,
+          analogPeriod: scoreResult.analogPeriod,
+          portfolioReturn: scoreResult.portfolioReturn,
+          benchmarkReturn: scoreResult.benchmarkReturn,
+          benchmarkBestYear: uiComparison?.userPortfolio.benchmarkBestYear,
+          benchmarkWorstYear: uiComparison?.userPortfolio.benchmarkWorstYear,
+          outperformance: scoreResult.outperformance,
+          portfolioDrawdown: scoreResult.portfolioDrawdown,
+          benchmarkDrawdown: scoreResult.benchmarkDrawdown,
+          returnScore: scoreResult.returnScore,
+          drawdownScore: scoreResult.drawdownScore,
+          upside: uiComparison?.userPortfolio.upside,
+          downside: uiComparison?.userPortfolio.downside,
+          expectedReturn: uiComparison?.userPortfolio.expectedReturn
+        },
         timestamp: new Date().toISOString()
       };
       

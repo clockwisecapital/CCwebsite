@@ -457,23 +457,12 @@ export default function AccountPage() {
         <div className="relative mb-6 sm:mb-8">
           <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
             <button
-              onClick={() => setActiveTab('portfolios')}
-              className={`relative flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold transition-all duration-300 whitespace-nowrap text-sm sm:text-base ${
-                activeTab === 'portfolios'
-                  ? 'bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-500/25'
-                  : 'bg-gray-800/80 text-gray-400 hover:text-white hover:bg-gray-700/80 border border-gray-700/50'
-              }`}
+              onClick={() => router.push('/scenario-testing/questions')}
+              className="relative flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold transition-all duration-300 whitespace-nowrap text-sm sm:text-base bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-500/25 hover:scale-105"
             >
               <FiBriefcase className="w-4 h-4" />
               <span className="hidden sm:inline">Explore Portfolios</span>
               <span className="sm:hidden">Explore</span>
-              <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${
-                activeTab === 'portfolios' 
-                  ? 'bg-white/20' 
-                  : 'bg-gray-700'
-              }`}>
-                {portfolios.length}
-              </span>
             </button>
 
             <button
@@ -488,8 +477,7 @@ export default function AccountPage() {
         </div>
 
         {/* Content */}
-        {activeTab === 'portfolios' && (
-          <div className="space-y-2">
+        <div className="space-y-2">
             {portfolios.length > 0 ? (
               portfolios.map((portfolio) => {
                 const isExpanded = expandedPortfolio === portfolio.id;
@@ -615,7 +603,6 @@ export default function AccountPage() {
               </div>
             )}
           </div>
-        )}
 
       </div>
 
