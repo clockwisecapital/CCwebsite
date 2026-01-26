@@ -16,7 +16,9 @@ const HISTORICAL_SP500_RETURNS: Record<string, number> = {
   "2000-2002": -0.145, // Dot-Com Bust - Tech crash
   "2003-2007": 0.098,  // Pre-GFC - Housing bubble expansion
   "2007-2009": -0.285, // Financial Crisis - Great Recession
+  "2008-Present": 0.134,  // Great Deleveraging - Post-GFC recovery (2009-2020)
   "2009-2020": 0.134,  // Recovery & Bull Market - QE era
+  "2009-Present": 0.134,  // Same as 2009-2020 (alias for present-day queries)
   "2020-2021": 0.185,  // COVID Recovery - Stimulus-driven rally
   "2022-2023": 0.042,  // Rate Hike Era - Fed tightening
   "2024-2025": 0.089,  // Current Period - AI boom

@@ -312,6 +312,18 @@ Find the best historical analog period for testing a portfolio against this scen
 - **S&P 500 Return:** -48.2%
 - **Best For:** Recession risk, stagflation, inflation hedge testing
 
+### 5. Great Deleveraging / Post-GFC Recovery (2009-2020)
+- **Period:** 2009-03-01 to 2020-02-01
+- **Characteristics:**
+  - Longest bull market in history (11 years)
+  - Zero interest rate policy (ZIRP) and QE
+  - Tech sector dominance
+  - Low volatility, gradual grind higher
+  - Value underperformance, growth outperformance
+  - Disconnect between asset prices and fundamentals
+- **S&P 500 Return:** +13.4% CAGR
+- **Best For:** Long-term portfolio stress testing, QE environment, 2008-present analogs, recovery period testing
+
 ## Your Task:
 
 1. Select the SINGLE best historical analog for testing this portfolio question
@@ -328,19 +340,19 @@ Find the best historical analog period for testing a portfolio against this scen
 ## Output Format (JSON):
 
 {
-  "analogId": "COVID_CRASH",
-  "analogName": "COVID Crash",
-  "period": "Feb-Mar 2020",
+  "analogId": "GFC_RECOVERY",
+  "analogName": "Great Deleveraging",
+  "period": "2009-2020",
   "similarity": 65,
   "matchingFactors": [
-    "High market valuation (P/E ratio elevated in both periods)",
-    "Low unemployment preceding shock",
-    "Strong tech sector leadership"
+    "Zero interest rate policy similar to post-GFC period",
+    "Tech sector dominance driving market returns",
+    "Central bank asset purchases supporting valuations"
   ],
   "keyEvents": [
-    "WHO declares pandemic (March 11, 2020)",
-    "Fed cuts rates to zero (March 15, 2020)",
-    "VIX hits 82.69 (March 16, 2020)"
+    "Fed QE programs (2009-2014)",
+    "Tech giants (FAANG) emerge as market leaders",
+    "Longest bull market in history"
   ],
   "reasoning": "Brief explanation of why this analog was selected"
 }

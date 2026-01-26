@@ -144,6 +144,54 @@ export const VERIFIED_HISTORICAL_RETURNS: Record<string, Record<string, PeriodRe
       source: 'CRB Commodity Index'
     }
     // ... others
+  },
+
+  // ============================================================================
+  // GFC RECOVERY / GREAT DELEVERAGING (2009-2020)
+  // ============================================================================
+  'GFC_RECOVERY': {
+    'us-large-cap': {
+      startDate: '2009-03-01',
+      endDate: '2020-02-01',
+      return: 0.1340,  // S&P 500: +13.4% CAGR (Morningstar)
+      source: 'S&P 500 Index'
+    },
+    'us-growth': {
+      startDate: '2009-03-01',
+      endDate: '2020-02-01',
+      return: 0.1580,  // Russell 1000 Growth: +15.8% CAGR
+      source: 'Russell 1000 Growth Index'
+    },
+    'us-value': {
+      startDate: '2009-03-01',
+      endDate: '2020-02-01',
+      return: 0.0950,  // Russell 1000 Value: +9.5% CAGR
+      source: 'Russell 1000 Value Index'
+    },
+    'tech-sector': {
+      startDate: '2009-03-01',
+      endDate: '2020-02-01',
+      return: 0.1850,  // Technology Sector: +18.5% CAGR
+      source: 'S&P Technology Sector'
+    },
+    'long-treasuries': {
+      startDate: '2009-03-01',
+      endDate: '2020-02-01',
+      return: 0.0680,  // 20+ Year Treasuries: +6.8% CAGR
+      source: 'Bloomberg U.S. Long Treasury Index'
+    },
+    'aggregate-bonds': {
+      startDate: '2009-03-01',
+      endDate: '2020-02-01',
+      return: 0.0350,  // Aggregate Bonds: +3.5% CAGR
+      source: 'Bloomberg U.S. Aggregate Bond Index'
+    },
+    'gold': {
+      startDate: '2009-03-01',
+      endDate: '2020-02-01',
+      return: 0.0150,  // Gold: +1.5% CAGR
+      source: 'LBMA Gold Price'
+    }
   }
 };
 

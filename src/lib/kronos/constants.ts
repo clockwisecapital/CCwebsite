@@ -85,6 +85,15 @@ export const HISTORICAL_ANALOGS: Record<string, HistoricalAnalog> = {
       end: '1974-12-31'
     },
     description: '1973-1974: Oil crisis and stagflation'
+  },
+  'GFC_RECOVERY': {
+    id: 'GFC_RECOVERY',
+    name: 'Great Deleveraging',
+    dateRange: {
+      start: '2009-03-01',
+      end: '2020-02-01'
+    },
+    description: '2008-Present: Post-GFC recovery and QE era'
   }
 };
 

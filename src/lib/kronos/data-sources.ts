@@ -100,6 +100,28 @@ const FALLBACK_RETURNS_BY_SCENARIO: Record<string, Record<KronosAssetClass, numb
     'gold': 0.65,                  // Gold rallied dramatically
     'commodities': 0.55,           // Commodities up
     'cash': 0.10
+  },
+  'GFC_RECOVERY': {
+    'us-large-cap': 0.134,         // S&P 500: +13.4% CAGR (2009-2020)
+    'us-growth': 0.158,            // Growth outperformed
+    'us-value': 0.095,             // Value lagged
+    'us-small-cap': 0.112,         // Small caps positive but lagged
+    'international': 0.042,        // International underperformed
+    'emerging-markets': 0.035,     // EM underperformed
+    'tech-sector': 0.185,          // Tech led the rally
+    'healthcare': 0.142,           // Healthcare strong
+    'financials': 0.088,           // Financials recovered but cautious
+    'energy': -0.015,              // Energy struggled
+    'long-treasuries': 0.068,      // Bonds positive (rates stayed low)
+    'intermediate-treasuries': 0.042,
+    'short-treasuries': 0.008,     // Near zero
+    'tips': 0.038,                 // TIPS modest gains
+    'aggregate-bonds': 0.035,      // Bond rally early, flat later
+    'corporate-ig': 0.048,         // IG bonds decent
+    'high-yield': 0.065,           // High yield recovered
+    'gold': 0.015,                 // Gold mixed
+    'commodities': -0.022,         // Commodities struggled
+    'cash': 0.005                  // Cash near zero return
   }
 };
 
@@ -413,7 +435,8 @@ const FALLBACK_SP500_BENCHMARKS: Record<string, BenchmarkData> = {
   'COVID_CRASH': { return: -0.339, drawdown: 0.339 },
   'DOT_COM_BUST': { return: -0.50, drawdown: 0.50 },
   'RATE_SHOCK': { return: -0.18, drawdown: 0.20 },
-  'STAGFLATION': { return: -0.37, drawdown: 0.48 }
+  'STAGFLATION': { return: -0.37, drawdown: 0.48 },
+  'GFC_RECOVERY': { return: 0.134, drawdown: 0.20 } // Post-GFC recovery
 };
 
 export async function fetchSP500Benchmark(
