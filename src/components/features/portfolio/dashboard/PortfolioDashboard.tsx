@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import IntakeTab from './IntakeTab';
 import ReviewTab from './ReviewTab';
+import ScenarioTestingTab from './ScenarioTestingTab';
 import UnifiedVideoPlayer, { type VideoConfig } from './UnifiedVideoPlayer';
 import { getVideoPath } from '@/hooks/useAvatarVariant';
 import CreatePasswordModal from '@/components/features/auth/CreatePasswordModal';
@@ -718,21 +719,15 @@ export default function PortfolioDashboard() {
               </button>
 
               <button
-                onClick={() => {
-                  if (intakeData) {
-                    // Set portfolio ID in sessionStorage so banner shows
-                    if (savedPortfolioId) {
-                      sessionStorage.setItem('scenarioTestPortfolioId', savedPortfolioId);
-                    }
-                    router.push('/scenario-testing/questions');
-                  }
-                }}
+                onClick={() => intakeData && setActiveTab('scenarios')}
                 disabled={!intakeData}
                 className={`
                   flex-1 px-3 sm:px-6 md:px-8 py-3 md:py-4 text-xs sm:text-sm font-medium border-b-2 transition-colors
-                  ${intakeData
-                    ? 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                    : 'border-transparent text-gray-600 cursor-not-allowed'
+                  ${activeTab === 'scenarios'
+                    ? 'border-teal-500 text-teal-400'
+                    : intakeData
+                      ? 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                      : 'border-transparent text-gray-600 cursor-not-allowed'
                   }
                 `}
               >
@@ -820,41 +815,25 @@ export default function PortfolioDashboard() {
                             </svg>
                             Finish Account Setup
                           </button>
-                          <button
-                            onClick={() => setShowAnalysisPrompt(false)}
-                            className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg transition-colors"
+                          <a
+                            href="https://calendly.com/clockwisecapital/appointments"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-6 py-3 bg-white text-teal-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors text-center flex items-center justify-center gap-2"
                           >
-                            Maybe Later
-                          </button>
+                            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            Schedule a Consultation
+                            <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </a>
                         </div>
                       </div>
                     </div>
                   </div>
                 )}
-
-                {/* Ready to Optimize CTA */}
-                <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-4 md:p-8 text-white">
-                  <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">Ready to Optimize?</h3>
-                  <p className="text-sm md:text-base text-teal-100 mb-4 md:mb-6">
-                    Work 1:1 with a Clockwise Approved Advisor to refine your strategy.
-                  </p>
-                  <div className="flex justify-center">
-                    <a
-                      href="https://calendly.com/clockwisecapital/appointments"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-6 md:px-8 py-3 bg-white text-teal-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors text-center flex items-center justify-center gap-2 text-sm md:text-base"
-                    >
-                      <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      Schedule a Consultation
-                      <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </a>
-                  </div>
-                </div>
 
                 {/* Portfolio Oversight Suggested - Moved to Top */}
                 {intakeData && (
@@ -1014,6 +993,18 @@ export default function PortfolioDashboard() {
                 )}
 
               </div>
+            )}
+
+            {activeTab === 'scenarios' && intakeData && (
+              <ScenarioTestingTab
+                portfolioData={intakeData.portfolio}
+                portfolioId={savedPortfolioId || undefined}
+                onNext={() => {}}
+                onBack={() => setActiveTab('analyze')}
+                email={emailData?.email || intakeData.email}
+                firstName={emailData?.firstName || intakeData.firstName}
+                lastName={emailData?.lastName || intakeData.lastName}
+              />
             )}
           </div>
         </div>
