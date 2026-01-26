@@ -15,10 +15,27 @@ const PortfolioComparison = () => {
   const [clockwisePortfolios, setClockwisePortfolios] = useState<PortfolioCardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedPortfolios, setExpandedPortfolios] = useState<Set<string>>(new Set(['user', 'time']));
+  const [questionData, setQuestionData] = useState<{ title: string; historicalPeriod?: string | undefined } | null>(null);
 
   useEffect(() => {
     const fetchComparison = async () => {
       try {
+        // Fetch the question details first
+        const questionResponse = await fetch(`/api/community/questions/${questionId}`);
+        const questionResult = await questionResponse.json();
+        
+        if (questionResponse.ok && questionResult.success && questionResult.question) {
+          const q = questionResult.question;
+          const historicalPeriod = q.historical_period && Array.isArray(q.historical_period) && q.historical_period.length > 0
+            ? `${q.historical_period[0].label} (${q.historical_period[0].start}-${q.historical_period[0].end})`
+            : undefined;
+          
+          setQuestionData({
+            title: q.question_text || q.title,
+            historicalPeriod
+          });
+        }
+        
         // Fetch the selected portfolio's test result
         const response = await fetch(`/api/community/questions/${questionId}/test-results`);
         const data = await response.json();
@@ -191,11 +208,13 @@ const PortfolioComparison = () => {
 
         {/* Test Scenario Header */}
         <div className="bg-gradient-to-r from-gray-900/60 to-gray-800/60 border border-teal-600/50 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 mb-4 sm:mb-6 md:mb-8">
-          <p className="text-[10px] sm:text-xs font-bold text-teal-400 uppercase tracking-wide mb-2">
-            Testing Scenario: AI Supercycle • Historical Analog: 1995-2000 — Internet Boom
-          </p>
+          {questionData?.historicalPeriod && (
+            <p className="text-[10px] sm:text-xs font-bold text-teal-400 uppercase tracking-wide mb-2">
+              Historical Analog: {questionData.historicalPeriod}
+            </p>
+          )}
           <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-white">
-            "Is AI a productivity supercycle or just another bubble?"
+            {questionData?.title ? `"${questionData.title}"` : 'Loading...'}
           </h2>
         </div>
 
