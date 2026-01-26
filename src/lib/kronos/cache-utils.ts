@@ -38,12 +38,12 @@ export async function getCachedClockwiseScores(
       return { found: false, portfolios: [], version, source: 'computed' };
     }
 
-    const found = data && data.length === 4; // Expect 4 portfolios
+    const found = data && data.length === 4; // Expect 4 asset allocation portfolios (TIME not included)
     
     if (found) {
       console.log(`✅ Cache HIT: ${analogId} (${data.length} portfolios, version ${version})`);
     } else {
-      console.log(`⚠️ Cache MISS: ${analogId} (found ${data?.length || 0}/4 portfolios)`);
+      console.log(`⚠️ Cache MISS: ${analogId} (found ${data?.length || 0}/4 asset allocation portfolios)`);
     }
 
     return {
@@ -243,6 +243,7 @@ export async function isCachePopulated(
     }
 
     // Expect 16 entries (4 portfolios × 4 analogs)
+    // Note: TIME portfolio is not included in this cache as it uses specific holdings
     return count === 16;
   } catch (error) {
     return false;

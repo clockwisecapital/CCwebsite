@@ -75,13 +75,13 @@ export async function isCorePortfoliosCacheValid(): Promise<boolean> {
   try {
     const supabase = createAdminSupabaseClient();
     
-    // Check if we have all 4 core portfolios
+    // Check if we have all 5 core portfolios (TIME + 4 asset allocation portfolios)
     const { data, error, count } = await supabase
       .from('core_portfolios_cache')
       .select('updated_at', { count: 'exact' });
     
-    if (error || !data || count !== 4) {
-      console.log(`📦 Core portfolios cache incomplete (${count || 0}/4 portfolios)`);
+    if (error || !data || count !== 5) {
+      console.log(`📦 Core portfolios cache incomplete (${count || 0}/5 portfolios)`);
       return false;
     }
     

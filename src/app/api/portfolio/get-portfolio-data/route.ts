@@ -25,6 +25,34 @@ interface PortfolioAllocation {
 
 type AssetClassKey = 'stocks' | 'bonds' | 'realEstate' | 'commodities' | 'cash' | 'alternatives';
 
+// 2026 Forward-Looking Expected Returns for Core Portfolio ETFs
+const CORE_PORTFOLIO_ETF_RETURNS: Record<string, number> = {
+  // Equity ETFs
+  'TIME': 0.085,  // Clockwise Core US Equity
+  'IDUB': 0.070,  // International Enhanced Yield
+  'OSCV': 0.090,  // Small Cap Value
+  'VEA': 0.065,   // Developed Markets
+  'UPSD': 0.080,  // Large Cap Upside
+  'VWO': 0.075,   // Emerging Markets
+  'ACIO': 0.070,  // Collared Investment
+  'ADME': 0.075,  // Drawdown-Managed Equity
+  'DUBS': 0.080,  // Enhanced Yield Equity
+  'BRNY': 0.085,  // Factor Rotation
+  'VBK': 0.095,   // Small Cap Growth
+  
+  // Bond ETFs
+  'DRSK': 0.045,  // Defined Risk
+  'VGIT': 0.040,  // Intermediate Treasury
+  'VGSH': 0.042,  // Short-Term Treasury
+  'DEFR': 0.050,  // Deferred Income
+  'JUCY': 0.055,  // Enhanced Yield Bonds
+  
+  // Commodities & Alternatives
+  'GLD': 0.030,   // Gold
+  'IBIT': 0.100,  // Bitcoin
+  'CASH': 0.045,  // Cash
+};
+
 const KNOWN_ASSET_CLASS_TICKERS: Record<string, AssetClassKey> = {
   // Index/Sector ETFs (Stocks)
   'SPY': 'stocks', 'QQQ': 'stocks', 'VTI': 'stocks', 'VOO': 'stocks', 'IVV': 'stocks',
@@ -32,7 +60,9 @@ const KNOWN_ASSET_CLASS_TICKERS: Record<string, AssetClassKey> = {
   'XLK': 'stocks', 'XLF': 'stocks', 'XLC': 'stocks', 'XLY': 'stocks', 'XLP': 'stocks',
   'XLE': 'stocks', 'XLV': 'stocks', 'XLI': 'stocks', 'XLB': 'stocks', 'XLRE': 'stocks',
   'XLU': 'stocks', 'ARKK': 'stocks', 'SOXX': 'stocks', 'SMH': 'stocks', 'IGV': 'stocks',
-  'ITA': 'stocks',
+  'ITA': 'stocks', 'TIME': 'stocks', 'IDUB': 'stocks', 'OSCV': 'stocks', 'VEA': 'stocks',
+  'UPSD': 'stocks', 'VWO': 'stocks', 'ACIO': 'stocks', 'ADME': 'stocks', 'DUBS': 'stocks',
+  'BRNY': 'stocks', 'VBK': 'stocks',
   
   // TIME Portfolio Individual Stocks
   'AAPL': 'stocks', 'GOOGL': 'stocks', 'NVDA': 'stocks', 'MSFT': 'stocks', 'AVGO': 'stocks',
@@ -50,7 +80,7 @@ const KNOWN_ASSET_CLASS_TICKERS: Record<string, AssetClassKey> = {
   // Bond ETFs
   'AGG': 'bonds', 'BND': 'bonds', 'TLT': 'bonds', 'IEF': 'bonds', 'LQD': 'bonds',
   'HYG': 'bonds', 'VCIT': 'bonds', 'VGIT': 'bonds', 'VCSH': 'bonds', 'MUB': 'bonds',
-  'TIP': 'bonds',
+  'TIP': 'bonds', 'VGSH': 'bonds', 'DRSK': 'bonds', 'DEFR': 'bonds', 'JUCY': 'bonds',
   
   // Real Estate ETFs
   'VNQ': 'realEstate', 'SCHH': 'realEstate', 'IYR': 'realEstate',
@@ -58,6 +88,9 @@ const KNOWN_ASSET_CLASS_TICKERS: Record<string, AssetClassKey> = {
   // Commodities
   'GLD': 'commodities', 'SLV': 'commodities', 'IAU': 'commodities', 'USO': 'commodities',
   'DBC': 'commodities', 'DBA': 'commodities', 'NEM': 'commodities', // NEM is gold miner
+  
+  // Alternatives
+  'IBIT': 'alternatives',
   
   // Cash/Money Market
   'SGOV': 'cash', 'BIL': 'cash', 'SHV': 'cash', 'FGXXX': 'cash',
@@ -441,40 +474,12 @@ export async function POST(request: NextRequest) {
     let userFinalDownside: number;
     
     if (timeHorizon === 1) {
-      // Calculate weighted average of bull/bear scenarios from INDEX VALS CSV
-      // For stocks without INDEX VALS, use a conservative ±15% spread around expected return
-      let bullWeightedReturn = 0;
-      let bearWeightedReturn = 0;
-      let totalWeight = 0;
+      // For 1-year portfolios, use Monte Carlo upside/downside directly
+      // This captures the real volatility-driven scenarios from each holding's Monte Carlo sim
+      userFinalUpside = userPortfolioMC.upside;
+      userFinalDownside = userPortfolioMC.downside;
       
-      for (const position of userPositions) {
-        if (position.ticker === 'CASH') continue;
-        
-        const weight = position.weight / 100; // Convert to decimal
-        const scenarios = indexScenarioReturns.get(position.ticker);
-        
-        if (scenarios) {
-          // Use INDEX VALS bull/bear for ETFs (Row 7 and Row 12 from CSV)
-          bullWeightedReturn += weight * scenarios.bull;
-          bearWeightedReturn += weight * scenarios.bear;
-          totalWeight += weight;
-        } else {
-          // For individual stocks without INDEX VALS: use expected return ± 15% spread
-          // This is more realistic for 1-year scenarios than Monte Carlo extremes
-          const expectedReturn = position.expectedReturn || LONG_TERM_NOMINAL.stocks; // Fallback to 10%
-          const conservativeBull = expectedReturn * 1.15;  // +15% above expected
-          const conservativeBear = expectedReturn * 0.85;  // -15% below expected
-          
-          bullWeightedReturn += weight * conservativeBull;
-          bearWeightedReturn += weight * conservativeBear;
-          totalWeight += weight;
-        }
-      }
-      
-      userFinalUpside = totalWeight > 0 ? bullWeightedReturn : userPortfolioMC.upside;
-      userFinalDownside = totalWeight > 0 ? bearWeightedReturn : userPortfolioMC.downside;
-      
-      console.log(`📊 User Portfolio 1-Year Scenarios (from INDEX VALS):`, {
+      console.log(`📊 User Portfolio 1-Year Scenarios (from Monte Carlo):`, {
         bull: (userFinalUpside * 100).toFixed(1) + '%',
         bear: (userFinalDownside * 100).toFixed(1) + '%'
       });

@@ -14,11 +14,19 @@ export interface AssetAllocation {
   cash: number;         // Cash allocation
 }
 
+export interface PortfolioHolding {
+  ticker: string;
+  name: string;
+  percentage: number;
+  assetClass: 'stocks' | 'bonds' | 'commodities' | 'alternatives' | 'cash';
+}
+
 export interface ClockwisePortfolio {
   id: string;
   name: string;
   description: string;
   allocations: AssetAllocation;
+  holdings: PortfolioHolding[]; // Real ETF holdings
   riskLevel: 'aggressive' | 'moderate-aggressive' | 'moderate' | 'moderate-conservative' | 'conservative';
 }
 
@@ -51,6 +59,25 @@ export const MAX_GROWTH_PORTFOLIO: ClockwisePortfolio = {
     realEstate: 0.000,
     cash: 0.022
   },
+  holdings: [
+    { ticker: 'TIME', name: 'Clockwise Core US Equity ETF', percentage: 50.0, assetClass: 'stocks' },
+    { ticker: 'IDUB', name: 'Aptus International Enhanced Yield ETF', percentage: 11.0, assetClass: 'stocks' },
+    { ticker: 'OSCV', name: 'Opus Small Cap Value ETF', percentage: 1.0, assetClass: 'stocks' },
+    { ticker: 'VEA', name: 'Vanguard FTSE Developed Markets ETF', percentage: 2.0, assetClass: 'stocks' },
+    { ticker: 'UPSD', name: 'Aptus Large Cap Upside ETF', percentage: 6.0, assetClass: 'stocks' },
+    { ticker: 'VWO', name: 'Vanguard FTSE Emerging Markets ETF', percentage: 5.0, assetClass: 'stocks' },
+    { ticker: 'ACIO', name: 'Aptus Collared Investment Opportunity ETF', percentage: 1.0, assetClass: 'stocks' },
+    { ticker: 'ADME', name: 'Aptus Drawdown-Managed Equity ETF', percentage: 1.0, assetClass: 'stocks' },
+    { ticker: 'DUBS', name: 'Aptus Large Cap Enhanced Yield ETF', percentage: 1.0, assetClass: 'stocks' },
+    { ticker: 'BRNY', name: 'Burney U.S. Factor Rotation ETF', percentage: 8.0, assetClass: 'stocks' },
+    { ticker: 'VBK', name: 'Vanguard Small Cap Growth ETF', percentage: 3.0, assetClass: 'stocks' },
+    { ticker: 'DRSK', name: 'Aptus Defined Risk ETF', percentage: 1.0, assetClass: 'bonds' },
+    { ticker: 'VGIT', name: 'Vanguard Intermediate-Term Treasury ETF', percentage: 2.0, assetClass: 'bonds' },
+    { ticker: 'VGSH', name: 'Vanguard Short-Term Treasury ETF', percentage: 2.0, assetClass: 'bonds' },
+    { ticker: 'GLD', name: 'SPDR Gold Shares', percentage: 3.0, assetClass: 'commodities' },
+    { ticker: 'IBIT', name: 'iShares Bitcoin Trust ETF', percentage: 2.0, assetClass: 'alternatives' },
+    { ticker: 'CASH', name: 'Cash', percentage: 1.0, assetClass: 'cash' }
+  ],
   riskLevel: 'aggressive'
 };
 
@@ -71,6 +98,25 @@ export const GROWTH_PORTFOLIO: ClockwisePortfolio = {
     realEstate: 0.000,
     cash: 0.020
   },
+  holdings: [
+    { ticker: 'TIME', name: 'Clockwise Core US Equity ETF', percentage: 40.0, assetClass: 'stocks' },
+    { ticker: 'IDUB', name: 'Aptus International Enhanced Yield ETF', percentage: 11.0, assetClass: 'stocks' },
+    { ticker: 'OSCV', name: 'Opus Small Cap Value ETF', percentage: 1.0, assetClass: 'stocks' },
+    { ticker: 'VEA', name: 'Vanguard FTSE Developed Markets ETF', percentage: 1.0, assetClass: 'stocks' },
+    { ticker: 'UPSD', name: 'Aptus Large Cap Upside ETF', percentage: 6.0, assetClass: 'stocks' },
+    { ticker: 'VWO', name: 'Vanguard FTSE Emerging Markets ETF', percentage: 5.0, assetClass: 'stocks' },
+    { ticker: 'ACIO', name: 'Aptus Collared Investment Opportunity ETF', percentage: 1.0, assetClass: 'stocks' },
+    { ticker: 'ADME', name: 'Aptus Drawdown-Managed Equity ETF', percentage: 1.0, assetClass: 'stocks' },
+    { ticker: 'DUBS', name: 'Aptus Large Cap Enhanced Yield ETF', percentage: 5.0, assetClass: 'stocks' },
+    { ticker: 'BRNY', name: 'Burney U.S. Factor Rotation ETF', percentage: 7.0, assetClass: 'stocks' },
+    { ticker: 'VBK', name: 'Vanguard Small Cap Growth ETF', percentage: 2.0, assetClass: 'stocks' },
+    { ticker: 'DRSK', name: 'Aptus Defined Risk ETF', percentage: 8.0, assetClass: 'bonds' },
+    { ticker: 'VGIT', name: 'Vanguard Intermediate-Term Treasury ETF', percentage: 3.0, assetClass: 'bonds' },
+    { ticker: 'VGSH', name: 'Vanguard Short-Term Treasury ETF', percentage: 3.0, assetClass: 'bonds' },
+    { ticker: 'GLD', name: 'SPDR Gold Shares', percentage: 3.0, assetClass: 'commodities' },
+    { ticker: 'IBIT', name: 'iShares Bitcoin Trust ETF', percentage: 2.0, assetClass: 'alternatives' },
+    { ticker: 'CASH', name: 'Cash', percentage: 1.0, assetClass: 'cash' }
+  ],
   riskLevel: 'moderate-aggressive'
 };
 
@@ -91,6 +137,27 @@ export const MODERATE_PORTFOLIO: ClockwisePortfolio = {
     realEstate: 0.000,
     cash: 0.017
   },
+  holdings: [
+    { ticker: 'TIME', name: 'Clockwise Core US Equity ETF', percentage: 30.0, assetClass: 'stocks' },
+    { ticker: 'IDUB', name: 'Aptus International Enhanced Yield ETF', percentage: 10.0, assetClass: 'stocks' },
+    { ticker: 'OSCV', name: 'Opus Small Cap Value ETF', percentage: 1.0, assetClass: 'stocks' },
+    { ticker: 'VEA', name: 'Vanguard FTSE Developed Markets ETF', percentage: 1.0, assetClass: 'stocks' },
+    { ticker: 'UPSD', name: 'Aptus Large Cap Upside ETF', percentage: 4.0, assetClass: 'stocks' },
+    { ticker: 'VWO', name: 'Vanguard FTSE Emerging Markets ETF', percentage: 3.0, assetClass: 'stocks' },
+    { ticker: 'ACIO', name: 'Aptus Collared Investment Opportunity ETF', percentage: 1.0, assetClass: 'stocks' },
+    { ticker: 'ADME', name: 'Aptus Drawdown-Managed Equity ETF', percentage: 1.0, assetClass: 'stocks' },
+    { ticker: 'DUBS', name: 'Aptus Large Cap Enhanced Yield ETF', percentage: 8.0, assetClass: 'stocks' },
+    { ticker: 'BRNY', name: 'Burney U.S. Factor Rotation ETF', percentage: 4.0, assetClass: 'stocks' },
+    { ticker: 'VBK', name: 'Vanguard Small Cap Growth ETF', percentage: 1.0, assetClass: 'stocks' },
+    { ticker: 'DRSK', name: 'Aptus Defined Risk ETF', percentage: 14.0, assetClass: 'bonds' },
+    { ticker: 'VGIT', name: 'Vanguard Intermediate-Term Treasury ETF', percentage: 3.0, assetClass: 'bonds' },
+    { ticker: 'VGSH', name: 'Vanguard Short-Term Treasury ETF', percentage: 3.0, assetClass: 'bonds' },
+    { ticker: 'DEFR', name: 'Aptus Deferred Income ETF', percentage: 7.0, assetClass: 'bonds' },
+    { ticker: 'JUCY', name: 'Aptus Enhanced Yield ETF', percentage: 4.0, assetClass: 'bonds' },
+    { ticker: 'GLD', name: 'SPDR Gold Shares', percentage: 3.0, assetClass: 'commodities' },
+    { ticker: 'IBIT', name: 'iShares Bitcoin Trust ETF', percentage: 1.0, assetClass: 'alternatives' },
+    { ticker: 'CASH', name: 'Cash', percentage: 1.0, assetClass: 'cash' }
+  ],
   riskLevel: 'moderate'
 };
 
@@ -111,6 +178,25 @@ export const MAX_INCOME_PORTFOLIO: ClockwisePortfolio = {
     realEstate: 0.000,
     cash: 0.015
   },
+  holdings: [
+    { ticker: 'TIME', name: 'Clockwise Core US Equity ETF', percentage: 20.0, assetClass: 'stocks' },
+    { ticker: 'IDUB', name: 'Aptus International Enhanced Yield ETF', percentage: 10.0, assetClass: 'stocks' },
+    { ticker: 'OSCV', name: 'Opus Small Cap Value ETF', percentage: 1.0, assetClass: 'stocks' },
+    { ticker: 'VEA', name: 'Vanguard FTSE Developed Markets ETF', percentage: 1.0, assetClass: 'stocks' },
+    { ticker: 'UPSD', name: 'Aptus Large Cap Upside ETF', percentage: 1.0, assetClass: 'stocks' },
+    { ticker: 'ACIO', name: 'Aptus Collared Investment Opportunity ETF', percentage: 1.0, assetClass: 'stocks' },
+    { ticker: 'ADME', name: 'Aptus Drawdown-Managed Equity ETF', percentage: 7.0, assetClass: 'stocks' },
+    { ticker: 'DUBS', name: 'Aptus Large Cap Enhanced Yield ETF', percentage: 11.0, assetClass: 'stocks' },
+    { ticker: 'BRNY', name: 'Burney U.S. Factor Rotation ETF', percentage: 2.0, assetClass: 'stocks' },
+    { ticker: 'DRSK', name: 'Aptus Defined Risk ETF', percentage: 18.0, assetClass: 'bonds' },
+    { ticker: 'VGIT', name: 'Vanguard Intermediate-Term Treasury ETF', percentage: 3.0, assetClass: 'bonds' },
+    { ticker: 'VGSH', name: 'Vanguard Short-Term Treasury ETF', percentage: 3.0, assetClass: 'bonds' },
+    { ticker: 'DEFR', name: 'Aptus Deferred Income ETF', percentage: 8.0, assetClass: 'bonds' },
+    { ticker: 'JUCY', name: 'Aptus Enhanced Yield ETF', percentage: 9.0, assetClass: 'bonds' },
+    { ticker: 'GLD', name: 'SPDR Gold Shares', percentage: 3.0, assetClass: 'commodities' },
+    { ticker: 'IBIT', name: 'iShares Bitcoin Trust ETF', percentage: 1.0, assetClass: 'alternatives' },
+    { ticker: 'CASH', name: 'Cash', percentage: 1.0, assetClass: 'cash' }
+  ],
   riskLevel: 'moderate-conservative'
 };
 

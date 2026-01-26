@@ -13,6 +13,62 @@ import { LONG_TERM_NOMINAL } from './goal-probability';
 
 export type AssetClass = keyof typeof LONG_TERM_NOMINAL;
 
+// 2026 Forward-Looking Expected Returns for Core Portfolio ETFs
+const CORE_PORTFOLIO_ETF_RETURNS: Record<string, number> = {
+  // Equity ETFs
+  'TIME': 0.085,  // Clockwise Core US Equity
+  'IDUB': 0.070,  // International Enhanced Yield
+  'OSCV': 0.090,  // Small Cap Value
+  'VEA': 0.065,   // Developed Markets
+  'UPSD': 0.080,  // Large Cap Upside
+  'VWO': 0.075,   // Emerging Markets
+  'ACIO': 0.070,  // Collared Investment
+  'ADME': 0.075,  // Drawdown-Managed Equity
+  'DUBS': 0.080,  // Enhanced Yield Equity
+  'BRNY': 0.085,  // Factor Rotation
+  'VBK': 0.095,   // Small Cap Growth
+  
+  // Bond ETFs
+  'DRSK': 0.045,  // Defined Risk
+  'VGIT': 0.040,  // Intermediate Treasury
+  'VGSH': 0.042,  // Short-Term Treasury
+  'DEFR': 0.050,  // Deferred Income
+  'JUCY': 0.055,  // Enhanced Yield Bonds
+  
+  // Commodities & Alternatives
+  'GLD': 0.030,   // Gold
+  'IBIT': 0.100,  // Bitcoin
+  'CASH': 0.045,  // Cash
+};
+
+// Volatility estimates for Core Portfolio ETFs (based on asset class)
+export const CORE_PORTFOLIO_ETF_VOLATILITIES: Record<string, number> = {
+  // Equity ETFs - typical stock volatility
+  'TIME': 0.17,   // 17% - US Large Cap
+  'IDUB': 0.16,   // 16% - International (lower vol with options overlay)
+  'OSCV': 0.20,   // 20% - Small Cap Value (higher vol)
+  'VEA': 0.16,    // 16% - Developed Markets
+  'UPSD': 0.15,   // 15% - Large Cap with options (lower vol)
+  'VWO': 0.22,    // 22% - Emerging Markets (higher vol)
+  'ACIO': 0.12,   // 12% - Collared (reduced vol from collar strategy)
+  'ADME': 0.14,   // 14% - Drawdown-Managed (reduced vol)
+  'DUBS': 0.15,   // 15% - Enhanced Yield with options overlay
+  'BRNY': 0.18,   // 18% - Factor Rotation
+  'VBK': 0.21,    // 21% - Small Cap Growth (higher vol)
+  
+  // Bond ETFs - typical bond volatility
+  'DRSK': 0.08,   // 8% - Defined Risk (options add some vol)
+  'VGIT': 0.06,   // 6% - Intermediate Treasury
+  'VGSH': 0.03,   // 3% - Short-Term Treasury (very low vol)
+  'DEFR': 0.07,   // 7% - Deferred Income
+  'JUCY': 0.08,   // 8% - Enhanced Yield (higher yield = higher vol)
+  
+  // Commodities & Alternatives
+  'GLD': 0.20,    // 20% - Gold (commodity volatility)
+  'IBIT': 0.60,   // 60% - Bitcoin (very high volatility)
+  'CASH': 0.01,   // 1% - Cash (minimal volatility)
+};
+
 export type Year1ReturnSource = 
   | 'index_vals_expected' // INDEX VALS CSV expected scenario
   | 'factset'           // FactSet analyst target price
@@ -47,7 +103,18 @@ export async function calculateYear1Return(
 ): Promise<Year1ReturnResult> {
   const upperTicker = ticker.toUpperCase();
 
-  // 1. Check INDEX VALS scenarios first (for ETFs)
+  // 0. Check Core Portfolio ETF returns FIRST (2026 forward-looking)
+  if (CORE_PORTFOLIO_ETF_RETURNS[upperTicker]) {
+    const returnVal = CORE_PORTFOLIO_ETF_RETURNS[upperTicker];
+    console.log(`📊 ${upperTicker} using 2026 Core Portfolio forward-looking return: ${(returnVal * 100).toFixed(1)}%`);
+    return {
+      return: returnVal,
+      source: 'index_vals_expected',
+      details: `2026 forward-looking return for ${upperTicker} (${(returnVal * 100).toFixed(1)}%)`
+    };
+  }
+
+  // 1. Check INDEX VALS scenarios (for other ETFs)
   if (indexScenarioReturns && indexScenarioReturns.has(upperTicker)) {
     const scenarios = indexScenarioReturns.get(upperTicker)!;
     console.log(`📊 ${upperTicker} using INDEX VALS expected scenario: ${(scenarios.expected * 100).toFixed(1)}%`);

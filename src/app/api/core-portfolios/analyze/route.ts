@@ -1,60 +1,170 @@
 /**
  * API Endpoint: Analyze Core Portfolios
  * 
- * Runs all 4 Clockwise Core Portfolios through the REAL Kronos analyzer
+ * Runs all 5 Clockwise Core Portfolios through the REAL Kronos analyzer
+ * Includes: TIME, Max Growth, Growth, Moderate, and Max Income
  * Uses the same logic as the Kronos dashboard for consistent calculations
  * 
  * CACHING: Results cached in Supabase for 24 hours since allocations don't change daily
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ASSET_ALLOCATION_PORTFOLIOS } from '@/lib/clockwise-portfolios';
+import { ASSET_ALLOCATION_PORTFOLIOS, TIME_PORTFOLIO } from '@/lib/clockwise-portfolios';
 import {
   getAllCachedCorePortfolios,
   batchSetCachedCorePortfolios,
   isCorePortfoliosCacheValid,
 } from '@/lib/services/core-portfolios-cache';
+import { getCachedTimePortfolio } from '@/lib/services/time-portfolio-cache';
 
 // Cache configuration - revalidate every 24 hours
 export const revalidate = 86400; // 24 hours in seconds
 
 const TIME_HORIZON_YEARS = 1; // 12 months
 
+// Define portfolio order: TIME, Max Growth, Growth, Moderate, Max Income
+const PORTFOLIO_ORDER = ['time', 'max-growth', 'growth', 'moderate', 'max-income'];
+
 /**
  * Convert Clockwise allocation to Kronos portfolio format
+ * CRITICAL FIX: Equity hedges are SHORT positions that REDUCE equity exposure AND returns
+ * 
+ * The problem: If we add hedges to cash, cash (SHV) has ~4-5% positive return, which incorrectly
+ * boosts the portfolio return. Hedges should REDUCE returns, not add to them.
+ * 
+ * Solution: Add hedge allocation to bonds instead of cash. Bonds have lower returns than stocks,
+ * which better models the risk-reduction effect of hedging without artificially boosting returns.
  */
 function convertToKronosPortfolio(portfolio: typeof ASSET_ALLOCATION_PORTFOLIOS[0]) {
-  // Clockwise portfolios have equityHedges, but Kronos uses "alternatives"
-  // We'll map equityHedges to alternatives for Kronos compatibility
-  const alternatives = portfolio.allocations.equityHedges;
+  // Calculate net equity exposure (stocks - hedges)
+  // Hedges are short positions that offset long equity exposure
+  const netEquity = portfolio.allocations.stocks - portfolio.allocations.equityHedges;
+  
+  // Add hedge allocation to bonds (conservative, lower-return asset)
+  // This models the risk-reduction effect without the artificial boost from cash returns
+  const adjustedBonds = portfolio.allocations.bonds + portfolio.allocations.equityHedges;
+  
+  console.log(`  🔧 ${portfolio.name} conversion:`, {
+    grossStocks: `${(portfolio.allocations.stocks * 100).toFixed(1)}%`,
+    hedges: `${(portfolio.allocations.equityHedges * 100).toFixed(1)}%`,
+    netEquity: `${(netEquity * 100).toFixed(1)}%`,
+    adjustedBonds: `${(adjustedBonds * 100).toFixed(1)}%`
+  });
   
   return {
-    stocks: portfolio.allocations.stocks * 100, // Convert to percentage
-    bonds: portfolio.allocations.bonds * 100,
-    cash: portfolio.allocations.cash * 100,
+    stocks: netEquity * 100, // Net equity exposure after hedges
+    bonds: adjustedBonds * 100, // Bonds + hedge allocation (models risk reduction)
+    cash: portfolio.allocations.cash * 100, // Keep cash as-is
     realEstate: portfolio.allocations.realEstate * 100,
     commodities: portfolio.allocations.commodities * 100,
-    alternatives: alternatives * 100
+    alternatives: 0
   };
 }
 
 /**
- * Analyze a single portfolio using the real Kronos analyzer
+ * Analyze the TIME portfolio using cached data
+ */
+async function analyzeTimePortfolio() {
+  try {
+    console.log(`  📊 Analyzing TIME Portfolio...`);
+    
+    // Check for cached TIME portfolio data
+    const cachedTime = await getCachedTimePortfolio();
+    
+    if (!cachedTime) {
+      console.error(`  ❌ No cached TIME portfolio data available`);
+      // Return fallback data - TIME portfolio needs to be cached by the refresh job
+      return {
+        id: TIME_PORTFOLIO.id,
+        name: TIME_PORTFOLIO.name,
+        description: TIME_PORTFOLIO.description,
+        riskLevel: TIME_PORTFOLIO.riskLevel,
+        expectedReturn: 0,
+        expectedBestYear: 0,
+        expectedWorstYear: 0,
+      upside: 0,
+      downside: 0,
+      volatility: 0,
+      topPositions: [],
+      allocations: {}, // Empty object for DB compatibility
+      error: 'TIME portfolio cache not available. Please refresh the cache.'
+    };
+    }
+
+    // Use cached TIME portfolio data
+    const topPositions = cachedTime.topPositions.map(pos => ({
+      ticker: pos.ticker,
+      name: pos.name,
+      weight: pos.weight,
+      expectedReturn: pos.expectedReturn || 0
+    }));
+
+    console.log(`  ✅ TIME Portfolio: ${(cachedTime.expectedReturn * 100).toFixed(1)}% expected return (from cache)`);
+
+    return {
+      id: TIME_PORTFOLIO.id,
+      name: TIME_PORTFOLIO.name,
+      description: TIME_PORTFOLIO.description,
+      riskLevel: TIME_PORTFOLIO.riskLevel,
+      expectedReturn: cachedTime.expectedReturn,
+      expectedBestYear: cachedTime.portfolioMonteCarlo.upside,
+      expectedWorstYear: cachedTime.portfolioMonteCarlo.downside,
+      upside: cachedTime.portfolioMonteCarlo.upside,
+      downside: cachedTime.portfolioMonteCarlo.downside,
+      volatility: cachedTime.portfolioMonteCarlo.volatility,
+      topPositions,
+      allocations: {}, // TIME uses specific holdings, not asset allocations (empty object for DB compatibility)
+      kronosData: {
+        positions: cachedTime.positions.length,
+        totalWeight: 100
+      }
+    };
+  } catch (error) {
+    console.error(`  ❌ Failed to analyze TIME Portfolio:`, error);
+    return {
+      id: TIME_PORTFOLIO.id,
+      name: TIME_PORTFOLIO.name,
+      description: TIME_PORTFOLIO.description,
+      riskLevel: TIME_PORTFOLIO.riskLevel,
+      expectedReturn: 0,
+      expectedBestYear: 0,
+      expectedWorstYear: 0,
+      upside: 0,
+      downside: 0,
+      volatility: 0,
+      topPositions: [],
+      allocations: {}, // Empty object for DB compatibility
+      error: error instanceof Error ? error.message : 'TIME portfolio analysis failed'
+    };
+  }
+}
+
+/**
+ * Analyze a single asset-allocation portfolio using the real Kronos analyzer
+ * NOW USES REAL ETF HOLDINGS instead of simple asset allocation
  */
 async function analyzePortfolio(portfolio: typeof ASSET_ALLOCATION_PORTFOLIOS[0]) {
   try {
-    console.log(`  📊 Analyzing ${portfolio.name}...`);
+    console.log(`  📊 Analyzing ${portfolio.name} with real holdings...`);
     
-    // Convert to Kronos format
-    const portfolioAllocation = convertToKronosPortfolio(portfolio);
+    // Convert holdings to simple format that Kronos expects
+    const userHoldings = portfolio.holdings.map(holding => ({
+      ticker: holding.ticker,
+      name: holding.name,
+      percentage: holding.percentage
+    }));
+
+    console.log(`  📦 ${portfolio.name} holdings:`, {
+      totalHoldings: userHoldings.length,
+      tickers: userHoldings.map(h => `${h.ticker}:${h.percentage}%`).join(', ')
+    });
     
     // Call the REAL Kronos analyzer (same endpoint used by dashboard)
     const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/portfolio/get-portfolio-data`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        userHoldings: [], // No specific holdings - using asset allocation proxy
-        portfolioAllocation,
+        userHoldings, // REAL ETF HOLDINGS with ticker + percentage
         portfolioValue: 100000, // Standard $100k for comparison
         timeHorizon: TIME_HORIZON_YEARS
       })
@@ -75,68 +185,41 @@ async function analyzePortfolio(portfolio: typeof ASSET_ALLOCATION_PORTFOLIOS[0]
     const analysis = data.comparison.userPortfolio;
     
     console.log(`  📊 ${portfolio.name} Analysis Results:`, {
-      expectedReturn: analysis.expectedReturn,
-      upside: analysis.upside,
-      downside: analysis.downside,
+      expectedReturn: (analysis.expectedReturn * 100).toFixed(2) + '%',
+      upside: (analysis.upside * 100).toFixed(2) + '%',
+      downside: (analysis.downside * 100).toFixed(2) + '%',
       positions: analysis.positions?.length || 0
     });
     
-    // Build asset allocation display
-    const topPositions = [];
+    // Group holdings by asset class for display (but use real holdings in background)
+    const assetClassGroups: Record<string, { weight: number; tickers: string[] }> = {};
     
-    if (portfolio.allocations.stocks > 0) {
-      topPositions.push({
-        ticker: 'Stocks',
-        name: 'Equities',
-        weight: portfolio.allocations.stocks * 100,
-        expectedReturn: 0.07 // Will be overridden by Kronos data if available
-      });
-    }
+    portfolio.holdings.forEach(holding => {
+      const assetClassName = 
+        holding.assetClass === 'stocks' ? 'Equities' :
+        holding.assetClass === 'bonds' ? 'Fixed Income' :
+        holding.assetClass === 'commodities' ? 'Commodities & Gold' :
+        holding.assetClass === 'alternatives' ? 'Alternatives' :
+        'Cash Equivalents';
+      
+      if (!assetClassGroups[assetClassName]) {
+        assetClassGroups[assetClassName] = { weight: 0, tickers: [] };
+      }
+      
+      assetClassGroups[assetClassName].weight += holding.percentage;
+      assetClassGroups[assetClassName].tickers.push(holding.ticker);
+    });
     
-    if (portfolio.allocations.bonds > 0) {
-      topPositions.push({
-        ticker: 'Bonds',
-        name: 'Fixed Income',
-        weight: portfolio.allocations.bonds * 100,
-        expectedReturn: 0.02
-      });
-    }
+    // Build top positions grouped by asset class (for UI display)
+    const topPositions = Object.entries(assetClassGroups).map(([name, data]) => ({
+      ticker: name,
+      name: name,
+      weight: data.weight,
+      expectedReturn: 0, // Will be calculated from real holdings
+      underlyingTickers: data.tickers // Keep track of real tickers
+    }));
     
-    if (portfolio.allocations.commodities > 0) {
-      topPositions.push({
-        ticker: 'Commodities',
-        name: 'Commodities & Gold',
-        weight: portfolio.allocations.commodities * 100,
-        expectedReturn: 0.01
-      });
-    }
-    
-    if (portfolio.allocations.realEstate > 0) {
-      topPositions.push({
-        ticker: 'Real Estate',
-        name: 'REITs',
-        weight: portfolio.allocations.realEstate * 100,
-        expectedReturn: 0.05
-      });
-    }
-    
-    if (portfolio.allocations.cash > 0) {
-      topPositions.push({
-        ticker: 'Cash',
-        name: 'Cash Equivalents',
-        weight: portfolio.allocations.cash * 100,
-        expectedReturn: 0.00
-      });
-    }
-    
-    if (portfolio.allocations.equityHedges > 0) {
-      topPositions.push({
-        ticker: 'Hedges',
-        name: 'Equity Hedges',
-        weight: portfolio.allocations.equityHedges * 100,
-        expectedReturn: -0.02
-      });
-    }
+    console.log(`  📊 Asset Class Breakdown:`, assetClassGroups);
 
     console.log(`  ✅ ${portfolio.name}: ${(analysis.expectedReturn * 100).toFixed(1)}% expected return`);
 
@@ -225,12 +308,21 @@ export async function POST(request: NextRequest) {
 
     console.log('📊 Analyzing Core Portfolios using Kronos (cache miss or expired)...');
 
-    // Analyze all 4 portfolios using the REAL Kronos analyzer
-    const portfolioResults = await Promise.all(
-      ASSET_ALLOCATION_PORTFOLIOS.map(portfolio => analyzePortfolio(portfolio))
-    );
+    // Analyze all 5 portfolios: TIME + 4 asset allocation portfolios
+    const [timeResult, ...assetAllocationResults] = await Promise.all([
+      analyzeTimePortfolio(),
+      ...ASSET_ALLOCATION_PORTFOLIOS.map(portfolio => analyzePortfolio(portfolio))
+    ]);
 
-    console.log(`✅ Analyzed ${portfolioResults.length} Core Portfolios`);
+    // Combine and sort according to PORTFOLIO_ORDER
+    const allResults = [timeResult, ...assetAllocationResults];
+    const portfolioResults = allResults.sort((a, b) => {
+      const indexA = PORTFOLIO_ORDER.indexOf(a.id);
+      const indexB = PORTFOLIO_ORDER.indexOf(b.id);
+      return indexA - indexB;
+    });
+
+    console.log(`✅ Analyzed ${portfolioResults.length} Core Portfolios (including TIME)`);
 
     // Save to database cache
     console.log('💾 Saving Core Portfolios to Supabase cache...');

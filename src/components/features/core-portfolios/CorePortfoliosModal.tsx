@@ -85,7 +85,7 @@ export default function CorePortfoliosModal({
       onClick={onClose}
     >
       <div 
-        className="bg-[#0f1420] rounded-2xl border border-gray-800/50 shadow-2xl w-full max-w-6xl max-h-[85vh] overflow-hidden flex flex-col relative"
+        className="bg-[#0f1420] rounded-2xl border border-gray-800/50 shadow-2xl w-full max-w-7xl max-h-[85vh] overflow-hidden flex flex-col relative"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -158,7 +158,7 @@ export default function CorePortfoliosModal({
                 </div>
 
                 {/* Desktop: Grid View */}
-                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-5 gap-4">
                   {portfolios.map(portfolio => (
                     <CorePortfolioCard
                       key={portfolio.id}
