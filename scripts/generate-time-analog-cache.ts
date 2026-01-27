@@ -13,6 +13,11 @@
  *   npm run generate-time-cache -- --analog=COVID_CRASH
  */
 
+import * as dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config({ path: '.env.local' });
+
 import { scorePortfolio, mapTickerToKronosAssetClassAsync } from '@/lib/kronos/scoring';
 import { getHoldingWeights } from '@/lib/supabase/database';
 import { HISTORICAL_ANALOGS } from '@/lib/kronos/constants';

@@ -372,6 +372,15 @@ export function transformKronosToUIComparison(
     1 // 1-year horizon for scenario testing
   );
   
+  // VALIDATION: Ensure upside >= downside
+  if (userMC.upside < userMC.downside) {
+    console.error(`❌ USER PORTFOLIO: Monte Carlo returned invalid results!`);
+    console.error(`   upside: ${(userMC.upside * 100).toFixed(2)}%`);
+    console.error(`   downside: ${(userMC.downside * 100).toFixed(2)}%`);
+    console.error(`   median: ${(userMC.median * 100).toFixed(2)}%`);
+    throw new Error(`Invalid Monte Carlo results for user portfolio: upside < downside`);
+  }
+  
   // Run Monte Carlo for TIME portfolio based on scenario return
   const timeMC = runPortfolioMonteCarloSimulation(
     kronosResponse.timeHoldings?.map(h => ({
@@ -382,6 +391,15 @@ export function transformKronosToUIComparison(
     })) || [],
     1
   );
+  
+  // VALIDATION: Ensure upside >= downside
+  if (timeMC.upside < timeMC.downside) {
+    console.error(`❌ TIME PORTFOLIO: Monte Carlo returned invalid results!`);
+    console.error(`   upside: ${(timeMC.upside * 100).toFixed(2)}%`);
+    console.error(`   downside: ${(timeMC.downside * 100).toFixed(2)}%`);
+    console.error(`   median: ${(timeMC.median * 100).toFixed(2)}%`);
+    throw new Error(`Invalid Monte Carlo results for TIME portfolio: upside < downside`);
+  }
   
   // For SPY benchmark best/worst, check if user portfolio IS 100% SPY
   // If so, use the same Monte Carlo to avoid variance between two simulations

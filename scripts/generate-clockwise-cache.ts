@@ -13,6 +13,11 @@
  *   npm run generate-cache -- --analog=COVID_CRASH
  */
 
+import * as dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config({ path: '.env.local' });
+
 import { scoreAssetAllocationPortfolio } from '@/lib/kronos/asset-allocation-scoring';
 import { assetAllocationToHoldings } from '@/lib/kronos/asset-allocation-scoring';
 import { ASSET_ALLOCATION_PORTFOLIOS } from '@/lib/clockwise-portfolios';
@@ -91,6 +96,14 @@ async function computeScoresForAnalog(
       // Convert holdings for storage
       const holdings = assetAllocationToHoldings(portfolio.allocations);
 
+      // Calculate upside/downside properly (not swapped!)
+      // - upside = portfolioReturn + 2*volatility (best case)
+      // - downside = negative of drawdown for losses, or portfolioReturn - 2*volatility
+      const estimatedUpside = scoreResult.portfolioReturn + (0.18 * 2);  // +2 std devs
+      const estimatedDownside = scoreResult.portfolioReturn < 0
+        ? -scoreResult.portfolioDrawdown  // Negative drawdown for crash scenarios
+        : scoreResult.portfolioReturn - (0.18 * 2);  // -2 std devs for positive returns
+      
       const cacheEntry: CacheInsertData = {
         portfolio_id: portfolio.id,
         portfolio_name: portfolio.name,
@@ -107,8 +120,8 @@ async function computeScoresForAnalog(
         benchmark_drawdown: scoreResult.benchmarkDrawdown,
         return_score: scoreResult.returnScore,
         drawdown_score: scoreResult.drawdownScore,
-        estimated_upside: scoreResult.portfolioReturn * 1.5, // Simple estimate
-        estimated_downside: scoreResult.portfolioDrawdown,
+        estimated_upside: estimatedUpside,
+        estimated_downside: estimatedDownside,
         scenario_id: scoreResult.scenarioId,
         scenario_name: scoreResult.scenarioName,
         holdings: holdings.map(h => ({

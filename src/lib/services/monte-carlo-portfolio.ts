@@ -154,12 +154,22 @@ export function runPortfolioMonteCarloSimulation(
   const upside = percentile(allPortfolioAnnualReturns, 0.95);
   const downside = percentile(allPortfolioAnnualReturns, 0.05);
   
+  // CRITICAL VALIDATION: upside should ALWAYS be >= downside
+  // If not, it means the values are incorrectly swapped somewhere
+  if (upside < downside) {
+    console.error(`❌ MONTE CARLO BUG DETECTED: upside (${upside}) < downside (${downside})`);
+    console.error(`❌ This should NEVER happen! 95th percentile should be >= 5th percentile`);
+    console.error(`❌ Array sorting or percentile calculation is broken!`);
+    throw new Error(`Monte Carlo calculation error: upside < downside`);
+  }
+  
   console.log(`📊 Portfolio Monte Carlo results:`, {
     medianAnnualized: (median * 100).toFixed(1) + '%',
     upside: (upside * 100).toFixed(1) + '% (best year)',
     downside: (downside * 100).toFixed(1) + '% (worst year)',
     volatility: (portfolioVolatility * 100).toFixed(1) + '%',
-    simulations: SIMULATIONS
+    simulations: SIMULATIONS,
+    validation: upside >= downside ? '✅ PASS' : '❌ FAIL'
   });
   
   return {

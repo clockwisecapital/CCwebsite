@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Meteors } from "@/components/ui/meteors";
+import { useAuth } from '@/lib/auth/AuthContext';
 // Header is now in layout.tsx
 import MissionSection from "@/components/features/home/MissionSection";
 import InvestmentOptions from "@/components/features/home/InvestmentOptions";
@@ -19,6 +20,7 @@ export default function Home() {
   // State to track if component is mounted - for animations
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
+  const { user } = useAuth();
   
   useEffect(() => {
     setMounted(true);
@@ -111,7 +113,15 @@ export default function Home() {
           {/* Buttons with enhanced hover effects */}
           <div className={`flex flex-col sm:flex-row justify-center md:justify-start gap-4 mb-12 transition-all duration-1000 delay-700 transform ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
             <button 
-              onClick={() => router.push('/kronos')} 
+              onClick={() => {
+                // If user is authenticated, go to scenario testing page
+                // If not authenticated, go to Kronos intake page
+                if (user) {
+                  router.push('/scenario-testing/questions');
+                } else {
+                  router.push('/kronos');
+                }
+              }} 
               className="group relative overflow-hidden bg-[#1FAAA3] hover:bg-[#1FAAA3]/90 text-white font-sans font-bold py-4 px-8 rounded-lg shadow-lg transition-all duration-300 hover:scale-105"
             >
               <span className="absolute top-0 left-0 w-full h-full transform -translate-x-full bg-white/10 skew-x-12 group-hover:translate-x-full transition-transform duration-700 ease-in-out"></span>

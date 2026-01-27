@@ -343,26 +343,53 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScoreResp
           
           if (cacheResult.found && cacheResult.portfolios.length > 0) {
             // Build clockwise portfolios array with TIME + cached portfolios
+            // NOTE: upside/downside should come from Monte Carlo simulation
+            // For cached portfolios without Monte Carlo, we use ROUGH estimates:
+            // - upside = portfolioReturn + 2*volatility (best case)
+            // - downside = portfolioReturn - 2*volatility (worst case) OR -drawdown if negative
+            const timeUpside = (response.timePortfolio?.portfolioReturn || 0) + (0.18 * 2); // +2 std devs
+            const timeDownside = response.timePortfolio?.portfolioReturn < 0 
+              ? -(response.timePortfolio?.portfolioDrawdown || 0)  // Negative drawdown
+              : (response.timePortfolio?.portfolioReturn || 0) - (0.18 * 2); // -2 std devs
+            
             (response as any).clockwisePortfolios = [
               {
                 id: 'time',
                 name: 'TIME Portfolio',
                 score: response.timePortfolio?.score || 0,
                 expectedReturn: response.timePortfolio?.portfolioReturn || 0,
-                upside: (response.timePortfolio?.portfolioReturn || 0) * 1.5,
-                downside: response.timePortfolio?.portfolioDrawdown || 0,
+                upside: timeUpside,
+                downside: timeDownside,
                 holdings: response.timeHoldings || []
               },
-              ...cacheResult.portfolios.map(p => ({
-                id: p.portfolio_id,
-                name: p.portfolio_name,
-                score: p.score,
-                expectedReturn: p.portfolio_return,
-                upside: p.estimated_upside || p.portfolio_return * 1.5,
-                downside: p.estimated_downside || p.portfolio_drawdown,
-                holdings: p.holdings
-              }))
+              ...cacheResult.portfolios.map(p => {
+                // For cached portfolios, estimate upside/downside properly
+                const portfolioUpside = p.portfolio_return + (0.18 * 2);  // +2 std devs
+                const portfolioDownside = p.portfolio_return < 0
+                  ? -(p.estimated_downside || p.portfolio_drawdown)  // Negative drawdown
+                  : p.portfolio_return - (0.18 * 2);  // -2 std devs
+                
+                // VALIDATION: Ensure upside >= downside
+                if (portfolioUpside < portfolioDownside) {
+                  console.error(`❌ BUG: ${p.portfolio_name} has upside (${portfolioUpside.toFixed(4)}) < downside (${portfolioDownside.toFixed(4)})`);
+                }
+                
+                return {
+                  id: p.portfolio_id,
+                  name: p.portfolio_name,
+                  score: p.score,
+                  expectedReturn: p.portfolio_return,
+                  upside: portfolioUpside,
+                  downside: portfolioDownside,
+                  holdings: p.holdings
+                };
+              })
             ];
+            
+            // VALIDATION: Ensure TIME portfolio upside >= downside
+            if (timeUpside < timeDownside) {
+              console.error(`❌ BUG: TIME Portfolio has upside (${timeUpside.toFixed(4)}) < downside (${timeDownside.toFixed(4)})`);
+            }
             
             console.log(`✅ Loaded ${cacheResult.portfolios.length} Clockwise portfolios from ${cacheResult.source} (TIME + cached)`);
           } else {

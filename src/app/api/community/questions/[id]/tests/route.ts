@@ -228,6 +228,37 @@ export async function POST(
       upside = uiComparison?.userPortfolio.upside || 0;
       downside = uiComparison?.userPortfolio.downside || 0;
       
+      // CRITICAL VALIDATION: upside should always be >= downside
+      // upside = 95th percentile (best case), downside = 5th percentile (worst case)
+      if (upside < downside) {
+        console.error(`❌ VALIDATION FAILED: upside (${upside}) < downside (${downside})`);
+        console.error(`❌ upside (best year) should ALWAYS be >= downside (worst year)`);
+        console.error(`❌ This indicates a bug in the Monte Carlo calculation or data transformation`);
+        console.error(`   Expected Return: ${expectedReturn}`);
+        console.error(`   upside (95th %ile): ${(upside * 100).toFixed(2)}%`);
+        console.error(`   downside (5th %ile): ${(downside * 100).toFixed(2)}%`);
+        
+        return NextResponse.json(
+          { 
+            error: 'Invalid portfolio analysis results: Expected Best Year is worse than Expected Worst Year',
+            details: {
+              upside: upside,
+              downside: downside,
+              expectedReturn: expectedReturn,
+              message: 'Please contact support - this indicates a calculation error'
+            }
+          },
+          { status: 500 }
+        );
+      }
+      
+      console.log(`✅ Monte Carlo validation passed:`, {
+        expectedReturn: (expectedReturn * 100).toFixed(2) + '%',
+        upside: (upside * 100).toFixed(2) + '% (best year)',
+        downside: (downside * 100).toFixed(2) + '% (worst year)',
+        validation: 'upside >= downside ✓'
+      });
+      
       // Store full comparison data including benchmarkBestYear and benchmarkWorstYear
       comparisonData = {
         userPortfolio: {

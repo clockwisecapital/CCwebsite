@@ -1,9 +1,9 @@
 /**
- * Clear Core Portfolios Cache
+ * Clear Clockwise Portfolio Cache
  * 
- * Clears the core_portfolios_cache table to force regeneration
+ * Clears the clockwise_portfolio_cache table to force regeneration
  * 
- * Usage: npx tsx scripts/clear-core-cache.ts
+ * Usage: npx tsx scripts/clear-clockwise-cache.ts
  */
 
 import * as dotenv from 'dotenv';
@@ -14,12 +14,11 @@ dotenv.config({ path: '.env.local' });
 import { createClient } from '@supabase/supabase-js';
 
 async function clearCache() {
-  // Hardcode the values for now - they're in the codebase anyway
-  const supabaseUrl = 'https://ftplqetmkuzuahoatuaa.supabase.co';
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!supabaseKey) {
-    console.error('❌ Missing SUPABASE_SERVICE_ROLE_KEY environment variable');
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('❌ Missing Supabase environment variables');
     process.exit(1);
   }
 
@@ -30,10 +29,10 @@ async function clearCache() {
     }
   });
 
-  console.log('🗑️  Clearing core_portfolios_cache...');
+  console.log('🗑️  Clearing clockwise_portfolio_cache...');
 
   const { error } = await supabase
-    .from('core_portfolios_cache')
+    .from('clockwise_portfolio_cache')
     .delete()
     .neq('portfolio_id', ''); // Delete all
 
@@ -42,8 +41,8 @@ async function clearCache() {
     process.exit(1);
   }
 
-  console.log('✅ Core portfolios cache cleared!');
-  console.log('💡 The cache will regenerate on the next API call');
+  console.log('✅ Clockwise portfolio cache cleared!');
+  console.log('💡 Run: npx tsx scripts/generate-clockwise-cache.ts --force');
 }
 
 clearCache();
