@@ -37,9 +37,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      const newUser = session?.user ?? null;
+      
+      // Clear dashboard state when user signs out
+      if (event === 'SIGNED_OUT') {
+        try {
+          localStorage.removeItem('kronos-dashboard-state');
+          console.log('🗑️ Cleared dashboard state on SIGNED_OUT event');
+        } catch (error) {
+          console.error('Failed to clear dashboard state:', error);
+        }
+      }
+      
       setSession(session);
-      setUser(session?.user ?? null);
+      setUser(newUser);
       setLoading(false);
     });
 
@@ -94,6 +106,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    // Clear dashboard state before signing out
+    try {
+      localStorage.removeItem('kronos-dashboard-state');
+      console.log('🗑️ Cleared dashboard state on signOut');
+    } catch (error) {
+      console.error('Failed to clear dashboard state:', error);
+    }
+    
     await supabase.auth.signOut();
   };
 

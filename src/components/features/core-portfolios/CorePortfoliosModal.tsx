@@ -76,6 +76,9 @@ export default function CorePortfoliosModal({
 
   if (!isOpen) return null;
 
+  // Sort portfolios by expected return (highest to lowest)
+  const sortedPortfolios = [...portfolios].sort((a, b) => b.expectedReturn - a.expectedReturn);
+
   return (
     <div 
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 pt-24 bg-black/80 backdrop-blur-md"
@@ -106,7 +109,7 @@ export default function CorePortfoliosModal({
               <h2 id="core-portfolios-modal-title" className="text-xl font-bold text-white">
                 Clockwise Core Portfolios
               </h2>
-              <p className="text-xs text-gray-400">12-Month Performance Analysis</p>
+              <p className="text-xs text-gray-400">Ranked by Projected Return</p>
             </div>
           </div>
         </div>
@@ -146,7 +149,7 @@ export default function CorePortfoliosModal({
 
                 {/* Mobile: Stacked View */}
                 <div className="md:hidden space-y-4">
-                  {portfolios.map(portfolio => (
+                  {sortedPortfolios.map(portfolio => (
                     <CorePortfolioCard
                       key={portfolio.id}
                       portfolio={portfolio}
@@ -159,7 +162,7 @@ export default function CorePortfoliosModal({
 
                 {/* Desktop: Grid View */}
                 <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-5 gap-4">
-                  {portfolios.map(portfolio => (
+                  {sortedPortfolios.map(portfolio => (
                     <CorePortfolioCard
                       key={portfolio.id}
                       portfolio={portfolio}

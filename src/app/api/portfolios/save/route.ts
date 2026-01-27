@@ -57,9 +57,25 @@ export async function POST(request: NextRequest) {
     });
     
     // Build comprehensive portfolio_data with holdings
+    // If no specific holdings, use proxy holdings from analysis result
+    let holdings = intakeData.specificHoldings || [];
+    
+    if (holdings.length === 0 && analysisResult?.portfolioComparison?.userPortfolio?.positions) {
+      // Convert analysis positions to holdings format
+      holdings = analysisResult.portfolioComparison.userPortfolio.positions.map((pos: any) => ({
+        ticker: pos.ticker,
+        name: pos.name,
+        percentage: pos.weight,
+        currentPrice: pos.currentPrice,
+        value: (intakeData.portfolio.totalValue * pos.weight) / 100
+      }));
+      console.log(`📊 Using ${holdings.length} proxy holdings from analysis:`, 
+        holdings.map((h: any) => `${h.ticker} (${h.percentage}%)`).join(', '));
+    }
+    
     const portfolioData = {
       ...intakeData.portfolio,
-      holdings: intakeData.specificHoldings || [],
+      holdings: holdings,
       totalValue: intakeData.portfolio.totalValue,
       allocations: {
         stocks: intakeData.portfolio.stocks,

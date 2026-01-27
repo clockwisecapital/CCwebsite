@@ -99,6 +99,9 @@ export default function PortfolioDashboard() {
   const [goalSlide, setGoalSlide] = useState(0);
   const [portfolioSlide, setPortfolioSlide] = useState(0);
   const [marketSlide, setMarketSlide] = useState(0);
+  
+  // Track which videos have been played to prevent autoplay on revisit
+  const [playedVideos, setPlayedVideos] = useState<string[]>([]);
 
   // Load saved state from localStorage on mount
   useEffect(() => {
@@ -119,6 +122,7 @@ export default function PortfolioDashboard() {
         if (parsed.cycleAnalysisTab) setCycleAnalysisTab(parsed.cycleAnalysisTab);
         if (parsed.portfolioSaved !== undefined) setPortfolioSaved(parsed.portfolioSaved);
         if (parsed.savedPortfolioId) setSavedPortfolioId(parsed.savedPortfolioId);
+        if (parsed.playedVideos) setPlayedVideos(parsed.playedVideos);
       }
     } catch (error) {
       console.error('Failed to load dashboard state:', error);
@@ -143,6 +147,7 @@ export default function PortfolioDashboard() {
         cycleAnalysisTab,
         portfolioSaved,
         savedPortfolioId,
+        playedVideos,
         timestamp: Date.now(),
       };
       
@@ -163,12 +168,26 @@ export default function PortfolioDashboard() {
     cycleAnalysisTab,
     portfolioSaved,
     savedPortfolioId,
+    playedVideos,
   ]);
 
   // Reusable function to save portfolio to database
   const savePortfolio = async (userId: string) => {
+    console.log('💾 savePortfolio called with userId:', userId);
+    console.log('📊 Portfolio save state check:', {
+      hasConversationId: !!conversationId,
+      hasIntakeData: !!intakeData,
+      hasAnalysisResult: !!analysisResult,
+      conversationId,
+      email: intakeData?.email,
+    });
+    
     if (!conversationId || !intakeData || !analysisResult) {
-      console.warn('Cannot save portfolio: missing required data');
+      console.warn('❌ Cannot save portfolio: missing required data', {
+        conversationId: !!conversationId,
+        intakeData: !!intakeData,
+        analysisResult: !!analysisResult,
+      });
       return;
     }
 
@@ -181,6 +200,7 @@ export default function PortfolioDashboard() {
         headers['Authorization'] = `Bearer ${session.access_token}`;
       }
       
+      console.log('📤 Sending portfolio save request...');
       const response = await fetch('/api/portfolios/save', {
         method: 'POST',
         headers,
@@ -199,7 +219,7 @@ export default function PortfolioDashboard() {
         console.log('✅ Portfolio saved successfully!', data.portfolio?.id);
       } else {
         const error = await response.json();
-        console.error('❌ Failed to save portfolio:', error);
+        console.error('❌ Failed to save portfolio - Response not OK:', error);
       }
     } catch (error) {
       console.error('❌ Portfolio save error:', error);
@@ -285,10 +305,31 @@ export default function PortfolioDashboard() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab]);
 
+  // Effect to detect email change and clear old videoId (prevents cross-account video reuse)
+  useEffect(() => {
+    if (emailData && videoId) {
+      // Check if we need to regenerate video for different user
+      // Compare current email with the one that was stored in state
+      const savedState = localStorage.getItem(DASHBOARD_STATE_KEY);
+      if (savedState) {
+        try {
+          const parsed = JSON.parse(savedState);
+          // If email changed, clear the old videoId
+          if (parsed.emailData?.email !== emailData.email) {
+            console.log('🔄 Email changed - clearing old videoId');
+            setVideoId(null);
+          }
+        } catch (error) {
+          console.error('Failed to check email change:', error);
+        }
+      }
+    }
+  }, [emailData]);
+
   // Effect to start video generation immediately when email submitted (don't wait for analysis)
   useEffect(() => {
     if (emailData && analysisResult && !videoId) {
-      console.log('🎬 Starting video generation process...', { firstName: emailData.firstName });
+      console.log('🎬 Starting video generation process...', { firstName: emailData.firstName, email: emailData.email });
       fetch('/api/portfolio/generate-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -338,6 +379,13 @@ export default function PortfolioDashboard() {
     setIsAnalyzing(true);
     setAnalysisComplete(false);
     setCyclesLoading(true); // Start with cycles loading
+    
+    // Clear video-related state for new analysis
+    setVideoId(null);
+    setPlayedVideos([]);
+    setPortfolioSaved(false);
+    setSavedPortfolioId(null);
+    console.log('🔄 Starting new analysis - cleared video and portfolio state');
 
     // Personal info should always be collected in the intake form now
     if (data.firstName && data.lastName && data.email) {
@@ -467,6 +515,7 @@ export default function PortfolioDashboard() {
     setShowCreatePasswordModal(false);
     setPortfolioSaved(false);
     setSavedPortfolioId(null);
+    setPlayedVideos([]);
     
     // Clear localStorage
     try {
@@ -490,16 +539,34 @@ export default function PortfolioDashboard() {
     }
   };
 
+  const handleVideoPlayed = (videoId: string) => {
+    // Mark video as played to prevent autoplay on revisit
+    if (!playedVideos.includes(videoId)) {
+      setPlayedVideos(prev => [...prev, videoId]);
+    }
+  };
+
   const handleFinishAccountClick = () => {
     setShowFinishAccountModal(true);
   };
 
-  const handleFinishAccountSuccess = async () => {
+  const handleFinishAccountSuccess = async (authenticatedUser: { id: string }) => {
     // After user finishes account, save portfolio if we have the data
-    if (user && !portfolioSaved && conversationId && intakeData && analysisResult) {
-      await savePortfolio(user.id);
+    // Use the passed user directly instead of waiting for context to update
+    if (authenticatedUser && !portfolioSaved && conversationId && intakeData && analysisResult) {
+      console.log('💾 Saving portfolio for user:', authenticatedUser.id);
+      await savePortfolio(authenticatedUser.id);
+      console.log('✅ Portfolio saved, modal will close and redirect');
+    } else {
+      console.warn('⚠️ Portfolio not saved:', { 
+        hasUser: !!authenticatedUser, 
+        portfolioSaved, 
+        hasConversationId: !!conversationId,
+        hasIntakeData: !!intakeData,
+        hasAnalysisResult: !!analysisResult 
+      });
     }
-    setShowFinishAccountModal(false);
+    // Don't close modal here - let the modal handle its own closing after showing success screen
     setShowAnalysisPrompt(false);
   };
 
@@ -617,7 +684,12 @@ export default function PortfolioDashboard() {
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Unified Video Player - appears at top on mobile, bottom-right on desktop */}
-      <UnifiedVideoPlayer currentVideo={currentVideo} onVideoEnd={handleVideoEnd} />
+      <UnifiedVideoPlayer 
+        currentVideo={currentVideo} 
+        onVideoEnd={handleVideoEnd}
+        playedVideos={playedVideos}
+        onVideoPlayed={handleVideoPlayed}
+      />
 
       {/* Create Password Modal (legacy - for backward compatibility) */}
       {emailData && !user && (
@@ -632,7 +704,7 @@ export default function PortfolioDashboard() {
       )}
 
       {/* Finish Account Modal (new unified modal) */}
-      {emailData && !user && (
+      {emailData && (
         <ScenarioAuthModal
           isOpen={showFinishAccountModal}
           onClose={() => setShowFinishAccountModal(false)}
@@ -897,10 +969,31 @@ export default function PortfolioDashboard() {
                         })()}
                       </div>
                       
-                      <div className="mt-4 text-center">
-                        <p className="text-xs text-gray-400">
-                          Schedule a consultation to learn more about these portfolios
-                        </p>
+                      {/* Action Buttons */}
+                      <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                        <a
+                          href="https://calendly.com/clockwisecapital/appointments"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 px-6 py-3 bg-white hover:bg-gray-50 text-teal-600 border border-teal-400 font-semibold rounded-lg transition-colors duration-300 text-center flex items-center justify-center gap-2 animate-pulse-glow-teal hover:scale-105"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          Schedule a Consultation
+                        </a>
+
+                        {!user && emailData && (
+                          <button
+                            onClick={handleFinishAccountClick}
+                            className="flex-1 px-6 py-3 bg-white hover:bg-gray-50 text-teal-600 border border-teal-400 font-semibold rounded-lg transition-colors duration-300 text-center flex items-center justify-center gap-2 animate-pulse-glow-teal hover:scale-105"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                            </svg>
+                            Finish Account
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -477,9 +477,9 @@ export default function CycleTab({ cycleData, portfolioAnalysis, timeExpectedRet
       </CarouselContainer>
 
       {/* SECTION 3: Next Steps - Always Visible */}
-      <div className="bg-gradient-to-r from-teal-600 to-blue-600 rounded-lg p-4 md:p-6 text-white">
-        <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3">Next Step</h3>
-        <p className="text-sm md:text-base text-teal-100 mb-4 md:mb-6">
+      <div className="bg-teal-900/20 rounded-lg p-4 md:p-6 border border-teal-400">
+        <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3 text-teal-300">Next Step</h3>
+        <p className="text-sm md:text-base text-teal-200 mb-4 md:mb-6">
           Work 1:1 with a strategist to optimize allocations for the current cycle.
         </p>
         <div className="flex flex-col sm:flex-row justify-center gap-3">
@@ -487,12 +487,12 @@ export default function CycleTab({ cycleData, portfolioAnalysis, timeExpectedRet
             href="https://calendly.com/clockwisecapital/appointments"
             target="_blank"
             rel="noopener noreferrer"
-            className="px-6 md:px-8 py-3 bg-white text-teal-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors text-center flex items-center justify-center gap-2 text-sm md:text-base"
+            className="px-6 md:px-8 py-3 bg-gray-800 text-teal-300 border border-teal-500 font-semibold rounded-lg hover:bg-gray-700 transition-colors text-center flex items-center justify-center gap-2 text-sm md:text-base"
           >
             <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            Match me with an advisor
+            Schedule a Consultation
             <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
@@ -500,7 +500,7 @@ export default function CycleTab({ cycleData, portfolioAnalysis, timeExpectedRet
           {showFinishAccount && onFinishAccountClick && (
             <button
               onClick={onFinishAccountClick}
-              className="px-6 md:px-8 py-3 bg-white text-teal-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors text-center flex items-center justify-center gap-2 text-sm md:text-base"
+              className="px-6 md:px-8 py-3 bg-gray-800 text-teal-300 border border-teal-500 font-semibold rounded-lg hover:bg-gray-700 transition-colors text-center flex items-center justify-center gap-2 text-sm md:text-base"
             >
               <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />

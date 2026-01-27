@@ -6,13 +6,15 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { FiUsers, FiTarget, FiAward, FiMessageSquare, FiX } from 'react-icons/fi';
+import { FiUsers, FiTarget, FiAward, FiMessageSquare, FiX, FiCheckCircle } from 'react-icons/fi';
+import type { User } from '@supabase/supabase-js';
 
 interface ScenarioAuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (user: User) => void;
   title?: string;
   description?: string;
   // Autofill data from intake form
@@ -32,9 +34,10 @@ export default function ScenarioAuthModal({
   defaultLastName = '',
 }: ScenarioAuthModalProps) {
   const { signUp, signIn } = useAuth();
+  const router = useRouter();
   // Has autofill data from intake form - if so, skip choice screen
   const hasIntakeData = Boolean(defaultEmail && defaultEmail.trim());
-  const [mode, setMode] = useState<'choice' | 'signup' | 'signin'>(hasIntakeData ? 'signup' : 'choice');
+  const [mode, setMode] = useState<'choice' | 'signup' | 'signin' | 'success'>(hasIntakeData ? 'signup' : 'choice');
   const [email, setEmail] = useState(defaultEmail || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -43,6 +46,7 @@ export default function ScenarioAuthModal({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSuccessFlow, setIsSuccessFlow] = useState(false);
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -55,6 +59,7 @@ export default function ScenarioAuthModal({
       setConfirmPassword('');
       setError(null);
       setShowPassword(false);
+      setIsSuccessFlow(false);
     }
   }, [isOpen, defaultEmail, defaultFirstName, defaultLastName, hasIntakeData]);
 
@@ -98,9 +103,22 @@ export default function ScenarioAuthModal({
 
       if (signUpError) {
         setError(signUpError.message);
+        setLoading(false);
       } else if (user) {
-        onSuccess?.();
-        onClose();
+        // Mark that we're in success flow to prevent premature closing
+        setIsSuccessFlow(true);
+        
+        // Show success state first
+        setMode('success');
+        setLoading(false);
+        
+        // After 2 seconds, call onSuccess (save portfolio), close modal, and redirect
+        setTimeout(async () => {
+          await onSuccess?.(user);
+          onClose();
+          router.push('/scenario-testing/questions');
+        }, 2000);
+        return; // Exit early to prevent finally block from running immediately
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -120,9 +138,22 @@ export default function ScenarioAuthModal({
 
       if (signInError) {
         setError(signInError.message);
+        setLoading(false);
       } else if (user) {
-        onSuccess?.();
-        onClose();
+        // Mark that we're in success flow to prevent premature closing
+        setIsSuccessFlow(true);
+        
+        // Show success state first
+        setMode('success');
+        setLoading(false);
+        
+        // After 2 seconds, call onSuccess (save portfolio), close modal, and redirect
+        setTimeout(async () => {
+          await onSuccess?.(user);
+          onClose();
+          router.push('/scenario-testing/questions');
+        }, 2000);
+        return; // Exit early to prevent finally block from running immediately
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -143,7 +174,8 @@ export default function ScenarioAuthModal({
     setShowPassword(false);
   };
 
-  if (!isOpen) return null;
+  // Keep modal open during success flow even if parent tries to close it
+  if (!isOpen && !isSuccessFlow) return null;
 
   return (
     <div 
@@ -152,14 +184,16 @@ export default function ScenarioAuthModal({
       aria-modal="true"
     >
       <div className="bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6 border border-gray-700 relative">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
-          aria-label="Close modal"
-        >
-          <FiX className="w-5 h-5" />
-        </button>
+        {/* Close Button - disabled during success flow */}
+        {!isSuccessFlow && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+            aria-label="Close modal"
+          >
+            <FiX className="w-5 h-5" />
+          </button>
+        )}
 
         {/* Choice View */}
         {mode === 'choice' && (
@@ -477,6 +511,37 @@ export default function ScenarioAuthModal({
                 </button>
               </div>
             </form>
+          </>
+        )}
+
+        {/* Success View */}
+        {mode === 'success' && (
+          <>
+            <div className="text-center py-8">
+              {/* Success Icon */}
+              <div className="flex items-center justify-center mb-6">
+                <div className="w-20 h-20 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center animate-pulse">
+                  <FiCheckCircle className="w-10 h-10 text-white" />
+                </div>
+              </div>
+
+              {/* Success Message */}
+              <h2 className="text-2xl font-bold text-white mb-3">
+                Success! 🎉
+              </h2>
+              <p className="text-gray-300 mb-2">
+                Welcome{firstName ? `, ${firstName}` : ''}!
+              </p>
+              <p className="text-gray-400 text-sm mb-6">
+                Your portfolio has been saved and you&apos;re ready to start scenario testing.
+              </p>
+
+              {/* Redirect Message */}
+              <div className="flex items-center justify-center gap-2 text-teal-400">
+                <div className="w-5 h-5 border-2 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-sm font-medium">Redirecting to Scenario Testing...</span>
+              </div>
+            </div>
           </>
         )}
       </div>

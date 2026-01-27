@@ -272,11 +272,14 @@ export default function AdminUsersPage() {
       const result = await response.json()
       
       if (result.success) {
+        alert('User deleted successfully')
         fetchUsers()
       } else {
+        console.error('Delete user error:', result.error)
         alert(result.message || 'Failed to delete user')
       }
-    } catch {
+    } catch (error) {
+      console.error('Network error deleting user:', error)
       alert('Network error. Please try again.')
     }
   }

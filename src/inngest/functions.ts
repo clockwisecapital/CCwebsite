@@ -76,7 +76,8 @@ function calculateBlendedReturn(
 
 // ============================================================================
 // REFRESH TIME PORTFOLIO CACHE
-// Runs every 6 hours to pre-compute TIME portfolio analysis
+// Runs every 6 hours to pre-compute TIME portfolio analysis (production only)
+// In development, use manual trigger: POST /api/admin/refresh-cache
 // ============================================================================
 
 export const refreshTimePortfolioCache = inngest.createFunction(
@@ -85,8 +86,9 @@ export const refreshTimePortfolioCache = inngest.createFunction(
     retries: 2,
   },
   [
-    { cron: "0 1,7,13,19 * * *" }, // 8pm, 2am, 8am, 2pm EST (1am, 7am, 1pm, 7pm UTC) - off-peak hours
-    { event: "app/refresh.time-portfolio" } // Manual trigger support
+    // Only enable cron in production to avoid running on dev server startup
+    ...(process.env.NODE_ENV === 'production' ? [{ cron: "0 1,7,13,19 * * *" }] : []), // 8pm, 2am, 8am, 2pm EST (1am, 7am, 1pm, 7pm UTC) - off-peak hours
+    { event: "app/refresh.time-portfolio" } // Manual trigger support (works in all environments)
   ],
   async ({ step }) => {
     const startTime = Date.now();
@@ -251,7 +253,8 @@ export const refreshTimePortfolioCache = inngest.createFunction(
 
 // ============================================================================
 // REFRESH VOLATILITY CACHE
-// Runs daily at midnight to pre-compute volatility for common tickers
+// Runs daily at midnight to pre-compute volatility for common tickers (production only)
+// In development, use manual trigger: POST /api/admin/refresh-cache
 // ============================================================================
 
 export const refreshVolatilityCache = inngest.createFunction(
@@ -260,8 +263,9 @@ export const refreshVolatilityCache = inngest.createFunction(
     retries: 2,
   },
   [
-    { cron: "0 6 * * *" }, // Daily at 1am EST (6am UTC) - off-peak hours
-    { event: "app/refresh.volatility" } // Manual trigger support
+    // Only enable cron in production to avoid running on dev server startup
+    ...(process.env.NODE_ENV === 'production' ? [{ cron: "0 6 * * *" }] : []), // Daily at 1am EST (6am UTC) - off-peak hours
+    { event: "app/refresh.volatility" } // Manual trigger support (works in all environments)
   ],
   async ({ step }) => {
     const startTime = Date.now();

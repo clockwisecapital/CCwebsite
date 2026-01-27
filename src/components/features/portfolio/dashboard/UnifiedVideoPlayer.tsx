@@ -14,9 +14,11 @@ interface UnifiedVideoPlayerProps {
   currentVideo: VideoConfig;
   onVideoReady?: () => void;
   onVideoEnd?: () => void;
+  playedVideos?: string[];
+  onVideoPlayed?: (videoId: string) => void;
 }
 
-export default function UnifiedVideoPlayer({ currentVideo, onVideoReady, onVideoEnd }: UnifiedVideoPlayerProps) {
+export default function UnifiedVideoPlayer({ currentVideo, onVideoReady, onVideoEnd, playedVideos = [], onVideoPlayed }: UnifiedVideoPlayerProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [displayedVideo, setDisplayedVideo] = useState<VideoConfig>(currentVideo);
   const [isMuted, setIsMuted] = useState(true);
@@ -26,9 +28,6 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady, onVideo
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<'pending' | 'processing' | 'completed' | 'failed'>('pending');
   const [error, setError] = useState<string | null>(null);
-  
-  // Track which videos have been played
-  const [playedVideos, setPlayedVideos] = useState<Set<string>>(new Set());
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const hasNotified = useRef(false);
@@ -82,7 +81,7 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady, onVideo
   useEffect(() => {
     if (currentVideo.id !== previousVideoId.current) {
       // Check if this video has been played before
-      const hasBeenPlayed = playedVideos.has(currentVideo.id);
+      const hasBeenPlayed = playedVideos.includes(currentVideo.id);
       
       // Update displayed video immediately (key prop handles the switch)
       setDisplayedVideo(currentVideo);
@@ -128,8 +127,10 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady, onVideo
   // Track when video starts playing
   const handleVideoPlay = () => {
     setIsPlaying(true);
-    // Mark this video as played
-    setPlayedVideos(prev => new Set(prev).add(currentVideo.id));
+    // Mark this video as played via callback to parent
+    if (onVideoPlayed && !playedVideos.includes(currentVideo.id)) {
+      onVideoPlayed(currentVideo.id);
+    }
   };
 
   const handleVideoPause = () => {
@@ -299,7 +300,7 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady, onVideo
                 key={`${displayedVideo.id}-${videoSource}`}
                 ref={videoRef}
                 src={videoSource}
-                autoPlay
+                autoPlay={isPlaying}
                 muted={isMuted}
                 playsInline
                 onPlay={handleVideoPlay}

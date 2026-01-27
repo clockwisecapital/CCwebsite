@@ -210,6 +210,32 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       )
     }
 
+    // Get the username for cleanup
+    const { data: userToDelete, error: getUserError } = await supabase
+      .from('admin_users')
+      .select('username')
+      .eq('id', id)
+      .single()
+
+    if (getUserError || !userToDelete) {
+      return NextResponse.json(
+        { success: false, message: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    // Update any client_assignments that reference this user
+    // Set assigned_by to 'deleted_user' or null to prevent foreign key issues
+    const { error: updateAssignmentsError } = await supabase
+      .from('client_assignments')
+      .update({ assigned_by: `deleted_user_${userToDelete.username}` })
+      .eq('assigned_by', userToDelete.username)
+
+    if (updateAssignmentsError) {
+      console.error('Error updating client assignments:', updateAssignmentsError)
+      // Continue with deletion even if this fails
+    }
+
     const { error: deleteError } = await supabase
       .from('admin_users')
       .delete()
@@ -218,7 +244,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     if (deleteError) {
       console.error('Error deleting user:', deleteError)
       return NextResponse.json(
-        { success: false, message: 'Failed to delete user' },
+        { 
+          success: false, 
+          message: `Failed to delete user: ${deleteError.message || deleteError.code || 'Database error'}`,
+          error: deleteError
+        },
         { status: 500 }
       )
     }

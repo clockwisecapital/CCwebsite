@@ -120,7 +120,7 @@ export function CarouselContainer({
 
         <button
           onClick={onNext}
-          className="px-4 sm:px-6 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-semibold rounded-lg hover:from-cyan-700 hover:to-blue-700 hover:scale-105 hover:shadow-lg transition-all duration-300 ease-out flex items-center gap-1 sm:gap-2 shadow-md text-sm sm:text-base"
+          className="px-4 sm:px-6 py-2 bg-gray-800 text-teal-300 border border-teal-500 font-semibold rounded-lg hover:bg-gray-700 hover:scale-105 transition-all duration-300 ease-out flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
           style={{
             transitionProperty: 'background, transform, box-shadow',
             transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'

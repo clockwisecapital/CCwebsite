@@ -20,6 +20,37 @@
   animation: pulse-slow 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Pulsing glow animation for buttons */
+@keyframes pulse-glow-cyan {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(8, 145, 178, 0.5);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(8, 145, 178, 0.9), 0 0 50px rgba(8, 145, 178, 0.5);
+    transform: scale(1.02);
+  }
+}
+
+@keyframes pulse-glow-teal {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(45, 212, 191, 0.15), 0 0 0 1px rgba(45, 212, 191, 0.5);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(45, 212, 191, 0.25), 0 0 18px rgba(45, 212, 191, 0.15), 0 0 0 1px rgba(45, 212, 191, 0.55);
+    transform: scale(1.005);
+  }
+}
+
+.animate-pulse-glow-cyan {
+  animation: pulse-glow-cyan 2.5s ease-in-out infinite;
+}
+
+.animate-pulse-glow-teal {
+  animation: pulse-glow-teal 2.5s ease-in-out infinite;
+}
+
 /* Slide-in from right for timed popup */
 @keyframes slide-in {
   0% {
