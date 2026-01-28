@@ -273,11 +273,12 @@ Find the best historical analog period for testing a portfolio against this scen
 - **Characteristics:** 
   - Rapid 34% market decline in ~1 month
   - Global pandemic shock
-  - Unprecedented monetary/fiscal response
-  - V-shaped recovery
+  - Unprecedented monetary/fiscal response (Fed emergency rate cuts to 0%, unlimited QE)
+  - Massive fiscal stimulus (CARES Act, PPP loans)
+  - V-shaped recovery driven by policy response
   - Flight to safety (bonds rallied, gold up)
 - **S&P 500 Return:** -33.9%
-- **Best For:** Testing extreme volatility, sudden crash scenarios, flight-to-quality dynamics
+- **Best For:** Pandemic scenarios, sudden health crises, extreme volatility, crash + aggressive Fed intervention scenarios, rapid policy response testing, flight-to-quality dynamics
 
 ### 2. Dot-Com Bust (Mar 2000 - Oct 2002)
 - **Period:** 2000-03-01 to 2002-10-01

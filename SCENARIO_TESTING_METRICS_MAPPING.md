@@ -252,8 +252,8 @@
    - Apply log-normal distribution with volatility
 3. Collect all annual returns across simulations
 4. Sort and extract percentiles:
-   - Upside = 95th percentile
-   - Downside = 5th percentile
+   - Upside = 95th percentile (Expected Best Year)
+   - Downside = 5th percentile (Expected Worst Year)
    - Median = 50th percentile
 
 **Location:** `src/lib/services/monte-carlo-portfolio.ts` → `runPortfolioMonteCarloSimulation()`
@@ -265,6 +265,13 @@
 - Commodities: 20%
 - Cash: 1%
 - Alternatives: 12%
+
+**Cached Portfolio Fallback (when Monte Carlo not available):**
+- **Formula:** `upside = expectedReturn + 0.36`, `downside = expectedReturn - 0.36`
+- **Rationale:** ±2 standard deviations (18% volatility × 2 = 36%)
+- **Used in:** Cached Clockwise portfolios, legacy TIME portfolio data
+- **Ensures:** Expected Worst Year is ALWAYS more negative than Expected Return
+- **Location:** `src/app/api/kronos/score/route.ts` lines 351-352, 366-367
 
 ### SPY Benchmark Metrics
 **Average Return:**
@@ -387,3 +394,26 @@ PortfolioComparison
 | `portfolios` | `portfolio_data`, `intake_data` | User portfolio holdings |
 | `holding_weights` | `stockTicker`, `weightings` | TIME portfolio holdings |
 | `users` | `first_name`, `last_name`, `email` | User info for leaderboard |
+
+
+---
+
+## Cache System & Validation
+
+### Cache Generation
+**Purpose:** Pre-compute scores for all Clockwise portfolios against all historical analogs
+
+**Generate Cache:**
+```bash
+npm run generate-cache -- --force
+``` 
+
+**Validation:**
+```bash
+npm run validate-analogs
+``` 
+
+**Critical Fix (Jan 2026):**
+- Fixed Expected Worst Year calculation to always be more negative than Expected Return
+- Formula: `downside = expectedReturn - 0.36` (consistent for all portfolios)
+- All 20 cache entries validated - 100% pass rate

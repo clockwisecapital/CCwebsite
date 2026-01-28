@@ -16,7 +16,7 @@ import type { ScenarioId, ScenarioKeywords, HistoricalAnalog, ScoreLabel } from 
  */
 export const QUESTION_TO_SCENARIO: Record<string, ScenarioKeywords> = {
   'market-volatility': {
-    keywords: ['volatility', 'crash', 'correction', 'market drop', 'downturn', 'panic', 'sell-off'],
+    keywords: ['volatility', 'crash', 'correction', 'market drop', 'downturn', 'panic', 'sell-off', 'pandemic'],
     primaryRisk: 'Equity Drawdown'
   },
   'ai-supercycle': {

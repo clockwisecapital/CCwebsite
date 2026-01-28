@@ -57,6 +57,12 @@ Return ONLY a JSON object in this exact format:
 Guidelines:
 - Title should be clear, specific, and engaging (not just a restatement of the question)
 - Choose the historical period that best matches the economic conditions, market dynamics, or time period mentioned or implied in the question
+- **IMPORTANT PERIOD SELECTION RULES:**
+  - Questions about pandemics, COVID, health crises, or rapid crashes with Fed intervention → COVID Crash period
+  - Questions about tech bubbles, AI hype, dot-com parallels → Peak & Crash (2000-2008) period
+  - Questions about 2008 financial crisis, bank failures, credit freeze → Great Deleveraging (2008-2020) period
+  - Questions about meme stocks, crypto, 2022 rate hikes → Post-COVID Era (2021-Present) period
+  - Questions about general long-term trends or "what if" futures → Reset (Forecast) period
 - **CRITICAL: You must select EXACTLY ONE tag from these 6 Economic Cycle categories:**
   - "empire": Questions about geopolitical shifts, global power dynamics, international relations
   - "technology": Questions about technological innovation, AI, tech bubbles, digital transformation

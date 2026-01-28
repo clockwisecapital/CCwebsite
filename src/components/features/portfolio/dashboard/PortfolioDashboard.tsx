@@ -4,12 +4,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import IntakeTab from './IntakeTab';
 import ReviewTab from './ReviewTab';
-import ScenarioTestingTab from './ScenarioTestingTab';
 import UnifiedVideoPlayer, { type VideoConfig } from './UnifiedVideoPlayer';
 import { getVideoPath } from '@/hooks/useAvatarVariant';
 import CreatePasswordModal from '@/components/features/auth/CreatePasswordModal';
 import ScenarioAuthModal from '@/components/features/auth/ScenarioAuthModal';
-import FinishAccountButton from '@/components/features/auth/FinishAccountButton';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 
@@ -94,6 +92,7 @@ export default function PortfolioDashboard() {
   const [portfolioSaved, setPortfolioSaved] = useState(false);
   const [savedPortfolioId, setSavedPortfolioId] = useState<string | null>(null);
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
+  const [isSavingPortfolio, setIsSavingPortfolio] = useState(false); // Guard against concurrent saves
   
   // Track carousel slides for video sync
   const [goalSlide, setGoalSlide] = useState(0);
@@ -180,7 +179,20 @@ export default function PortfolioDashboard() {
       hasAnalysisResult: !!analysisResult,
       conversationId,
       email: intakeData?.email,
+      isSavingPortfolio,
+      portfolioSaved,
     });
+    
+    // Guard against concurrent saves or already saved portfolio
+    if (isSavingPortfolio) {
+      console.warn('⚠️ Save already in progress, skipping duplicate call');
+      return;
+    }
+    
+    if (portfolioSaved) {
+      console.warn('⚠️ Portfolio already saved, skipping duplicate call');
+      return;
+    }
     
     if (!conversationId || !intakeData || !analysisResult) {
       console.warn('❌ Cannot save portfolio: missing required data', {
@@ -192,6 +204,9 @@ export default function PortfolioDashboard() {
     }
 
     try {
+      // Set saving flag to prevent concurrent saves
+      setIsSavingPortfolio(true);
+      
       // Get the current session to include auth token
       const { data: { session } } = await supabase.auth.getSession();
       const headers: HeadersInit = { 'Content-Type': 'application/json' };
@@ -223,6 +238,9 @@ export default function PortfolioDashboard() {
       }
     } catch (error) {
       console.error('❌ Portfolio save error:', error);
+    } finally {
+      // Always clear the saving flag
+      setIsSavingPortfolio(false);
     }
   };
 
@@ -364,7 +382,7 @@ export default function PortfolioDashboard() {
       setActiveTab('review');
       
       // Handle portfolio saving based on authentication status
-      if (user && !portfolioSaved) {
+      if (user && !portfolioSaved && !isSavingPortfolio) {
         // User is authenticated: automatically save portfolio
         console.log('🔐 User authenticated, auto-saving portfolio...');
         savePortfolio(user.id);
@@ -372,7 +390,7 @@ export default function PortfolioDashboard() {
       // Note: For unauthenticated users, we now wait until the Analysis tab video finishes
       // The prompt will be triggered by handleVideoEnd() when they watch the personalized video
     }
-  }, [emailData, analysisComplete, analysisResult, conversationId, user, portfolioSaved]);
+  }, [emailData, analysisComplete, analysisResult, conversationId, user, portfolioSaved, isSavingPortfolio]);
 
   const handleIntakeSubmit = async (data: IntakeFormData) => {
     setIntakeData(data);
@@ -385,6 +403,7 @@ export default function PortfolioDashboard() {
     setPlayedVideos([]);
     setPortfolioSaved(false);
     setSavedPortfolioId(null);
+    setIsSavingPortfolio(false);
     console.log('🔄 Starting new analysis - cleared video and portfolio state');
 
     // Personal info should always be collected in the intake form now
@@ -515,6 +534,7 @@ export default function PortfolioDashboard() {
     setShowCreatePasswordModal(false);
     setPortfolioSaved(false);
     setSavedPortfolioId(null);
+    setIsSavingPortfolio(false);
     setPlayedVideos([]);
     
     // Clear localStorage
@@ -553,14 +573,15 @@ export default function PortfolioDashboard() {
   const handleFinishAccountSuccess = async (authenticatedUser: { id: string }) => {
     // After user finishes account, save portfolio if we have the data
     // Use the passed user directly instead of waiting for context to update
-    if (authenticatedUser && !portfolioSaved && conversationId && intakeData && analysisResult) {
+    if (authenticatedUser && !portfolioSaved && !isSavingPortfolio && conversationId && intakeData && analysisResult) {
       console.log('💾 Saving portfolio for user:', authenticatedUser.id);
       await savePortfolio(authenticatedUser.id);
       console.log('✅ Portfolio saved, modal will close and redirect');
     } else {
       console.warn('⚠️ Portfolio not saved:', { 
         hasUser: !!authenticatedUser, 
-        portfolioSaved, 
+        portfolioSaved,
+        isSavingPortfolio, 
         hasConversationId: !!conversationId,
         hasIntakeData: !!intakeData,
         hasAnalysisResult: !!analysisResult 
@@ -571,21 +592,8 @@ export default function PortfolioDashboard() {
   };
 
   // Auto-save portfolio for authenticated users when analysis completes
-  useEffect(() => {
-    const autoSaveForAuthenticatedUser = async () => {
-      // Only auto-save if:
-      // 1. User is authenticated
-      // 2. Analysis is complete
-      // 3. We have all required data
-      // 4. Portfolio hasn't been saved yet for this session
-      if (user && analysisComplete && intakeData && analysisResult && conversationId && !portfolioSaved) {
-        console.log('📝 Auto-saving portfolio for authenticated user:', user.id);
-        await savePortfolio(user.id);
-      }
-    };
-
-    autoSaveForAuthenticatedUser();
-  }, [user, analysisComplete, intakeData, analysisResult, conversationId, portfolioSaved]);
+  // NOTE: Removed redundant useEffect - portfolio saving is now handled by the 
+  // useEffect at lines 358-373 and by handleFinishAccountSuccess for new accounts
 
   // Determine current video based on app state and carousel slides
   const currentVideo: VideoConfig = useMemo(() => {
@@ -791,7 +799,21 @@ export default function PortfolioDashboard() {
               </button>
 
               <button
-                onClick={() => intakeData && setActiveTab('scenarios')}
+                onClick={() => {
+                  if (!intakeData) return;
+                  
+                  // Check if user is logged in
+                  if (user) {
+                    // User is logged in: redirect to scenario questions page
+                    if (savedPortfolioId) {
+                      sessionStorage.setItem('scenarioTestPortfolioId', savedPortfolioId);
+                    }
+                    router.push('/scenario-testing/questions');
+                  } else {
+                    // User is not logged in: prompt to finish account
+                    setShowFinishAccountModal(true);
+                  }
+                }}
                 disabled={!intakeData}
                 className={`
                   flex-1 px-3 sm:px-6 md:px-8 py-3 md:py-4 text-xs sm:text-sm font-medium border-b-2 transition-colors
@@ -1086,18 +1108,6 @@ export default function PortfolioDashboard() {
                 )}
 
               </div>
-            )}
-
-            {activeTab === 'scenarios' && intakeData && (
-              <ScenarioTestingTab
-                portfolioData={intakeData.portfolio}
-                portfolioId={savedPortfolioId || undefined}
-                onNext={() => {}}
-                onBack={() => setActiveTab('analyze')}
-                email={emailData?.email || intakeData.email}
-                firstName={emailData?.firstName || intakeData.firstName}
-                lastName={emailData?.lastName || intakeData.lastName}
-              />
             )}
           </div>
         </div>
