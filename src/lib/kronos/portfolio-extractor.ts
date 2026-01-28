@@ -34,6 +34,7 @@ interface IntakeData {
     percentage?: number;
     shares?: number;
     currentValue?: number;
+    dollarAmount?: number; // Added: Forms send dollarAmount, not currentValue
   }>;
   portfolio?: PortfolioData;
   portfolioTotalValue?: number;
@@ -68,8 +69,9 @@ export async function extractHoldingsFromPortfolio(
 ): Promise<Holding[]> {
   // Try to get specific holdings from intake_data
   const intakeData = portfolio.intake_data as IntakeData;
-  const portfolioData = portfolio.portfolio_data as PortfolioData;
+  const portfolioData = portfolio.portfolio_data as PortfolioData & { holdings?: any[] };
   
+  // Try intake_data.specificHoldings first (preferred location)
   if (intakeData?.specificHoldings && Array.isArray(intakeData.specificHoldings)) {
     const specificHoldings = intakeData.specificHoldings.filter(h => 
       h.ticker && 
@@ -85,7 +87,23 @@ export async function extractHoldingsFromPortfolio(
     }
   }
   
-  // Fallback: Create proxy ETF holdings based on allocation
+  // Fallback: Try portfolio_data.holdings (alternative location)
+  if (portfolioData?.holdings && Array.isArray(portfolioData.holdings)) {
+    const specificHoldings = portfolioData.holdings.filter(h => 
+      h.ticker && 
+      h.ticker.trim().length > 0 &&
+      !h.ticker.toLowerCase().includes('other')
+    );
+    
+    if (specificHoldings.length > 0) {
+      return await extractFromSpecificHoldings(
+        specificHoldings, 
+        portfolioData?.totalValue
+      );
+    }
+  }
+  
+  // Final fallback: Create proxy ETF holdings based on allocation
   return extractFromAllocation(portfolioData || intakeData?.portfolio || {});
 }
 
@@ -98,11 +116,23 @@ export async function extractHoldingsFromPortfolio(
  * @param totalValue - Total portfolio value for weight calculation
  */
 async function extractFromSpecificHoldings(
-  specificHoldings: Array<{ ticker?: string; percentage?: number; shares?: number; currentValue?: number }>,
+  specificHoldings: Array<{ ticker?: string; percentage?: number; shares?: number; currentValue?: number; dollarAmount?: number }>,
   totalValue?: number
 ): Promise<Holding[]> {
   const holdings: Holding[] = [];
   let totalPercentage = 0;
+  
+  // If no totalValue provided but we have dollarAmounts, calculate totalValue
+  let calculatedTotalValue = totalValue;
+  if (!calculatedTotalValue) {
+    const sumOfDollarAmounts = specificHoldings.reduce((sum, h) => {
+      return sum + (h.dollarAmount || h.currentValue || 0);
+    }, 0);
+    if (sumOfDollarAmounts > 0) {
+      calculatedTotalValue = sumOfDollarAmounts;
+      console.log(`Calculated total portfolio value from holdings: $${calculatedTotalValue.toLocaleString()}`);
+    }
+  }
   
   // Calculate weights and classify tickers with static mappings
   for (const holding of specificHoldings) {
@@ -114,9 +144,13 @@ async function extractFromSpecificHoldings(
     if (holding.percentage && holding.percentage > 0) {
       weight = holding.percentage / 100; // Convert percentage to decimal
     }
-    // Try calculating from shares and value
-    else if (holding.currentValue && totalValue && totalValue > 0) {
-      weight = holding.currentValue / totalValue;
+    // Try calculating from dollarAmount (forms send this)
+    else if (holding.dollarAmount && holding.dollarAmount > 0 && calculatedTotalValue && calculatedTotalValue > 0) {
+      weight = holding.dollarAmount / calculatedTotalValue;
+    }
+    // Try calculating from currentValue (legacy support)
+    else if (holding.currentValue && calculatedTotalValue && calculatedTotalValue > 0) {
+      weight = holding.currentValue / calculatedTotalValue;
     }
     // Try inferring from shares (if we have other holdings with values)
     else if (holding.shares && holding.shares > 0) {

@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
-import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import React, { useState } from 'react';
+import { FiChevronDown, FiChevronUp, FiInfo } from 'react-icons/fi';
 import { convertToAssetClassIfClockwise, isClockwisePortfolio } from '@/lib/asset-class-aggregation';
+import MonteCarloInfoModal from './MonteCarloInfoModal';
 
 export interface PortfolioCardData {
   id: string;
@@ -38,6 +39,7 @@ export default function PortfolioCard({
   canToggle = false,
   className = ''
 }: PortfolioCardProps) {
+  const [showMonteCarloModal, setShowMonteCarloModal] = useState(false);
   const isTime = portfolio.id === 'time';
 
   // Styling based on portfolio type
@@ -118,7 +120,19 @@ export default function PortfolioCard({
         <div className="space-y-3 sm:space-y-4">
           {/* Metrics */}
           <div>
-            <p className="text-[10px] sm:text-xs text-gray-500 uppercase mb-1">Expected Return</p>
+            <div className="flex items-center gap-1 mb-1">
+              <p className="text-[10px] sm:text-xs text-gray-500 uppercase">Expected Return (Avg Annual)</p>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMonteCarloModal(true);
+                }}
+                className="text-gray-500 hover:text-teal-400 transition-colors"
+                aria-label="Learn about Monte Carlo simulation"
+              >
+                <FiInfo className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              </button>
+            </div>
             <p className={`text-sm sm:text-base font-bold ${getColorClass(portfolio.expectedReturn)}`}>
               {formatPercent(portfolio.expectedReturn)}
             </p>
@@ -176,6 +190,12 @@ export default function PortfolioCard({
           View Details <FiChevronDown className="w-3 h-3" />
         </button>
       )}
+
+      {/* Monte Carlo Info Modal */}
+      <MonteCarloInfoModal 
+        isOpen={showMonteCarloModal} 
+        onClose={() => setShowMonteCarloModal(false)} 
+      />
     </div>
   );
 }

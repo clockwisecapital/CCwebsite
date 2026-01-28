@@ -7,8 +7,9 @@
 
 'use client';
 
-import React from 'react';
-import { FiTrendingUp, FiTrendingDown, FiShield, FiZap } from 'react-icons/fi';
+import React, { useState } from 'react';
+import { FiTrendingUp, FiTrendingDown, FiShield, FiZap, FiInfo } from 'react-icons/fi';
+import MonteCarloInfoModal from './MonteCarloInfoModal';
 
 interface TimeComparisonProps {
   userScore: number;
@@ -29,6 +30,7 @@ export default function TimeComparison({
   timeDrawdown,
   scenarioName
 }: TimeComparisonProps) {
+  const [showMonteCarloModal, setShowMonteCarloModal] = useState(false);
   const scoreDiff = timeScore - userScore;
   const returnDiff = timeReturn - userReturn;
   const drawdownDiff = userDrawdown - timeDrawdown;
@@ -105,7 +107,16 @@ export default function TimeComparison({
 
         {/* Return Comparison */}
         <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Expected Return</p>
+          <div className="flex items-center gap-1 mb-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Expected Return (Avg Annual)</p>
+            <button
+              onClick={() => setShowMonteCarloModal(true)}
+              className="text-gray-400 hover:text-teal-400 transition-colors"
+              aria-label="Learn about Monte Carlo simulation"
+            >
+              <FiInfo className="w-3.5 h-3.5" />
+            </button>
+          </div>
           
           <div className="space-y-3">
             {/* Your Portfolio */}
@@ -273,6 +284,12 @@ export default function TimeComparison({
           Learn More About TIME
         </button>
       </div>
+
+      {/* Monte Carlo Info Modal */}
+      <MonteCarloInfoModal 
+        isOpen={showMonteCarloModal} 
+        onClose={() => setShowMonteCarloModal(false)} 
+      />
     </div>
   );
 }

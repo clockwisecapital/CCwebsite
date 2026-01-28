@@ -75,6 +75,18 @@ export default function PortfolioSelectionModal({
         headers['Authorization'] = `Bearer ${session.access_token}`;
       }
 
+      // Calculate total value from dollar amounts if not provided
+      let finalTotalValue = formData.totalValue;
+      if (!finalTotalValue && formData.specificHoldings && formData.specificHoldings.length > 0) {
+        const sumOfDollarAmounts = formData.specificHoldings.reduce((sum, h) => {
+          return sum + (h.dollarAmount || 0);
+        }, 0);
+        if (sumOfDollarAmounts > 0) {
+          finalTotalValue = sumOfDollarAmounts;
+          console.log(`Calculated total portfolio value: $${finalTotalValue.toLocaleString()}`);
+        }
+      }
+
       // Create portfolio with Kronos-style data
       // For portfolios created this way, we'll set a default allocation (100% stocks for proxy system)
       // or if they have specific holdings, those will be used instead
@@ -85,7 +97,7 @@ export default function PortfolioSelectionModal({
           name: formData.name,
           description: formData.description,
           portfolio_data: JSON.stringify({
-            totalValue: formData.totalValue,
+            totalValue: finalTotalValue,
             stocks: 100,  // Default for proxy system when using value ranges
             bonds: 0,
             cash: 0,
@@ -100,6 +112,7 @@ export default function PortfolioSelectionModal({
             ...formData,
             riskTolerance: 'medium',  // Default risk tolerance
             experienceLevel: 'Intermediate',  // Default experience level
+            portfolioTotalValue: finalTotalValue,
           }),
         }),
       });
