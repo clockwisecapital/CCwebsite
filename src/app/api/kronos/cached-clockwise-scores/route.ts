@@ -89,8 +89,8 @@ async function computeClockwiseScoresOnDemand(
         name: portfolio.name,
         score: scoreResult.score,
         expectedReturn: scoreResult.portfolioReturn,
-        upside: scoreResult.portfolioReturn * 1.5,
-        downside: scoreResult.portfolioDrawdown,
+        upside: scoreResult.portfolioReturn + 0.36, // +2 std devs (18% × 2)
+        downside: scoreResult.portfolioReturn - 0.36, // -2 std devs (18% × 2)
         portfolioReturn: scoreResult.portfolioReturn,
         benchmarkReturn: scoreResult.benchmarkReturn,
         outperformance: scoreResult.outperformance,
@@ -129,8 +129,8 @@ function transformCachedScore(cached: CachedPortfolioScore): PortfolioScoreRespo
     name: cached.portfolio_name,
     score: cached.score,
     expectedReturn: cached.portfolio_return,
-    upside: cached.estimated_upside || cached.portfolio_return * 1.5,
-    downside: cached.estimated_downside || cached.portfolio_drawdown,
+    upside: cached.estimated_upside || (cached.portfolio_return + 0.36), // Fallback: +2 std devs
+    downside: cached.estimated_downside || (cached.portfolio_return - 0.36), // Fallback: -2 std devs
     portfolioReturn: cached.portfolio_return,
     benchmarkReturn: cached.benchmark_return,
     outperformance: cached.outperformance,

@@ -98,11 +98,9 @@ async function computeScoresForAnalog(
 
       // Calculate upside/downside properly (not swapped!)
       // - upside = portfolioReturn + 2*volatility (best case)
-      // - downside = negative of drawdown for losses, or portfolioReturn - 2*volatility
+      // - downside = portfolioReturn - 2*volatility (worst case)
       const estimatedUpside = scoreResult.portfolioReturn + (0.18 * 2);  // +2 std devs
-      const estimatedDownside = scoreResult.portfolioReturn < 0
-        ? -scoreResult.portfolioDrawdown  // Negative drawdown for crash scenarios
-        : scoreResult.portfolioReturn - (0.18 * 2);  // -2 std devs for positive returns
+      const estimatedDownside = scoreResult.portfolioReturn - (0.18 * 2);  // -2 std devs
       
       const cacheEntry: CacheInsertData = {
         portfolio_id: portfolio.id,

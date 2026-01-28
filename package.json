@@ -10,7 +10,8 @@
     "generate-cache": "tsx --env-file=.env.local scripts/generate-clockwise-cache.ts",
     "test-cache": "tsx --env-file=.env.local scripts/test-cache.ts",
     "generate-time-cache": "tsx --env-file=.env.local scripts/generate-time-analog-cache.ts",
-    "generate-all-caches": "npm run generate-cache && npm run generate-time-cache"
+    "generate-all-caches": "npm run generate-cache && npm run generate-time-cache",
+    "validate-analogs": "tsx --env-file=.env.local scripts/validate-all-analogs.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",

@@ -26,6 +26,7 @@ function getAnalogIdFromScenarioId(scenarioId: string, analogName: string): stri
   if (analogLower.includes('dot-com') || analogLower.includes('dot com')) return 'DOT_COM_BUST';
   if (analogLower.includes('rate shock') || analogLower.includes('2022')) return 'RATE_SHOCK';
   if (analogLower.includes('stagflation') || analogLower.includes('1973')) return 'STAGFLATION';
+  if (analogLower.includes('gfc') || analogLower.includes('deleveraging') || analogLower.includes('2009')) return 'GFC_RECOVERY';
   
   // Fallback to scenario ID mapping
   if (scenarioId === 'market-volatility') return 'COVID_CRASH';
@@ -346,11 +347,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScoreResp
             // NOTE: upside/downside should come from Monte Carlo simulation
             // For cached portfolios without Monte Carlo, we use ROUGH estimates:
             // - upside = portfolioReturn + 2*volatility (best case)
-            // - downside = portfolioReturn - 2*volatility (worst case) OR -drawdown if negative
+            // - downside = portfolioReturn - 2*volatility (worst case)
             const timeUpside = (response.timePortfolio?.portfolioReturn || 0) + (0.18 * 2); // +2 std devs
-            const timeDownside = response.timePortfolio?.portfolioReturn < 0 
-              ? -(response.timePortfolio?.portfolioDrawdown || 0)  // Negative drawdown
-              : (response.timePortfolio?.portfolioReturn || 0) - (0.18 * 2); // -2 std devs
+            const timeDownside = (response.timePortfolio?.portfolioReturn || 0) - (0.18 * 2); // -2 std devs
             
             (response as any).clockwisePortfolios = [
               {
@@ -365,9 +364,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScoreResp
               ...cacheResult.portfolios.map(p => {
                 // For cached portfolios, estimate upside/downside properly
                 const portfolioUpside = p.portfolio_return + (0.18 * 2);  // +2 std devs
-                const portfolioDownside = p.portfolio_return < 0
-                  ? -(p.estimated_downside || p.portfolio_drawdown)  // Negative drawdown
-                  : p.portfolio_return - (0.18 * 2);  // -2 std devs
+                const portfolioDownside = p.portfolio_return - (0.18 * 2);  // -2 std devs
                 
                 // VALIDATION: Ensure upside >= downside
                 if (portfolioUpside < portfolioDownside) {

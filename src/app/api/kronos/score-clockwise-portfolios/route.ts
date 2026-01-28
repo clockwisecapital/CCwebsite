@@ -124,8 +124,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScoreCloc
         name: 'TIME Portfolio',
         score: timeResult.score,
         expectedReturn: timeResult.portfolioReturn,
-        upside: timeResult.portfolioReturn * 1.5, // Estimated
-        downside: timeResult.portfolioDrawdown,
+        upside: timeResult.portfolioReturn + 0.36, // +2 std devs (18% × 2)
+        downside: timeResult.portfolioReturn - 0.36, // -2 std devs (18% × 2)
         portfolioReturn: timeResult.portfolioReturn,
         benchmarkReturn: timeResult.benchmarkReturn,
         outperformance: timeResult.outperformance,
@@ -174,8 +174,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScoreCloc
             name: portfolio.name,
             score: result.score,
             expectedReturn: result.portfolioReturn,
-            upside: result.portfolioReturn * 1.5, // Estimated
-            downside: result.portfolioDrawdown,
+            upside: result.portfolioReturn + 0.36, // +2 std devs (18% × 2)
+            downside: result.portfolioReturn - 0.36, // -2 std devs (18% × 2)
             portfolioReturn: result.portfolioReturn,
             benchmarkReturn: result.benchmarkReturn,
             outperformance: result.outperformance,
