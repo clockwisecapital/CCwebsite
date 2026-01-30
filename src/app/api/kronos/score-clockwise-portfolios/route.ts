@@ -114,10 +114,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScoreCloc
     let analogPeriod: string | undefined;
     
     // Score TIME Portfolio (from database holdings)
+    // This establishes the analog for ALL portfolios to ensure consistency
+    let selectedAnalogId: string | undefined;
+    
     try {
-      console.log('\n📊 Scoring TIME Portfolio...');
+      console.log('\n📊 Scoring TIME Portfolio (this will select the analog for ALL portfolios)...');
       const timeHoldings = await getTimePortfolioHoldings();
       const timeResult = await scorePortfolio(body.question, timeHoldings);
+      
+      // Store the analog ID to use for ALL other portfolios
+      selectedAnalogId = timeResult.analogId;
+      console.log(`✅ Analog selected: ${selectedAnalogId} (${timeResult.analogName})`);
+      console.log(`   ALL portfolios will use this SAME analog for consistency`);
       
       portfolioScores.push({
         id: 'time',
@@ -152,6 +160,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScoreCloc
     
     // Score asset-allocation portfolios in parallel
     console.log('\n📊 Scoring asset-allocation portfolios...');
+    if (selectedAnalogId) {
+      console.log(`   Using same analog (${selectedAnalogId}) for ALL portfolios to ensure consistency`);
+    } else {
+      console.log(`   ⚠️ TIME scoring failed - portfolios will use AI selection (less consistent)`);
+    }
     
     const allocationResults = await Promise.all(
       ASSET_ALLOCATION_PORTFOLIOS.map(async (portfolio: ClockwisePortfolio) => {
@@ -159,7 +172,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScoreCloc
           const result = await scoreAssetAllocationPortfolio(
             body.question,
             portfolio.allocations,
-            portfolio.name
+            portfolio.name,
+            selectedAnalogId  // ✅ Use same analog as TIME portfolio (or undefined if TIME failed)
           );
           
           // Store scenario info from first result if not already set

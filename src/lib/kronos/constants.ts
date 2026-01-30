@@ -94,6 +94,24 @@ export const HISTORICAL_ANALOGS: Record<string, HistoricalAnalog> = {
       end: '2020-02-01'
     },
     description: '2008-Present: Post-GFC recovery and QE era'
+  },
+  'POST_COVID_ERA': {
+    id: 'POST_COVID_ERA',
+    name: 'Post-COVID Era',
+    dateRange: {
+      start: '2021-01-01',
+      end: '2023-12-31'
+    },
+    description: '2021-Present: Meme stocks, crypto surge, rate shock volatility'
+  },
+  'GFC_CRASH': {
+    id: 'GFC_CRASH',
+    name: '2008 Financial Crisis',
+    dateRange: {
+      start: '2007-10-01',
+      end: '2009-03-01'
+    },
+    description: '2007-2009: Global Financial Crisis, housing crash, bank failures'
   }
 };
 

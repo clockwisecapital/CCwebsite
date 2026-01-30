@@ -15,11 +15,15 @@ const HISTORICAL_SP500_RETURNS: Record<string, number> = {
   "1995-2000": 0.286,  // Dot-Com Boom - Tech bubble peak
   "2000-2002": -0.145, // Dot-Com Bust - Tech crash
   "2003-2007": 0.098,  // Pre-GFC - Housing bubble expansion
-  "2007-2009": -0.285, // Financial Crisis - Great Recession
+  "2007-2009": -0.57,  // 2008 Financial Crisis - Global Financial Crisis ✅ UPDATED
+  "2008-2009": -0.57,  // 2008 Financial Crisis (alias)
+  "2008-2020": 0.134,  // Great Deleveraging - Post-GFC recovery (2009-2020) ✅ FIXED
   "2008-Present": 0.134,  // Great Deleveraging - Post-GFC recovery (2009-2020)
   "2009-2020": 0.134,  // Recovery & Bull Market - QE era
   "2009-Present": 0.134,  // Same as 2009-2020 (alias for present-day queries)
   "2020-2021": 0.185,  // COVID Recovery - Stimulus-driven rally
+  "2021-2023": 0.095,  // Post-COVID Era - Meme stocks, crypto, rate shock
+  "2021-Present": 0.095,  // Post-COVID Era (alias)
   "2022-2023": 0.042,  // Rate Hike Era - Fed tightening
   "2024-2025": 0.089,  // Current Period - AI boom
 };
@@ -36,6 +40,7 @@ export async function POST(request: NextRequest) {
     }
     
     const key = `${startYear}-${endYear}`;
+    console.log(`📊 Looking up S&P 500 return for period: ${key}`);
     const sp500Return = HISTORICAL_SP500_RETURNS[key];
     
     if (sp500Return !== undefined) {

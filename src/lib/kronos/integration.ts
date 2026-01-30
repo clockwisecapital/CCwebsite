@@ -544,32 +544,7 @@ export async function runScenarioTest(
   };
 }
 
-/**
- * Helper: Extract analog ID from Kronos response
- * Maps analog names back to IDs for cache lookup
- */
-function getAnalogIdFromScenarioResponse(response: KronosScoreResponse): string | null {
-  const analogName = response.analogName?.toLowerCase() || '';
-  
-  // Map analog names to IDs
-  if (analogName.includes('covid')) return 'COVID_CRASH';
-  if (analogName.includes('dot-com') || analogName.includes('dot com')) return 'DOT_COM_BUST';
-  if (analogName.includes('rate shock') || analogName.includes('2022')) return 'RATE_SHOCK';
-  if (analogName.includes('stagflation') || analogName.includes('1973')) return 'STAGFLATION';
-  
-  // Fallback: try to extract from scenario ID if available
-  if (response.scenarioId) {
-    const scenarioId = response.scenarioId;
-    if (scenarioId === 'market-volatility') return 'COVID_CRASH';
-    if (scenarioId === 'ai-supercycle' || scenarioId === 'tech-concentration') return 'DOT_COM_BUST';
-    if (scenarioId === 'cash-vs-bonds') return 'RATE_SHOCK';
-    if (scenarioId === 'inflation-hedge' || scenarioId === 'recession-risk') return 'STAGFLATION';
-  }
-  
-  console.warn(`⚠️ Could not determine analog ID from response:`, {
-    analogName: response.analogName,
-    scenarioId: response.scenarioId
-  });
-  
-  return null;
-}
+// REMOVED: getAnalogIdFromScenarioResponse
+// This function was dangerous - it guessed analog IDs from names which caused mismatches
+// Example bug: "Post-COVID Era" matched "covid" → returned COVID_CRASH (wrong!)
+// Now all code uses ScoreResult.analogId directly which is authoritative

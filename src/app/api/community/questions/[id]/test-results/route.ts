@@ -125,14 +125,24 @@ async function runSP500BenchmarkTest(questionId: string) {
     
     const supabase = await createServerSupabaseClient();
     
-    // Get question details
+    // Get question details including metadata
     const { data: question } = await supabase
       .from('scenario_questions')
-      .select('title, question_text')
+      .select('title, question_text, metadata')
       .eq('id', questionId)
       .single();
     
     if (!question) return;
+    
+    // Check for stored analog ID for consistency
+    const metadata = question.metadata as any;
+    const storedAnalogId = metadata?.analog_id;
+    
+    if (storedAnalogId) {
+      console.log(`✅ Using stored analog for SPY benchmark: ${storedAnalogId}`);
+    } else {
+      console.log(`⚠️ No stored analog - SPY benchmark will use AI selection`);
+    }
     
     // Create a standard S&P 500 portfolio (100% SPY)
     const sp500Holdings = [
@@ -149,7 +159,7 @@ async function runSP500BenchmarkTest(questionId: string) {
     const scoreResult = await scorePortfolio(
       question.question_text || question.title,
       sp500Holdings,
-      true // Use AI
+      storedAnalogId || true // Use stored analog for consistency, or AI if legacy question
     );
     
     // Save S&P 500 benchmark result (use any to bypass TypeScript table check)

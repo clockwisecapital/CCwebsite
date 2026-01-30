@@ -100,7 +100,8 @@ export default function CreateQuestionModal({ isOpen, onClose, onSubmit }: Creat
         historical_period: [aiEnrichment.historicalPeriod],
         tags: aiEnrichment.tags,
         metadata: {
-          sp500_return: (aiEnrichment as any).sp500Return || 0.10 // Store S&P 500 return
+          sp500_return: (aiEnrichment as any).sp500Return || 0.10, // Store S&P 500 return
+          ...(aiEnrichment as any).analogData // Store selected analog for consistent testing
         }
       });
 

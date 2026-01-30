@@ -72,14 +72,19 @@ export function assetAllocationToHoldings(allocations: AssetAllocation): Holding
  * @param question - Scenario question
  * @param allocations - Asset class allocations (must sum to 1.0)
  * @param portfolioName - Name for logging purposes
+ * @param forceAnalogId - Optional: Force specific analog for consistency
  * @returns Complete ScoreResult
  */
 export async function scoreAssetAllocationPortfolio(
   question: string,
   allocations: AssetAllocation,
-  portfolioName: string = 'Portfolio'
+  portfolioName: string = 'Portfolio',
+  forceAnalogId?: string
 ) {
   console.log(`\n📊 Scoring asset-allocation portfolio: ${portfolioName}`);
+  if (forceAnalogId) {
+    console.log(`   Using forced analog: ${forceAnalogId} (for consistency)`);
+  }
   console.log(`Allocations:`, {
     stocks: `${(allocations.stocks * 100).toFixed(1)}%`,
     equityHedges: `${(allocations.equityHedges * 100).toFixed(1)}%`,
@@ -92,8 +97,8 @@ export async function scoreAssetAllocationPortfolio(
   // Convert to holdings format
   const holdings = assetAllocationToHoldings(allocations);
 
-  // Score using standard Kronos logic
-  const result = await scorePortfolio(question, holdings);
+  // Score using standard Kronos logic (with forced analog for consistency)
+  const result = await scorePortfolio(question, holdings, forceAnalogId);
 
   console.log(`✅ ${portfolioName} Score: ${result.score}/100`);
 

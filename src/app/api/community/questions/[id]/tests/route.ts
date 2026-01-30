@@ -113,10 +113,10 @@ export async function POST(
       );
     }
     
-    // Check if question exists and get question text
+    // Check if question exists and get question text + metadata
     const { data: question, error: questionError } = await supabase
       .from('scenario_questions')
-      .select('id, question_text, title')
+      .select('id, question_text, title, metadata')
       .eq('id', id)
       .eq('is_active', true)
       .single();
@@ -199,8 +199,19 @@ export async function POST(
       // Use question text for scoring
       const questionText = question.question_text || question.title;
       
-      // Score the portfolio - this returns ScoreResult
-      const scoreResult = await scorePortfolio(questionText, holdings);
+      // Check if question has a pre-selected analog (for consistency)
+      const metadata = question.metadata as any;
+      const storedAnalogId = metadata?.analog_id;
+      
+      if (storedAnalogId) {
+        console.log(`✅ Using pre-selected analog from question: ${storedAnalogId} (${metadata?.analog_name})`);
+        console.log(`   This ensures ALL tests against this question use the SAME benchmark`);
+      } else {
+        console.log(`⚠️ No stored analog - will use AI selection (legacy question)`);
+      }
+      
+      // Score the portfolio - pass stored analog ID if available
+      const scoreResult = await scorePortfolio(questionText, holdings, storedAnalogId);
       
       // Extract metrics from score result
       calculatedScore = scoreResult.score;

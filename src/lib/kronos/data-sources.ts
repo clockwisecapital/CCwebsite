@@ -122,6 +122,50 @@ const FALLBACK_RETURNS_BY_SCENARIO: Record<string, Record<KronosAssetClass, numb
     'gold': 0.015,                 // Gold mixed
     'commodities': -0.022,         // Commodities struggled
     'cash': 0.005                  // Cash near zero return
+  },
+  'POST_COVID_ERA': {
+    'us-large-cap': 0.095,         // S&P 500: ~+9.5% CAGR (2021-2023)
+    'us-growth': 0.105,            // Growth recovered after 2022 hit
+    'us-value': 0.085,             // Value more resilient
+    'us-small-cap': 0.042,         // Small caps struggled
+    'international': 0.038,        // International mixed
+    'emerging-markets': 0.025,     // EM underperformed
+    'tech-sector': 0.115,          // Tech rebounded strong in 2023
+    'healthcare': 0.065,           // Healthcare steady
+    'financials': 0.072,           // Banks benefited from higher rates
+    'energy': 0.185,               // Energy massive in 2021-2022
+    'long-treasuries': -0.125,     // Bonds crushed by rate hikes
+    'intermediate-treasuries': -0.065,
+    'short-treasuries': 0.025,     // Short-term positive from yields
+    'tips': -0.042,                // TIPS negative with rate shock
+    'aggregate-bonds': -0.068,     // Aggregate bonds down
+    'corporate-ig': -0.058,        // IG bonds struggled
+    'high-yield': -0.025,          // High yield mixed
+    'gold': 0.018,                 // Gold slightly positive
+    'commodities': 0.155,          // Commodities rally 2021-2022
+    'cash': 0.032                  // Cash got positive returns from rates
+  },
+  'GFC_CRASH': {
+    'us-large-cap': -0.57,         // S&P 500: -57% peak to trough (2007-2009)
+    'us-growth': -0.60,            // Growth hit harder
+    'us-value': -0.54,             // Value slightly better
+    'us-small-cap': -0.58,         // Small caps crushed
+    'international': -0.60,        // International suffered
+    'emerging-markets': -0.65,     // EM devastated
+    'tech-sector': -0.52,          // Tech down but not worst
+    'healthcare': -0.38,           // Healthcare defensive
+    'financials': -0.78,           // Banks annihilated (Lehman, Bear Sterns)
+    'energy': -0.48,               // Energy crashed with demand
+    'long-treasuries': 0.25,       // Treasuries massive rally (flight to safety)
+    'intermediate-treasuries': 0.15,
+    'short-treasuries': 0.08,
+    'tips': 0.12,                  // TIPS positive
+    'aggregate-bonds': 0.15,       // Bond funds positive
+    'corporate-ig': 0.02,          // IG barely positive
+    'high-yield': -0.35,           // High yield crushed
+    'gold': 0.28,                  // Gold rallied as safe haven
+    'commodities': -0.42,          // Commodities crashed
+    'cash': 0.05                   // Cash safe but low return
   }
 };
 
@@ -436,7 +480,9 @@ const FALLBACK_SP500_BENCHMARKS: Record<string, BenchmarkData> = {
   'DOT_COM_BUST': { return: -0.50, drawdown: 0.50 },
   'RATE_SHOCK': { return: -0.18, drawdown: 0.20 },
   'STAGFLATION': { return: -0.37, drawdown: 0.48 },
-  'GFC_RECOVERY': { return: 0.134, drawdown: 0.20 } // Post-GFC recovery
+  'GFC_RECOVERY': { return: 0.134, drawdown: 0.20 }, // Post-GFC recovery
+  'POST_COVID_ERA': { return: 0.095, drawdown: 0.25 }, // Post-COVID volatility (2021-2023)
+  'GFC_CRASH': { return: -0.57, drawdown: 0.57 } // 2008 Financial Crisis (2007-2009)
 };
 
 export async function fetchSP500Benchmark(

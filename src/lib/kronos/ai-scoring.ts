@@ -325,6 +325,33 @@ Find the best historical analog period for testing a portfolio against this scen
 - **S&P 500 Return:** +13.4% CAGR
 - **Best For:** Long-term portfolio stress testing, QE environment, 2008-present analogs, recovery period testing
 
+### 6. Post-COVID Era (2021-2023)
+- **Period:** 2021-01-01 to 2023-12-31
+- **Characteristics:**
+  - Meme stock mania (GameStop, AMC)
+  - Crypto surge and crash
+  - 2022 rate shock (0% → 5.5% in 18 months)
+  - Extreme volatility and rotation
+  - Inflation spike and Fed pivot
+  - Tech drawdown followed by 2023 AI rally
+  - Bonds worst performance in decades
+- **S&P 500 Return:** +9.5% CAGR (highly volatile)
+- **Best For:** Meme stock scenarios, crypto exposure, rate hike resilience, inflation volatility, extreme market swings
+
+### 7. 2008 Financial Crisis (2007-2009)
+- **Period:** 2007-10-01 to 2009-03-01
+- **Characteristics:**
+  - Global financial system collapse
+  - Housing market crash, subprime mortgage crisis
+  - Bank failures (Lehman Brothers, Bear Stearns)
+  - Credit markets freeze
+  - S&P 500 down -57% peak to trough
+  - Worst crisis since Great Depression
+  - Financials down -78%, massive deleveraging
+  - Flight to safety (Treasuries +25%, Gold +28%)
+- **S&P 500 Return:** -57% (cumulative)
+- **Best For:** Banking crisis, housing crash, 2008 scenarios, systemic financial risk, credit freeze, deleveraging stress tests
+
 ## Your Task:
 
 1. Select the SINGLE best historical analog for testing this portfolio question
@@ -340,22 +367,32 @@ Find the best historical analog period for testing a portfolio against this scen
 
 ## Output Format (JSON):
 
+**CRITICAL: Use these exact analog IDs:**
+- COVID_CRASH (for COVID-19 pandemic)
+- DOT_COM_BUST (for tech bubble 2000-2002)
+- RATE_SHOCK (for 2022 rate hikes)
+- STAGFLATION (for 1973-1974 inflation crisis)
+- GFC_RECOVERY (for 2009-2020 bull market)
+- POST_COVID_ERA (for 2021-2023 meme stocks/crypto)
+- GFC_CRASH (for 2008 financial crisis)
+
+Example output:
 {
-  "analogId": "GFC_RECOVERY",
-  "analogName": "Great Deleveraging",
-  "period": "2009-2020",
-  "similarity": 65,
+  "analogId": "POST_COVID_ERA",
+  "analogName": "Post-COVID Era",
+  "period": "2021-2023",
+  "similarity": 75,
   "matchingFactors": [
-    "Zero interest rate policy similar to post-GFC period",
-    "Tech sector dominance driving market returns",
-    "Central bank asset purchases supporting valuations"
+    "Meme stock mania similar to current retail trading environment",
+    "Crypto volatility and market sentiment shifts",
+    "Rate shock environment with Fed tightening"
   ],
   "keyEvents": [
-    "Fed QE programs (2009-2014)",
-    "Tech giants (FAANG) emerge as market leaders",
-    "Longest bull market in history"
+    "GameStop/AMC short squeeze (Jan 2021)",
+    "Crypto crash (May 2022)",
+    "Fed raises rates 0% to 5.5% in 18 months"
   ],
-  "reasoning": "Brief explanation of why this analog was selected"
+  "reasoning": "Question about meme stocks directly parallels the 2021-2023 period of retail trading mania"
 }
 
 Provide only the JSON output, no additional text.`;
@@ -393,7 +430,12 @@ Provide only the JSON output, no additional text.`;
       'COVID_19': 'COVID_CRASH',
       'RATE_SHOCK_2022': 'RATE_SHOCK',
       'RATES_SHOCK': 'RATE_SHOCK',
-      'STAGFLATION_70S': 'STAGFLATION'
+      'STAGFLATION_70S': 'STAGFLATION',
+      'POST_COVID': 'POST_COVID_ERA',
+      'POSTCOVID': 'POST_COVID_ERA',
+      'GFC': 'GFC_CRASH',
+      'FINANCIAL_CRISIS': 'GFC_CRASH',
+      '2008_CRISIS': 'GFC_CRASH'
     };
     
     // Try direct lookup first

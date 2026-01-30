@@ -46,7 +46,7 @@ export const phases: Phase[] = [
   {
     id: 4,
     title: "Great Deleveraging",
-    years: "2008-2020",
+    years: "2008-Present",
     synopsis:
       "Zero rates & quantitative easing fuel longest bull market in history. Tech dominance, low volatility, gradual grind higher.",
     chart: [

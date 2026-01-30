@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { phases } from '@/utils/turbulentData';
+import { findHistoricalAnalogWithAI } from '@/lib/kronos/ai-scoring';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
@@ -60,7 +61,7 @@ Guidelines:
 - **IMPORTANT PERIOD SELECTION RULES:**
   - Questions about pandemics, COVID, health crises, or rapid crashes with Fed intervention → COVID Crash period
   - Questions about tech bubbles, AI hype, dot-com parallels → Peak & Crash (2000-2008) period
-  - Questions about 2008 financial crisis, bank failures, credit freeze → Great Deleveraging (2008-2020) period
+  - Questions about 2008 financial crisis, bank failures, credit freeze → Great Deleveraging (2008-Present) period
   - Questions about meme stocks, crypto, 2022 rate hikes → Post-COVID Era (2021-Present) period
   - Questions about general long-term trends or "what if" futures → Reset (Forecast) period
 - **CRITICAL: You must select EXACTLY ONE tag from these 6 Economic Cycle categories:**
@@ -155,6 +156,35 @@ Guidelines:
       console.error('Failed to fetch S&P 500 return, using default:', error);
     }
 
+    // =====================================================================================
+    // SELECT HISTORICAL ANALOG (AI-POWERED) - ONCE, STORED WITH QUESTION
+    // =====================================================================================
+    // This ensures ALL portfolio tests against this question use the SAME analog
+    // No more inconsistent benchmarks!
+    
+    let analogData = null;
+    try {
+      console.log('🎯 Selecting historical analog for question (will be stored with question)...');
+      const aiMatch = await findHistoricalAnalogWithAI(questionText, 'market-volatility');
+      
+      analogData = {
+        analog_id: aiMatch.analog.id,
+        analog_name: aiMatch.analog.name,
+        analog_period: `${aiMatch.analog.dateRange.start} to ${aiMatch.analog.dateRange.end}`,
+        analog_date_range: aiMatch.analog.dateRange,
+        analog_similarity: aiMatch.similarity,
+        analog_reasoning: aiMatch.reasoning,
+        analog_matching_factors: aiMatch.matchingFactors
+      };
+      
+      console.log(`✅ Analog selected: ${analogData.analog_name} (${analogData.analog_similarity}% similarity)`);
+      console.log(`   Period: ${analogData.analog_period}`);
+      console.log(`   Reasoning: ${analogData.analog_reasoning}`);
+    } catch (error) {
+      console.error('⚠️ Failed to select analog, tests will use AI selection:', error);
+      // Non-fatal: tests can still run with AI selection as fallback
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -163,7 +193,8 @@ Guidelines:
         historicalPeriodId: aiResult.historicalPeriodId,
         tags: aiResult.tags, // Single cycle tag only
         description: selectedPhase.synopsis,
-        sp500Return // Include S&P 500 return in response
+        sp500Return, // Include S&P 500 return in response
+        analogData // NEW: Include analog selection to be stored in question metadata
       }
     });
 

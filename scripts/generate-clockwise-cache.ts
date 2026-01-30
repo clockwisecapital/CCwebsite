@@ -77,9 +77,6 @@ async function computeScoresForAnalog(
   console.log(`   Version: ${version}`);
 
   // We need to pass a question, but for pre-computation we'll use the analog ID directly
-  // The scoring engine will map this to the correct scenario
-  const questionForAnalog = analog.id; // e.g., "COVID_CRASH"
-
   const results: CacheInsertData[] = [];
 
   // Score all portfolios in parallel
@@ -87,10 +84,12 @@ async function computeScoresForAnalog(
     try {
       console.log(`\n   Scoring ${portfolio.name}...`);
       
+      // CRITICAL: Pass analogId as 4th parameter (forceAnalogId) to ensure exact analog!
       const scoreResult = await scoreAssetAllocationPortfolio(
-        questionForAnalog,
-        portfolio.allocations,
-        portfolio.name
+        `Scenario testing for ${analog.name}`,  // Generic question (doesn't affect score)
+        portfolio.allocations,                  // Allocations to score
+        portfolio.name,                         // Portfolio name for logging
+        analogId                                // ✅ Force this specific analog
       );
 
       // Convert holdings for storage

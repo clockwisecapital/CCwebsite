@@ -85,7 +85,12 @@ async function computeTimeScoreForAnalog(
   console.log(`\n📊 Processing analog: ${analog.name} (${analog.dateRange.start} to ${analog.dateRange.end})`);
 
   // Score TIME portfolio against this analog
-  const scoreResult = await scorePortfolio(analogId, timeHoldings);
+  // CRITICAL: Pass analogId as 3rd parameter (forceAnalogId) not as question!
+  const scoreResult = await scorePortfolio(
+    `Scenario testing for ${analog.name}`,  // Generic question (doesn't affect score)
+    timeHoldings,                           // Holdings to score
+    analogId                                // ✅ Force this specific analog
+  );
 
   const cacheEntry: Omit<CachedTimeAnalogScore, 'id' | 'created_at' | 'updated_at'> = {
     analog_id: analogId,

@@ -16,26 +16,10 @@ import type { Holding } from '@/lib/kronos/types';
 // HELPER FUNCTIONS
 // =====================================================================================
 
-/**
- * Map scenario ID and analog name to analog ID for cache lookup
- */
-function getAnalogIdFromScenarioId(scenarioId: string, analogName: string): string | null {
-  // Try to extract from analog name first
-  const analogLower = analogName.toLowerCase();
-  if (analogLower.includes('covid')) return 'COVID_CRASH';
-  if (analogLower.includes('dot-com') || analogLower.includes('dot com')) return 'DOT_COM_BUST';
-  if (analogLower.includes('rate shock') || analogLower.includes('2022')) return 'RATE_SHOCK';
-  if (analogLower.includes('stagflation') || analogLower.includes('1973')) return 'STAGFLATION';
-  if (analogLower.includes('gfc') || analogLower.includes('deleveraging') || analogLower.includes('2009')) return 'GFC_RECOVERY';
-  
-  // Fallback to scenario ID mapping
-  if (scenarioId === 'market-volatility') return 'COVID_CRASH';
-  if (scenarioId === 'ai-supercycle' || scenarioId === 'tech-concentration') return 'DOT_COM_BUST';
-  if (scenarioId === 'cash-vs-bonds') return 'RATE_SHOCK';
-  if (scenarioId === 'inflation-hedge' || scenarioId === 'recession-risk') return 'STAGFLATION';
-  
-  return null;
-}
+// REMOVED: getAnalogIdFromScenarioId
+// This function was DANGEROUS - it guessed analog IDs from pattern matching
+// Bug example: "Post-COVID Era" matched "covid" → returned COVID_CRASH (WRONG!)
+// Now we use ScoreResult.analogId directly which is authoritative and accurate
 
 // Fallback TIME Portfolio Holdings - used if database fetch fails
 const FALLBACK_TIME_PORTFOLIO: Holding[] = [
@@ -236,8 +220,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScoreResp
       console.log(`\n🤖 Fetching TIME portfolio comparison...`);
       
       try {
-        // Determine analog ID from user result
-        const analogId = getAnalogIdFromScenarioId(userResult.scenarioId || '', userResult.analogName || '');
+        // Use the actual analog ID from user result (not guessed!)
+        const analogId = userResult.analogId;
+        
+        console.log(`📊 User portfolio was scored against analog: ${analogId} (${userResult.analogName})`);
         
         // Try to get cached TIME score first
         let timeResult: any = null;
@@ -248,6 +234,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScoreResp
           const cachedScore = await getCachedTimeAnalogScore(analogId);
           
           if (cachedScore) {
+            console.log(`✅ Cache HIT: TIME × ${analogId} (score: ${cachedScore.score}/100)`);
             console.log(`✅ Using cached TIME score for ${analogId}`);
             timeResult = {
               score: cachedScore.score,
@@ -259,18 +246,24 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScoreResp
               portfolioDrawdown: cachedScore.portfolio_drawdown,
               benchmarkDrawdown: cachedScore.benchmark_drawdown,
               returnScore: cachedScore.return_score,
-              drawdownScore: cachedScore.drawdown_score
+              drawdownScore: cachedScore.drawdown_score,
+              analogId: analogId,
+              analogName: userResult.analogName,
+              analogPeriod: userResult.analogPeriod
             };
             
             timePortfolioHoldings = cachedScore.holdings as Holding[];
+          } else {
+            console.log(`⚠️ Cache MISS: No cached TIME score for ${analogId}`);
           }
         }
         
-        // If no cache hit, compute fresh
+        // If no cache hit, compute fresh (and use same analog as user!)
         if (!timeResult) {
-          console.log(`⚠️ Cache miss, computing TIME portfolio score...`);
+          console.log(`🔄 Computing fresh TIME portfolio score for ${analogId}...`);
           timePortfolioHoldings = await getTimePortfolioHoldings();
-          timeResult = await scorePortfolio(body.question, timePortfolioHoldings);
+          // Pass the same analogId to ensure consistency!
+          timeResult = await scorePortfolio(body.question, timePortfolioHoldings, analogId);
         }
         
         response.timeHoldings = (timePortfolioHoldings || []).map(h => ({
@@ -333,11 +326,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScoreResp
       // Fetch cached Clockwise portfolios (fast lookup!)
       console.log(`\n📊 Fetching cached Clockwise portfolios...`);
       try {
-        // Determine analog ID from user result
-        const analogId = getAnalogIdFromScenarioId(userResult.scenarioId || '', userResult.analogName || '');
+        // Use the actual analog ID from user result (ensures consistency!)
+        const analogId = userResult.analogId;
         
         if (analogId) {
-          console.log(`🔍 Looking up cached scores for analog: ${analogId}`);
+          console.log(`🔍 Looking up cached scores for analog: ${analogId} (matches user portfolio scoring)`);
           
           const { getCachedClockwiseScores } = await import('@/lib/kronos/cache-utils');
           const cacheResult = await getCachedClockwiseScores(analogId);

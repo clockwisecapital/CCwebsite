@@ -362,23 +362,61 @@ export function calculateScore(
  * 
  * @param question - User's scenario question
  * @param holdings - Portfolio holdings with weights and asset classes
- * @param useAI - Whether to use AI enhancements (default: auto-detect)
+ * @param forceAnalogIdOrUseAI - Optional: Either analog ID string (for consistency) OR boolean (useAI for backward compatibility)
+ * @param useAI - Whether to use AI enhancements (default: auto-detect) - only used if 3rd param is string
  * @returns Complete ScoreResult with all metrics
  */
 export async function scorePortfolio(
   question: string,
   holdings: Holding[],
+  forceAnalogIdOrUseAI?: string | boolean,
   useAI: boolean = isAIScoringAvailable()
 ): Promise<ScoreResult> {
+  // Parse parameters for backward compatibility
+  let forceAnalogId: string | undefined;
+  let actualUseAI: boolean;
+  
+  if (typeof forceAnalogIdOrUseAI === 'string') {
+    // New usage: scorePortfolio(question, holdings, 'GFC_RECOVERY')
+    forceAnalogId = forceAnalogIdOrUseAI;
+    actualUseAI = useAI; // Use 4th parameter
+  } else if (typeof forceAnalogIdOrUseAI === 'boolean') {
+    // Legacy usage: scorePortfolio(question, holdings, true/false)
+    forceAnalogId = undefined;
+    actualUseAI = forceAnalogIdOrUseAI;
+  } else {
+    // Default usage: scorePortfolio(question, holdings)
+    forceAnalogId = undefined;
+    actualUseAI = useAI;
+  }
+  
   console.log(`\n🎯 Starting portfolio scoring for question: "${question}"`);
   console.log(`Portfolio: ${holdings.length} holdings`);
-  console.log(`AI Enhancement: ${useAI ? 'ENABLED ✨' : 'DISABLED'}`);
+  console.log(`AI Enhancement: ${actualUseAI ? 'ENABLED ✨' : 'DISABLED'}`);
+  console.log(`Forced Analog: ${forceAnalogId ? `${forceAnalogId} ✅ (CONSISTENCY MODE)` : 'None (will use AI selection)'}`);
   
   // Step 1: Map question to scenario (AI-enhanced)
-  const scenarioId = await mapQuestionToScenario(question, useAI);
+  const scenarioId = await mapQuestionToScenario(question, actualUseAI);
   
-  // Step 2: Get historical analog (AI-enhanced)
-  const { analog, aiMatch } = await getHistoricalAnalog(scenarioId, question, useAI);
+  // Step 2: Get historical analog
+  let analog: HistoricalAnalog;
+  let aiMatch: AIHistoricalAnalogMatch | undefined;
+  
+  if (forceAnalogId) {
+    // Use forced analog (from question metadata) for consistency
+    const forcedAnalog = getHistoricalAnalogById(forceAnalogId);
+    if (!forcedAnalog) {
+      throw new Error(`Invalid forced analog ID: ${forceAnalogId}`);
+    }
+    analog = forcedAnalog;
+    console.log(`✅ Using forced analog: ${analog.name} (${analog.dateRange.start} to ${analog.dateRange.end})`);
+    console.log(`   All tests of this question will use the SAME analog for consistency`);
+  } else {
+    // AI selection (legacy behavior or fallback)
+    const result = await getHistoricalAnalog(scenarioId, question, actualUseAI);
+    analog = result.analog;
+    aiMatch = result.aiMatch;
+  }
   
   // Step 2.5: Calculate scenario duration for annualization
   const scenarioDuration = calculateScenarioDuration(

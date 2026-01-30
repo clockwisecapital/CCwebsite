@@ -50,9 +50,9 @@ async function clearAllCaches() {
   }
 
   // Clear TIME cache
-  console.log('\n2. Clearing time_portfolio_cache...');
+  console.log('\n2. Clearing time_portfolio_analog_cache...');
   const { error: timeError } = await supabase
-    .from('time_portfolio_cache')
+    .from('time_portfolio_analog_cache')
     .delete()
     .neq('analog_id', '');
 
