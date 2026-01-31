@@ -52,8 +52,8 @@ export default function CommentThread({ questionId }: CommentThreadProps) {
     e.preventDefault();
 
     if (!user) {
-      // Redirect to login
-      window.location.href = '/login';
+      // Redirect to home
+      window.location.href = '/';
       return;
     }
 
@@ -100,7 +100,7 @@ export default function CommentThread({ questionId }: CommentThreadProps) {
   // Handle reply submission
   const handleReplySubmit = async (parentCommentId: string, content: string) => {
     if (!user) {
-      window.location.href = '/login';
+      window.location.href = '/';
       return;
     }
 
@@ -189,7 +189,7 @@ export default function CommentThread({ questionId }: CommentThreadProps) {
         <div className="p-6 bg-gray-800 border-2 border-gray-700 rounded-xl text-center">
           <p className="text-gray-400 mb-4">Sign in to join the discussion</p>
           <button
-            onClick={() => window.location.href = '/login'}
+            onClick={() => window.location.href = '/'}
             className="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold 
               rounded-lg transition-colors"
           >

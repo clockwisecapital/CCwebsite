@@ -68,7 +68,7 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
     e.stopPropagation(); // Prevent card click
     
     if (!user) {
-      router.push('/login');
+      router.push('/');
       return;
     }
 
@@ -106,7 +106,7 @@ export default function PostCard({ question, onLike, onUnlike, onTest }: PostCar
   const handleTestClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
     if (!user) {
-      router.push('/login');
+      router.push('/');
       return;
     }
     setShowPortfolioModal(true);

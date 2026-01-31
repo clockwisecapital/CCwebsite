@@ -192,7 +192,7 @@ export default function TopPortfoliosPage() {
   // Handle test button click
   const handleTestClick = () => {
     if (!user) {
-      router.push('/login');
+      router.push('/');
       return;
     }
     setShowPortfolioModal(true);

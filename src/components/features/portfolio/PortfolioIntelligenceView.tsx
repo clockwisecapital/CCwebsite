@@ -9,28 +9,53 @@ interface PortfolioIntelligenceViewProps {
 }
 
 export default function PortfolioIntelligenceView({ portfolio, analysisResults }: PortfolioIntelligenceViewProps) {
-  const cycleData = analysisResults.cycleAnalysis?.cycles;
-  const portfolioAnalysis = analysisResults.cycleAnalysis?.portfolioAnalysis;
-  const timeExpectedReturn = analysisResults.portfolioComparison?.timePortfolio?.expectedReturn;
-  const personalizedVideo = analysisResults.personalizedVideo;
+  console.log('🔍 PortfolioIntelligenceView rendering with:', {
+    portfolioId: portfolio?.id,
+    portfolioName: portfolio?.name,
+    hasAnalysisResults: !!analysisResults,
+    hasCycleAnalysis: !!analysisResults?.cycleAnalysis,
+    hasCycles: !!analysisResults?.cycleAnalysis?.cycles,
+    hasPersonalizedVideo: !!analysisResults?.personalizedVideo,
+    hasMarketImpact: !!analysisResults?.marketImpact,
+    hasPortfolioImpact: !!analysisResults?.portfolioImpact,
+    hasGoalImpact: !!analysisResults?.goalImpact,
+    hasRecommendations: !!analysisResults?.recommendations,
+  });
 
-  if (!cycleData) {
+  const cycleData = analysisResults?.cycleAnalysis?.cycles;
+  const portfolioAnalysis = analysisResults?.cycleAnalysis?.portfolioAnalysis;
+  const goalAnalysis = analysisResults?.cycleAnalysis?.goalAnalysis;
+  const timeExpectedReturn = analysisResults?.portfolioComparison?.timePortfolio?.expectedReturn;
+  const personalizedVideo = analysisResults?.personalizedVideo;
+  
+  // Impact and Recommendations (main focus)
+  const marketImpact = analysisResults?.marketImpact;
+  const portfolioImpact = analysisResults?.portfolioImpact;
+  const goalImpact = analysisResults?.goalImpact;
+  const recommendations = analysisResults?.recommendations;
+  
+  // Collapsible cycle details state
+  const [showCycleDetails, setShowCycleDetails] = useState(false);
+
+  if (!analysisResults || (!cycleData && !marketImpact && !recommendations)) {
+    console.warn('⚠️ No analysis data available');
     return (
       <div className="text-center py-8 text-gray-400">
-        No cycle analysis data available
+        <p className="mb-2">No portfolio intelligence available</p>
+        <p className="text-xs text-gray-500">Run a new Kronos analysis to generate portfolio intelligence</p>
       </div>
     );
   }
 
   // Default to market if available, otherwise first available cycle
-  const availableCycles = (Object.keys(cycleData) as Array<keyof typeof cycleData>).filter(key => cycleData[key] !== undefined);
-  const defaultCycle = cycleData.market ? 'market' : availableCycles[0] || 'country';
+  const availableCycles = cycleData ? (Object.keys(cycleData) as Array<keyof typeof cycleData>).filter(key => cycleData[key] !== undefined) : [];
+  const defaultCycle = cycleData?.market ? 'market' : availableCycles[0] || 'country';
   
   const [selectedCycle, setSelectedCycle] = useState<keyof typeof cycleData>(defaultCycle);
   const [portfolioCycleFilter, setPortfolioCycleFilter] = useState<keyof typeof cycleData>(defaultCycle);
   const [currentView, setCurrentView] = useState<'cycle' | 'analog' | 'performance'>('cycle');
   
-  const currentCycle = cycleData[selectedCycle] || cycleData[availableCycles[0]] || cycleData.country;
+  const currentCycle = cycleData ? (cycleData[selectedCycle] || cycleData[availableCycles[0]] || cycleData.country) : null;
 
   const formatPercent = (value: number) => {
     return `${(value * 100).toFixed(1)}%`;
@@ -119,6 +144,11 @@ export default function PortfolioIntelligenceView({ portfolio, analysisResults }
     );
   };
 
+  const formatImpactText = (impact: string | string[] | undefined): string[] => {
+    if (!impact) return [];
+    return Array.isArray(impact) ? impact : [impact];
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -127,7 +157,7 @@ export default function PortfolioIntelligenceView({ portfolio, analysisResults }
           {portfolio.name}
         </h2>
         <p className="text-gray-400 text-sm">
-          Latest cycle analysis from your most recent Kronos experience
+          Personalized portfolio intelligence from your most recent Kronos experience
         </p>
       </div>
 
@@ -179,60 +209,172 @@ export default function PortfolioIntelligenceView({ portfolio, analysisResults }
         </div>
       )}
 
-      {/* Market Cycle Recommendation */}
-      <div className="bg-gradient-to-br from-blue-900/30 to-cyan-900/30 rounded-2xl p-4 md:p-6 border border-blue-800 shadow-sm backdrop-blur-sm">
-        <div className="flex items-start gap-3 md:gap-4">
-          <div className="flex-shrink-0">
-            <div className="w-10 h-10 md:w-14 md:h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-md">
-              <svg className="w-5 h-5 md:w-7 md:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
-              </svg>
+      {/* Unified Impact & Risk Analysis */}
+      {((marketImpact && formatImpactText(marketImpact).length > 0) || 
+        (portfolioImpact && formatImpactText(portfolioImpact).length > 0) || 
+        (goalImpact && formatImpactText(goalImpact).length > 0)) && (
+        <div className="bg-gray-800/80 rounded-2xl p-6 border border-gray-700/50 shadow-lg backdrop-blur-sm">
+          <div className="space-y-6">
+            {/* Market Impact Section */}
+            {marketImpact && formatImpactText(marketImpact).length > 0 && (
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-gray-700/50 rounded-xl flex items-center justify-center">
+                    <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-bold text-teal-300">Market Impact</h3>
+                </div>
+                <div className="ml-13 space-y-2">
+                  {formatImpactText(marketImpact).map((text, idx) => (
+                    <p key={idx} className="text-sm text-gray-300 leading-relaxed">
+                      • {text}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Divider */}
+            {marketImpact && portfolioImpact && (
+              <div className="border-t border-gray-700/50" />
+            )}
+
+            {/* Portfolio Risk Section */}
+            {portfolioImpact && formatImpactText(portfolioImpact).length > 0 && (
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-gray-700/50 rounded-xl flex items-center justify-center">
+                    <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-bold text-teal-300">Personalized Portfolio Risk</h3>
+                </div>
+                <div className="ml-13 space-y-2">
+                  {formatImpactText(portfolioImpact).map((text, idx) => (
+                    <p key={idx} className="text-sm text-gray-300 leading-relaxed">
+                      • {text}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Divider */}
+            {portfolioImpact && goalImpact && (
+              <div className="border-t border-gray-700/50" />
+            )}
+
+            {/* Goal Impact Section */}
+            {goalImpact && formatImpactText(goalImpact).length > 0 && (
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-gray-700/50 rounded-xl flex items-center justify-center">
+                    <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-bold text-teal-300">Goal Impact</h3>
+                </div>
+                <div className="ml-13 space-y-2">
+                  {formatImpactText(goalImpact).map((text, idx) => (
+                    <p key={idx} className="text-sm text-gray-300 leading-relaxed">
+                      • {text}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Recommendations */}
+      {recommendations && recommendations.length > 0 && (
+        <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 rounded-2xl p-4 md:p-6 border border-purple-700 shadow-sm backdrop-blur-sm">
+          <div className="flex items-start gap-3 md:gap-4">
+            <div className="flex-shrink-0">
+              <div className="w-10 h-10 md:w-14 md:h-14 bg-purple-600 rounded-2xl flex items-center justify-center shadow-md">
+                <svg className="w-5 h-5 md:w-7 md:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm md:text-lg font-bold text-purple-300 mb-1 md:mb-2">Kronos Recommendations</div>
+              <ul className="space-y-2">
+                {recommendations.map((rec, idx) => (
+                  <li key={idx} className="text-xs md:text-base text-gray-300 leading-relaxed flex items-start gap-2">
+                    <span className="text-purple-400 mt-1">•</span>
+                    <span>{rec}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm md:text-lg font-bold text-blue-300 mb-1 md:mb-2">Market Cycle Recommendation</div>
-            <p className="text-xs md:text-base text-gray-300 leading-relaxed">
-              Based on the current {currentCycle.phase} phase of the {currentCycle.name}, our analysis suggests a {currentCycle.phasePercent < 50 ? 'cautious' : 'strategic'} approach. Historical patterns indicate {(currentCycle.sp500Backtest.expectedReturn * 100).toFixed(1)}% median returns with significant volatility potential.
-            </p>
-          </div>
         </div>
-      </div>
+      )}
 
-      {/* View Selector */}
-      <div className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 rounded-xl p-4 border border-gray-700/50 backdrop-blur-sm">
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+      {/* Collapsible Cycle Details */}
+      {cycleData && currentCycle && (
+        <div className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 rounded-xl border border-gray-700/50 backdrop-blur-sm overflow-hidden">
           <button
-            onClick={() => setCurrentView('cycle')}
-            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all whitespace-nowrap ${
-              currentView === 'cycle'
-                ? 'bg-teal-600 text-white shadow-md'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
+            onClick={() => setShowCycleDetails(!showCycleDetails)}
+            className="w-full p-4 flex items-center justify-between hover:bg-gray-700/30 transition-colors"
           >
-            Cycle Analysis
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span className="text-sm font-semibold text-gray-300">Advanced Cycle Analysis</span>
+            </div>
+            <svg 
+              className={`w-5 h-5 text-gray-400 transition-transform ${showCycleDetails ? 'rotate-180' : ''}`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
           </button>
-          <button
-            onClick={() => setCurrentView('analog')}
-            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all whitespace-nowrap ${
-              currentView === 'analog'
-                ? 'bg-teal-600 text-white shadow-md'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            Historical Analog
-          </button>
-          <button
-            onClick={() => setCurrentView('performance')}
-            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all whitespace-nowrap ${
-              currentView === 'performance'
-                ? 'bg-teal-600 text-white shadow-md'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            Performance By Cycle
-          </button>
-        </div>
-      </div>
+
+          {showCycleDetails && (
+            <div className="p-4 border-t border-gray-700/50 space-y-6">
+              {/* View Selector */}
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                <button
+                  onClick={() => setCurrentView('cycle')}
+                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all whitespace-nowrap ${
+                    currentView === 'cycle'
+                      ? 'bg-teal-600 text-white shadow-md'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  Cycle Analysis
+                </button>
+                <button
+                  onClick={() => setCurrentView('analog')}
+                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all whitespace-nowrap ${
+                    currentView === 'analog'
+                      ? 'bg-teal-600 text-white shadow-md'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  Historical Analog
+                </button>
+                <button
+                  onClick={() => setCurrentView('performance')}
+                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all whitespace-nowrap ${
+                    currentView === 'performance'
+                      ? 'bg-teal-600 text-white shadow-md'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  Performance By Cycle
+                </button>
+              </div>
 
       {/* Content Views */}
       {currentView === 'cycle' && (
@@ -502,36 +644,46 @@ export default function PortfolioIntelligenceView({ portfolio, analysisResults }
           </div>
         </div>
       )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Next Steps */}
       <div className="bg-teal-900/20 rounded-lg p-4 md:p-6 border border-teal-400 backdrop-blur-sm">
         <h3 className="text-xl md:text-2xl font-bold mb-2 md:mb-3 text-teal-300">Next Steps</h3>
         <p className="text-sm md:text-base text-teal-200 mb-4 md:mb-6">
-          Work 1:1 with a strategist to optimize allocations for the current cycle, or run a new Kronos analysis to refresh your intelligence.
+          Test your portfolio in different market conditions, schedule a consultation, or run a new Kronos analysis.
         </p>
-        <div className="flex flex-col sm:flex-row justify-center gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <a
+            href="/scenario-testing"
+            className="px-6 py-3 bg-gray-800 text-teal-300 border border-teal-500 font-semibold rounded-lg hover:bg-gray-700 transition-colors text-center flex items-center justify-center gap-2 text-sm"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            Scenario Testing
+          </a>
           <a
             href="https://calendly.com/clockwisecapital/appointments"
             target="_blank"
             rel="noopener noreferrer"
-            className="px-6 md:px-8 py-3 bg-gray-800 text-teal-300 border border-teal-500 font-semibold rounded-lg hover:bg-gray-700 transition-colors text-center flex items-center justify-center gap-2 text-sm md:text-base"
+            className="px-6 py-3 bg-gray-800 text-teal-300 border border-teal-500 font-semibold rounded-lg hover:bg-gray-700 transition-colors text-center flex items-center justify-center gap-2 text-sm"
           >
-            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            Schedule a Consultation
-            <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
+            Schedule a Consulation
           </a>
           <a
             href="/kronos"
-            className="px-6 md:px-8 py-3 bg-gray-800 text-teal-300 border border-teal-500 font-semibold rounded-lg hover:bg-gray-700 transition-colors text-center flex items-center justify-center gap-2 text-sm md:text-base"
+            className="px-6 py-3 bg-gray-800 text-teal-300 border border-teal-500 font-semibold rounded-lg hover:bg-gray-700 transition-colors text-center flex items-center justify-center gap-2 text-sm"
           >
-            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            Refresh Analysis
+            Refresh
           </a>
         </div>
       </div>

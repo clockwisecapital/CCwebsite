@@ -94,7 +94,7 @@ function AccountPageContent() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push('/login');
+      router.push('/');
       return;
     }
 
@@ -176,13 +176,26 @@ function AccountPageContent() {
         // Fetch the most recent portfolio with full analysis data
         if (portfoliosData.portfolios.length > 0) {
           const mostRecentId = portfoliosData.portfolios[0].id;
-          const { data: fullPortfolio } = await supabase
+          console.log('📊 Fetching full portfolio data for:', mostRecentId);
+          
+          const { data: fullPortfolio, error: portfolioError } = await supabase
             .from('portfolios')
             .select('*')
             .eq('id', mostRecentId)
             .single();
           
+          if (portfolioError) {
+            console.error('❌ Error fetching portfolio:', portfolioError);
+          }
+          
           if (fullPortfolio) {
+            const analysisResults = fullPortfolio.analysis_results as any;
+            console.log('✅ Full portfolio loaded:', {
+              id: fullPortfolio.id,
+              name: fullPortfolio.name,
+              hasCycleAnalysis: !!analysisResults?.cycleAnalysis,
+              hasPersonalizedVideo: !!analysisResults?.personalizedVideo,
+            });
             setMostRecentPortfolio(fullPortfolio);
           }
         }

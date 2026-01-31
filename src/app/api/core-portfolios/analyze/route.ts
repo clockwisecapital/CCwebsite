@@ -160,6 +160,7 @@ async function analyzePortfolio(portfolio: typeof ASSET_ALLOCATION_PORTFOLIOS[0]
     });
     
     // Call the REAL Kronos analyzer (same endpoint used by dashboard)
+    console.log(`  🌐 Calling /api/portfolio/get-portfolio-data for ${portfolio.name}...`);
     const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/portfolio/get-portfolio-data`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -171,10 +172,14 @@ async function analyzePortfolio(portfolio: typeof ASSET_ALLOCATION_PORTFOLIOS[0]
     });
 
     if (!response.ok) {
-      throw new Error(`Kronos analyzer failed for ${portfolio.name}`);
+      const errorText = await response.text();
+      console.error(`  ❌ HTTP ${response.status} for ${portfolio.name}:`, errorText);
+      throw new Error(`Kronos analyzer failed for ${portfolio.name}: HTTP ${response.status} - ${errorText}`);
     }
 
+    console.log(`  ✅ Got response for ${portfolio.name}, parsing JSON...`);
     const data = await response.json();
+    console.log(`  ✅ JSON parsed for ${portfolio.name}`);
     
     if (!data.success || !data.comparison || !data.comparison.userPortfolio) {
       console.error(`  ❌ Invalid Kronos response for ${portfolio.name}:`, data);

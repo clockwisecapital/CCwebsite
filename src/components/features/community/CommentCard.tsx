@@ -48,7 +48,7 @@ export default function CommentCard({ comment, onReply, isReply = false }: Comme
     e.preventDefault();
 
     if (!user) {
-      window.location.href = '/login';
+      window.location.href = '/';
       return;
     }
 

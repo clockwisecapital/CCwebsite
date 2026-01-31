@@ -37,25 +37,53 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady, onVideo
   const hasNotified = useRef(false);
   const previousVideoId = useRef<string>(currentVideo.id);
   const hasTriggeredNotification = useRef(false);
+  const hasCalledVideoReady = useRef(false); // Track if we've already called onPersonalizedVideoReady
   
   // Kronos notification hook
   const { triggerNotification } = useKronosNotification();
 
   // Handle video polling for analysis video
   useEffect(() => {
-    if (!currentVideo.videoId || !currentVideo.needsPolling) return;
+    if (!currentVideo.videoId || !currentVideo.needsPolling) {
+      console.log('🔍 Video polling check:', {
+        hasVideoId: !!currentVideo.videoId,
+        needsPolling: currentVideo.needsPolling,
+        videoId: currentVideo.videoId,
+        currentVideoId: currentVideo.id,
+      });
+      return;
+    }
 
-    const checkVideoStatus = async (intervalId: NodeJS.Timeout) => {
+    console.log('🔄 Starting HeyGen video polling for:', currentVideo.videoId, '(currentVideo:', currentVideo.id, ')');
+
+    // Check immediately on mount
+    let hasChecked = false;
+
+    const checkVideoStatus = async (intervalId?: NodeJS.Timeout) => {
       try {
+        console.log('📡 Checking video status for:', currentVideo.videoId);
         const response = await fetch(`/api/portfolio/video-status?videoId=${currentVideo.videoId}`);
         const data = await response.json();
+        
+        console.log('📡 Video status response:', {
+          videoId: currentVideo.videoId,
+          status: data.status,
+          hasVideoUrl: !!data.videoUrl,
+          success: data.success,
+        });
 
         if (data.success) {
           setStatus(data.status);
 
           if (data.status === 'completed' && data.videoUrl) {
+            console.log('🎉 HeyGen video COMPLETED!', {
+              videoUrl: data.videoUrl,
+              videoId: currentVideo.videoId,
+              hasCallback: !!onPersonalizedVideoReady,
+              alreadyCalled: hasCalledVideoReady.current,
+            });
             setVideoUrl(data.videoUrl);
-            clearInterval(intervalId);
+            if (intervalId) clearInterval(intervalId);
             setError(null);
             
             if (onVideoReady && !hasNotified.current) {
@@ -63,14 +91,30 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady, onVideo
               onVideoReady();
             }
             
-            // Store personalized video data in analysis result
-            if (currentVideo.videoId && onPersonalizedVideoReady) {
+            // Store personalized video data in analysis result (only call once!)
+            if (currentVideo.videoId && onPersonalizedVideoReady && !hasCalledVideoReady.current) {
+              hasCalledVideoReady.current = true; // Mark as called BEFORE calling to prevent race conditions
+              
+              console.log('📹 HeyGen video completed! Calling onPersonalizedVideoReady with:', {
+                videoId: currentVideo.videoId,
+                videoUrl: data.videoUrl,
+                thumbnailUrl: data.thumbnailUrl,
+              });
+              
               onPersonalizedVideoReady({
                 videoId: currentVideo.videoId,
                 videoUrl: data.videoUrl,
                 thumbnailUrl: data.thumbnailUrl,
               });
-              console.log('💾 Personalized video data sent to parent:', currentVideo.videoId);
+              
+              console.log('✅ Personalized video data sent to parent:', currentVideo.videoId);
+            } else if (hasCalledVideoReady.current) {
+              console.log('⏭️ Skipping duplicate onPersonalizedVideoReady call');
+            } else {
+              console.warn('⚠️ Personalized video ready but callback missing:', {
+                hasVideoId: !!currentVideo.videoId,
+                hasCallback: !!onPersonalizedVideoReady,
+              });
             }
             
             // Trigger Kronos notification ONLY for authenticated users (guests will see video when they create account)
@@ -83,26 +127,27 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady, onVideo
             }
           } else if (data.status === 'failed') {
             setError('Video generation failed');
-            clearInterval(intervalId);
+            if (intervalId) clearInterval(intervalId);
           }
         } else {
           setError('Failed to retrieve video status');
-          clearInterval(intervalId);
+          if (intervalId) clearInterval(intervalId);
         }
       } catch (err) {
         console.error('Failed to check video status:', err);
         setError('Failed to check video status');
-        clearInterval(intervalId);
+        if (intervalId) clearInterval(intervalId);
       }
     };
 
+    // Check immediately first, then poll every 3 seconds
     const pollInterval = setInterval(() => checkVideoStatus(pollInterval), 3000);
     checkVideoStatus(pollInterval);
 
     return () => {
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [currentVideo.videoId, currentVideo.needsPolling, onVideoReady]);
+  }, [currentVideo.videoId, currentVideo.needsPolling, onVideoReady, onPersonalizedVideoReady, isAuthenticated]);
 
   // Handle video transitions
   useEffect(() => {
@@ -112,6 +157,14 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady, onVideo
       
       // Update displayed video immediately (key prop handles the switch)
       setDisplayedVideo(currentVideo);
+      
+      // Reset callback flags when switching to a new video with videoId
+      if (currentVideo.videoId && currentVideo.videoId !== previousVideoId.current) {
+        hasCalledVideoReady.current = false;
+        hasTriggeredNotification.current = false;
+        console.log('🔄 Reset callback flags for new video:', currentVideo.videoId);
+      }
+      
       previousVideoId.current = currentVideo.id;
       
       // Only autoplay if video hasn't been played before

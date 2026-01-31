@@ -208,8 +208,15 @@ function calculateBlendedReturn(
  */
 export async function POST(request: NextRequest) {
   try {
+    console.log('\n🔍 ===== GET-PORTFOLIO-DATA API CALLED =====');
     const body: RequestBody = await request.json();
     const { userHoldings, portfolioAllocation, portfolioValue, timeHorizon = 1 } = body;
+    console.log('📊 Request params:', {
+      holdingsCount: userHoldings?.length || 0,
+      portfolioValue,
+      timeHorizon,
+      hasAllocation: !!portfolioAllocation
+    });
     
     // Calculate long-term return based on asset allocation (for years 2+)
     // If portfolioAllocation is all zeros but user has holdings, infer allocation from holdings
@@ -290,23 +297,51 @@ export async function POST(request: NextRequest) {
     console.log(`📊 Underlying indices for shorts: ${underlyingIndices.join(', ') || 'none'}`);
 
     // 2. Fetch Clockwise index/sector targets (for index ETFs and short calculations)
-    console.log('Fetching Clockwise index targets...');
+    try {
+      console.log('Fetching Clockwise index targets...');
+      const indexTargets = await getIndexSectorTargets();
+      console.log(`✅ Loaded ${indexTargets.size} Clockwise index targets`);
+    } catch (error) {
+      console.error('❌ FAILED: getIndexSectorTargets()', error);
+      throw new Error(`Failed to fetch index targets: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
+    // Re-fetch for use (after error check)
     const indexTargets = await getIndexSectorTargets();
-    console.log(`✅ Loaded ${indexTargets.size} Clockwise index targets`);
 
     // 2b. Fetch INDEX VALS scenario returns (for ETFs)
-    console.log('Fetching INDEX VALS scenario returns...');
+    try {
+      console.log('Fetching INDEX VALS scenario returns...');
+      const indexScenarioReturns = await getIndexScenarioReturns();
+      console.log(`✅ Loaded ${indexScenarioReturns.size} INDEX VALS ETF scenarios`);
+    } catch (error) {
+      console.error('❌ FAILED: getIndexScenarioReturns()', error);
+      throw new Error(`Failed to fetch index scenario returns: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
     const indexScenarioReturns = await getIndexScenarioReturns();
-    console.log(`✅ Loaded ${indexScenarioReturns.size} INDEX VALS ETF scenarios`);
 
     // 3. Fetch current prices for tickers we need to process
-    console.log('Fetching current prices...');
-    const currentPrices = await fetchBatchCurrentPrices(tickersWithUnderlyings);
+    let currentPrices: Map<string, number>;
+    try {
+      console.log('Fetching current prices...');
+      currentPrices = await fetchBatchCurrentPrices(tickersWithUnderlyings);
+      console.log(`✅ Fetched ${currentPrices.size} current prices`);
+    } catch (error) {
+      console.error('❌ FAILED: fetchBatchCurrentPrices()', error);
+      throw new Error(`Failed to fetch current prices: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
 
     // 4. Fetch FactSet target prices (for individual stocks)
-    console.log('Fetching FactSet target prices...');
-    const targetPrices = await getTgtPrices(tickersForProcessing);
-    console.log(`📊 FactSet target prices fetched: ${targetPrices.size} of ${tickersForProcessing.length} tickers`);
+    let targetPrices: Map<string, number>;
+    try {
+      console.log('Fetching FactSet target prices...');
+      targetPrices = await getTgtPrices(tickersForProcessing);
+      console.log(`✅ FactSet target prices fetched: ${targetPrices.size} of ${tickersForProcessing.length} tickers`);
+    } catch (error) {
+      console.error('❌ FAILED: getTgtPrices()', error);
+      throw new Error(`Failed to fetch FactSet target prices: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
     console.log('✓ Tickers with FactSet targets:', Array.from(targetPrices.keys()).join(', '));
     
     const missingTargets = tickersForProcessing.filter(t => !targetPrices.has(t) && !indexTargets.has(t));
@@ -340,16 +375,24 @@ export async function POST(request: NextRequest) {
 
     // 6. Run Monte Carlo simulations ONLY for tickers we need
     // (If TIME is cached, this is just user tickers - HUGE speed improvement!)
-    console.log(`Running Monte Carlo simulations for ${tickersForProcessing.length} tickers...`);
-    const tickersForMC = tickersForProcessing
-      .filter(ticker => currentPrices.has(ticker) && year1Returns.has(ticker))
-      .map(ticker => ({ 
-        ticker, 
-        currentPrice: currentPrices.get(ticker)!,
-        year1Return: year1Returns.get(ticker)!
-      }));
-    
-    const monteCarloResults = await runBatchMonteCarloSimulations(tickersForMC, timeHorizon);
+    let monteCarloResults: Map<string, any>;
+    try {
+      console.log(`Running Monte Carlo simulations for ${tickersForProcessing.length} tickers...`);
+      const tickersForMC = tickersForProcessing
+        .filter(ticker => currentPrices.has(ticker) && year1Returns.has(ticker))
+        .map(ticker => ({ 
+          ticker, 
+          currentPrice: currentPrices.get(ticker)!,
+          year1Return: year1Returns.get(ticker)!
+        }));
+      
+      console.log(`📊 Running MC for ${tickersForMC.length} tickers after filtering`);
+      monteCarloResults = await runBatchMonteCarloSimulations(tickersForMC, timeHorizon);
+      console.log(`✅ Monte Carlo completed for ${monteCarloResults.size} tickers`);
+    } catch (error) {
+      console.error('❌ FAILED: runBatchMonteCarloSimulations()', error);
+      throw new Error(`Failed to run Monte Carlo simulations: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
 
     // 7. Build User Portfolio Analysis
     const userPositions: PositionAnalysis[] = finalUserHoldings.map(holding => {
@@ -710,11 +753,17 @@ export async function POST(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('❌ Portfolio data fetch error:', error);
+    console.error('\n❌ ===== GET-PORTFOLIO-DATA ERROR =====');
+    console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('=====================================\n');
+    
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Failed to fetch portfolio data' 
+        error: error instanceof Error ? error.message : 'Failed to fetch portfolio data',
+        details: error instanceof Error ? error.stack : undefined
       },
       { status: 500 }
     );

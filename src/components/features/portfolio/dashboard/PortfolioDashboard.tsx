@@ -99,7 +99,8 @@ export default function PortfolioDashboard() {
   const [isSavingPortfolio, setIsSavingPortfolio] = useState(false); // Guard against concurrent saves
   
   // Track current video in the Review tab sequence
-  const [reviewVideoIndex, setReviewVideoIndex] = useState(0); // 0 = goal, 1 = portfolio
+  const [reviewVideoIndex, setReviewVideoIndex] = useState(0); // 0 = goal, 1 = portfolio, 2 = personalized (if videoId exists)
+  const [hasUpdatedPortfolioWithVideo, setHasUpdatedPortfolioWithVideo] = useState(false); // Track if we've already updated the portfolio with video data
   
   // Track which videos have been played to prevent autoplay on revisit
   const [playedVideos, setPlayedVideos] = useState<string[]>([]);
@@ -158,6 +159,7 @@ export default function PortfolioDashboard() {
         if (parsed.portfolioSaved !== undefined) setPortfolioSaved(parsed.portfolioSaved);
         if (parsed.savedPortfolioId) setSavedPortfolioId(parsed.savedPortfolioId);
         if (parsed.playedVideos) setPlayedVideos(parsed.playedVideos);
+        if (parsed.hasUpdatedPortfolioWithVideo !== undefined) setHasUpdatedPortfolioWithVideo(parsed.hasUpdatedPortfolioWithVideo);
       } else {
         console.log('📭 No cached state found. Starting fresh');
       }
@@ -200,6 +202,7 @@ export default function PortfolioDashboard() {
         portfolioSaved,
         savedPortfolioId,
         playedVideos,
+        hasUpdatedPortfolioWithVideo,
         timestamp: Date.now(),
       };
       
@@ -210,6 +213,7 @@ export default function PortfolioDashboard() {
     }
   }, [
     stateLoaded,
+    user,
     activeTab,
     intakeData,
     analysisResult,
@@ -220,6 +224,7 @@ export default function PortfolioDashboard() {
     portfolioSaved,
     savedPortfolioId,
     playedVideos,
+    hasUpdatedPortfolioWithVideo,
   ]);
 
   // Reusable function to save portfolio to database
@@ -268,6 +273,12 @@ export default function PortfolioDashboard() {
       }
       
       console.log('📤 Sending portfolio save request...');
+      console.log('📦 Analysis result includes:', {
+        hasCycleAnalysis: !!analysisResult.cycleAnalysis,
+        hasPersonalizedVideo: !!analysisResult.personalizedVideo,
+        personalizedVideoId: analysisResult.personalizedVideo?.videoId,
+      });
+      
       const response = await fetch('/api/portfolios/save', {
         method: 'POST',
         headers,
@@ -460,6 +471,7 @@ export default function PortfolioDashboard() {
     setPortfolioSaved(false);
     setSavedPortfolioId(null);
     setIsSavingPortfolio(false);
+    setHasUpdatedPortfolioWithVideo(false); // Reset video update flag
     console.log('🔄 Starting new analysis - cleared video and portfolio state');
 
     // Personal info should always be collected in the intake form now
@@ -613,14 +625,29 @@ export default function PortfolioDashboard() {
 
   const handleVideoEnd = () => {
     // When on Review tab, automatically advance to next video in sequence
-    if (activeTab === 'review' && reviewVideoIndex === 0) {
-      // Goal video ended, move to portfolio video
-      setReviewVideoIndex(1);
+    if (activeTab === 'review') {
+      if (reviewVideoIndex === 0) {
+        // Goal video ended, move to portfolio video
+        setReviewVideoIndex(1);
+      } else if (reviewVideoIndex === 1 && videoId) {
+        // Portfolio video ended and we have a personalized video, move to it
+        setReviewVideoIndex(2);
+        console.log('🎬 Advancing to personalized video:', videoId);
+      }
+      // If reviewVideoIndex === 2, we're at the end - do nothing
     }
   };
 
-  const handlePersonalizedVideoReady = (videoData: { videoId: string; videoUrl: string; thumbnailUrl?: string }) => {
+  const handlePersonalizedVideoReady = async (videoData: { videoId: string; videoUrl: string; thumbnailUrl?: string }) => {
     // Store personalized video data in analysis result
+    console.log('🎥 handlePersonalizedVideoReady called with:', videoData);
+    
+    // Prevent duplicate calls
+    if (hasUpdatedPortfolioWithVideo) {
+      console.log('⚠️ Portfolio already updated with video data, skipping duplicate call');
+      return;
+    }
+    
     if (analysisResult) {
       const updatedResult = {
         ...analysisResult,
@@ -630,7 +657,56 @@ export default function PortfolioDashboard() {
         },
       };
       setAnalysisResult(updatedResult);
-      console.log('✅ Personalized video stored in analysis result:', videoData.videoId);
+      console.log('✅ Personalized video stored in analysis result:', {
+        videoId: videoData.videoId,
+        videoUrl: videoData.videoUrl,
+        hasCycleAnalysis: !!updatedResult.cycleAnalysis,
+      });
+
+      // If user is authenticated and portfolio already saved, update it with video data
+      if (user && portfolioSaved && savedPortfolioId && !isSavingPortfolio) {
+        console.log('🔄 Updating saved portfolio with personalized video...');
+        try {
+          setIsSavingPortfolio(true);
+          setHasUpdatedPortfolioWithVideo(true); // Mark as updated to prevent duplicates
+          
+          const { data: { session } } = await supabase.auth.getSession();
+          const headers: HeadersInit = { 'Content-Type': 'application/json' };
+          
+          if (session?.access_token) {
+            headers['Authorization'] = `Bearer ${session.access_token}`;
+          }
+
+          const response = await fetch('/api/portfolios/save', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              userId: user.id,
+              conversationId,
+              intakeData,
+              analysisResult: updatedResult, // Use the updated result with video
+            }),
+          });
+
+          const data = await response.json();
+          
+          if (data.success) {
+            console.log('✅ Portfolio updated with personalized video:', data.portfolioId);
+          } else {
+            console.error('❌ Failed to update portfolio with video:', data.error);
+          }
+        } catch (error) {
+          console.error('❌ Error updating portfolio with video:', error);
+        } finally {
+          setIsSavingPortfolio(false);
+        }
+      } else if (!user) {
+        // For guest users, just mark as updated (video will be saved when they create account)
+        setHasUpdatedPortfolioWithVideo(true);
+        console.log('📭 Guest user - video will be saved when account is created');
+      }
+    } else {
+      console.error('❌ Cannot store personalized video: analysisResult is null');
     }
   };
 
@@ -682,20 +758,28 @@ export default function PortfolioDashboard() {
       };
     }
 
-    // 3-4. Review tab with sequential videos
+    // 3-5. Review tab with sequential videos
     if (activeTab === 'review') {
-      // Play videos in sequence: Goal first, then Portfolio
+      // Play videos in sequence: Goal first, then Portfolio, then Personalized (if available)
       if (reviewVideoIndex === 0) {
         return {
           id: 'probability-goal',
           title: 'Probability of Reaching Your Goal',
           videoSrc: getVideoPath('/kronos-probability-goal.mp4')
         };
-      } else {
+      } else if (reviewVideoIndex === 1) {
         return {
           id: 'portfolio-performance',
           title: 'Portfolio Performance Analysis',
           videoSrc: getVideoPath('/kronos-portfolio-performance.mp4')
+        };
+      } else if (reviewVideoIndex === 2 && videoId) {
+        // Personalized HeyGen video (with polling)
+        return {
+          id: `personalized-analysis-${videoId}`,
+          title: 'Your Personalized Analysis by Kronos',
+          videoId: videoId,
+          needsPolling: true,
         };
       }
     }
@@ -705,7 +789,7 @@ export default function PortfolioDashboard() {
       id: 'no-video',
       title: 'Portfolio Dashboard'
     };
-  }, [activeTab, isAnalyzing, reviewVideoIndex]);
+  }, [activeTab, isAnalyzing, reviewVideoIndex, videoId]);
 
   // Show loading state while auth is loading or state is being restored
   if (authLoading || !stateLoaded) {
