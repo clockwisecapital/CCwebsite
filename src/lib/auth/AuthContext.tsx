@@ -40,13 +40,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange((event, session) => {
       const newUser = session?.user ?? null;
       
-      // Clear dashboard state when user signs out
+      // Clear ALL Kronos data when user signs out
       if (event === 'SIGNED_OUT') {
         try {
           localStorage.removeItem('kronos-dashboard-state');
-          console.log('🗑️ Cleared dashboard state on SIGNED_OUT event');
+          localStorage.removeItem('kronos_intelligence_notification');
+          localStorage.removeItem('kronos_intelligence_viewed');
+          console.log('🗑️ SIGNED_OUT event: Cleared all Kronos localStorage data');
+          
+          // Force a page reload if on Kronos page to ensure clean state
+          if (typeof window !== 'undefined' && window.location.pathname === '/kronos') {
+            console.log('🔄 Reloading Kronos page to ensure clean state');
+            setTimeout(() => window.location.reload(), 100);
+          }
         } catch (error) {
-          console.error('Failed to clear dashboard state:', error);
+          console.error('Failed to clear Kronos data on SIGNED_OUT:', error);
         }
       }
       
@@ -106,12 +114,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    // Clear dashboard state before signing out
+    // Clear all Kronos-related data before signing out
     try {
       localStorage.removeItem('kronos-dashboard-state');
-      console.log('🗑️ Cleared dashboard state on signOut');
+      localStorage.removeItem('kronos_intelligence_notification');
+      localStorage.removeItem('kronos_intelligence_viewed');
+      console.log('🗑️ Cleared all Kronos data on signOut');
     } catch (error) {
-      console.error('Failed to clear dashboard state:', error);
+      console.error('Failed to clear Kronos data:', error);
     }
     
     await supabase.auth.signOut();

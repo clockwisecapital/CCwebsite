@@ -8,6 +8,7 @@ import './fonts.css';
 import Footer from '../components/layout/Footer';
 import Header from '../components/layout/Header';
 import ScrollProgressIndicator from '../components/ui/ScrollProgressIndicator';
+import GlobalNotifications from '@/components/features/notifications/GlobalNotifications';
 import { AuthProvider } from '@/lib/auth/AuthContext';
 import React from 'react';
 
@@ -75,6 +76,7 @@ export default function RootLayout({
             {children}
           </div>
           <Footer />
+          <GlobalNotifications />
         </AuthProvider>
       </body>
     </html>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useKronosNotification } from '@/hooks/useKronosNotification';
 
 export interface VideoConfig {
   id: string;
@@ -16,9 +17,12 @@ interface UnifiedVideoPlayerProps {
   onVideoEnd?: () => void;
   playedVideos?: string[];
   onVideoPlayed?: (videoId: string) => void;
+  onPersonalizedVideoReady?: (videoData: { videoId: string; videoUrl: string; thumbnailUrl?: string }) => void;
+  firstName?: string; // For Kronos notification
+  isAuthenticated?: boolean; // Only show notification for authenticated users
 }
 
-export default function UnifiedVideoPlayer({ currentVideo, onVideoReady, onVideoEnd, playedVideos = [], onVideoPlayed }: UnifiedVideoPlayerProps) {
+export default function UnifiedVideoPlayer({ currentVideo, onVideoReady, onVideoEnd, playedVideos = [], onVideoPlayed, onPersonalizedVideoReady, firstName, isAuthenticated = false }: UnifiedVideoPlayerProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [displayedVideo, setDisplayedVideo] = useState<VideoConfig>(currentVideo);
   const [isMuted, setIsMuted] = useState(true);
@@ -32,6 +36,10 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady, onVideo
   const videoRef = useRef<HTMLVideoElement>(null);
   const hasNotified = useRef(false);
   const previousVideoId = useRef<string>(currentVideo.id);
+  const hasTriggeredNotification = useRef(false);
+  
+  // Kronos notification hook
+  const { triggerNotification } = useKronosNotification();
 
   // Handle video polling for analysis video
   useEffect(() => {
@@ -53,6 +61,25 @@ export default function UnifiedVideoPlayer({ currentVideo, onVideoReady, onVideo
             if (onVideoReady && !hasNotified.current) {
               hasNotified.current = true;
               onVideoReady();
+            }
+            
+            // Store personalized video data in analysis result
+            if (currentVideo.videoId && onPersonalizedVideoReady) {
+              onPersonalizedVideoReady({
+                videoId: currentVideo.videoId,
+                videoUrl: data.videoUrl,
+                thumbnailUrl: data.thumbnailUrl,
+              });
+              console.log('💾 Personalized video data sent to parent:', currentVideo.videoId);
+            }
+            
+            // Trigger Kronos notification ONLY for authenticated users (guests will see video when they create account)
+            if (currentVideo.videoId && !hasTriggeredNotification.current && isAuthenticated) {
+              hasTriggeredNotification.current = true;
+              triggerNotification(currentVideo.videoId, firstName);
+              console.log('🔔 Kronos notification triggered for authenticated user:', currentVideo.videoId);
+            } else if (!isAuthenticated && currentVideo.videoId) {
+              console.log('📭 Skipping notification for guest user. Video will be available after account creation.');
             }
           } else if (data.status === 'failed') {
             setError('Video generation failed');

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useKronosNotification } from '@/hooks/useKronosNotification';
 import SignInModal from '@/components/features/auth/SignInModal';
 import { HiArrowRightOnRectangle } from 'react-icons/hi2';
 
@@ -14,6 +15,7 @@ export default function Header(): React.JSX.Element {
   const [showSignInModal, setShowSignInModal] = useState(false);
   const { isAdmin, logout } = useAdmin();
   const { user, signOut } = useAuth();
+  const { hasUnviewedIntelligence } = useKronosNotification();
 
 
   useEffect(() => {
@@ -115,6 +117,12 @@ export default function Header(): React.JSX.Element {
             >
               <span className="absolute bottom-0 left-0 h-0.5 bg-[#E3B23C] w-0 group-hover:w-full transition-all duration-300"></span>
               My Account
+              {hasUnviewedIntelligence && (
+                <span className="absolute -top-1 -right-2 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-teal-500 border border-gray-900"></span>
+                </span>
+              )}
             </Link>
           )}
 
@@ -271,10 +279,16 @@ export default function Header(): React.JSX.Element {
           {user && (
             <Link
               href="/account"
-              className="mt-4 text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200"
+              className="mt-4 text-white hover:text-[#E3B23C] font-medium transform hover:translate-x-1 transition-all duration-200 relative inline-flex items-center gap-2"
               onClick={() => setIsMenuOpen(false)}
             >
               My Account
+              {hasUnviewedIntelligence && (
+                <span className="flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-teal-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-teal-500"></span>
+                </span>
+              )}
             </Link>
           )}
 

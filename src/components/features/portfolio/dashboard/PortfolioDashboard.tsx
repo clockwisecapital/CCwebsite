@@ -10,6 +10,7 @@ import CreatePasswordModal from '@/components/features/auth/CreatePasswordModal'
 import ScenarioAuthModal from '@/components/features/auth/ScenarioAuthModal';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { supabase } from '@/lib/supabase/client';
+import { clearKronosCache, validateKronosCache } from '@/utils/clearKronosCache';
 
 export interface IntakeFormData {
   // Personal
@@ -67,16 +68,22 @@ export interface AnalysisResult {
   detailedAnalysis?: string;
   benchmarkComparison?: Record<string, unknown>;
   portfolioComparison?: import('@/types/portfolio').PortfolioComparison; // Portfolio comparison data
+  personalizedVideo?: {
+    videoId: string;
+    videoUrl: string;
+    thumbnailUrl?: string;
+    createdAt: string;
+  };
 }
 
 // LocalStorage key for persisting dashboard state
 const DASHBOARD_STATE_KEY = 'kronos-dashboard-state';
 
 export default function PortfolioDashboard() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [stateLoaded, setStateLoaded] = useState(false);
-  const [activeTab, setActiveTab] = useState<'intake' | 'review' | 'analyze' | 'scenarios'>('intake');
+  const [activeTab, setActiveTab] = useState<'intake' | 'review'>('intake');
   const [intakeData, setIntakeData] = useState<IntakeFormData | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -84,51 +91,97 @@ export default function PortfolioDashboard() {
   const [emailData, setEmailData] = useState<{ email: string; firstName: string; lastName: string } | null>(null);
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [videoId, setVideoId] = useState<string | null>(null);
-  const [cycleAnalysisTab, setCycleAnalysisTab] = useState<'market' | 'portfolio' | 'goal'>('goal');
-  const [cyclesLoading, setCyclesLoading] = useState(false); // Track if market cycles are still loading
   const [showCreatePasswordModal, setShowCreatePasswordModal] = useState(false);
   const [showFinishAccountModal, setShowFinishAccountModal] = useState(false);
-  const [showAnalysisPrompt, setShowAnalysisPrompt] = useState(false);
   const [portfolioSaved, setPortfolioSaved] = useState(false);
   const [savedPortfolioId, setSavedPortfolioId] = useState<string | null>(null);
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
   const [isSavingPortfolio, setIsSavingPortfolio] = useState(false); // Guard against concurrent saves
   
-  // Track carousel slides for video sync
-  const [goalSlide, setGoalSlide] = useState(0);
-  const [portfolioSlide, setPortfolioSlide] = useState(0);
-  const [marketSlide, setMarketSlide] = useState(0);
+  // Track current video in the Review tab sequence
+  const [reviewVideoIndex, setReviewVideoIndex] = useState(0); // 0 = goal, 1 = portfolio
   
   // Track which videos have been played to prevent autoplay on revisit
   const [playedVideos, setPlayedVideos] = useState<string[]>([]);
 
-  // Load saved state from localStorage on mount
+  // Load saved state from localStorage on mount (ONLY after auth is loaded)
   useEffect(() => {
+    // Wait for auth to finish loading before attempting to restore state
+    if (authLoading) {
+      console.log('⏳ Waiting for auth to load before restoring state...');
+      return;
+    }
+
+    console.log('🔐 Auth loaded. User:', user?.id || 'guest');
+
+    // Validate cache against current user
+    const isValid = validateKronosCache(user?.id);
+    
+    if (!isValid) {
+      console.log('🧹 Clearing invalid cache and resetting state');
+      clearKronosCache();
+      
+      // Reset all React state to initial values
+      setActiveTab('intake');
+      setIntakeData(null);
+      setAnalysisResult(null);
+      setConversationId(null);
+      setEmailData(null);
+      setAnalysisComplete(false);
+      setVideoId(null);
+      setPortfolioSaved(false);
+      setSavedPortfolioId(null);
+      setPlayedVideos([]);
+      setReviewVideoIndex(0);
+      
+      setStateLoaded(true);
+      return;
+    }
+
+    // Cache is valid - try to restore state
     try {
       const savedState = localStorage.getItem(DASHBOARD_STATE_KEY);
       if (savedState) {
         const parsed = JSON.parse(savedState);
-        console.log('📥 Restoring dashboard state from localStorage');
+        console.log('✅ Restoring valid dashboard state from localStorage');
         
         // Restore all state
-        if (parsed.activeTab) setActiveTab(parsed.activeTab);
+        if (parsed.activeTab && (parsed.activeTab === 'intake' || parsed.activeTab === 'review')) {
+          setActiveTab(parsed.activeTab);
+        }
         if (parsed.intakeData) setIntakeData(parsed.intakeData);
         if (parsed.analysisResult) setAnalysisResult(parsed.analysisResult);
         if (parsed.conversationId) setConversationId(parsed.conversationId);
         if (parsed.emailData) setEmailData(parsed.emailData);
         if (parsed.analysisComplete !== undefined) setAnalysisComplete(parsed.analysisComplete);
         if (parsed.videoId) setVideoId(parsed.videoId);
-        if (parsed.cycleAnalysisTab) setCycleAnalysisTab(parsed.cycleAnalysisTab);
         if (parsed.portfolioSaved !== undefined) setPortfolioSaved(parsed.portfolioSaved);
         if (parsed.savedPortfolioId) setSavedPortfolioId(parsed.savedPortfolioId);
         if (parsed.playedVideos) setPlayedVideos(parsed.playedVideos);
+      } else {
+        console.log('📭 No cached state found. Starting fresh');
       }
     } catch (error) {
-      console.error('Failed to load dashboard state:', error);
+      console.error('❌ Failed to load dashboard state:', error);
+      clearKronosCache();
+      
+      // Reset state on error
+      setActiveTab('intake');
+      setIntakeData(null);
+      setAnalysisResult(null);
+      setConversationId(null);
+      setEmailData(null);
+      setAnalysisComplete(false);
+      setVideoId(null);
+      setPortfolioSaved(false);
+      setSavedPortfolioId(null);
+      setPlayedVideos([]);
+      setReviewVideoIndex(0);
     } finally {
       setStateLoaded(true);
+      console.log('✅ State loading complete');
     }
-  }, []);
+  }, [authLoading, user]);
 
   // Save state to localStorage whenever it changes (but only after initial load)
   useEffect(() => {
@@ -136,6 +189,7 @@ export default function PortfolioDashboard() {
     
     try {
       const stateToSave = {
+        userId: user?.id || null, // Store user ID to validate cache on load
         activeTab,
         intakeData,
         analysisResult,
@@ -143,7 +197,6 @@ export default function PortfolioDashboard() {
         emailData,
         analysisComplete,
         videoId,
-        cycleAnalysisTab,
         portfolioSaved,
         savedPortfolioId,
         playedVideos,
@@ -164,7 +217,6 @@ export default function PortfolioDashboard() {
     emailData,
     analysisComplete,
     videoId,
-    cycleAnalysisTab,
     portfolioSaved,
     savedPortfolioId,
     playedVideos,
@@ -318,9 +370,14 @@ export default function PortfolioDashboard() {
     }
   }, [user, intakeData, stateLoaded]);
 
-  // Effect to scroll to top when switching tabs
+  // Effect to scroll to top when switching tabs and reset video sequence
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Reset video sequence when entering Review tab
+    if (activeTab === 'review') {
+      setReviewVideoIndex(0);
+    }
   }, [activeTab]);
 
   // Effect to detect email change and clear old videoId (prevents cross-account video reuse)
@@ -396,7 +453,6 @@ export default function PortfolioDashboard() {
     setIntakeData(data);
     setIsAnalyzing(true);
     setAnalysisComplete(false);
-    setCyclesLoading(true); // Start with cycles loading
     
     // Clear video-related state for new analysis
     setVideoId(null);
@@ -486,11 +542,9 @@ export default function PortfolioDashboard() {
               goalAnalysis: cycleResult.cycleAnalysis?.goalAnalysis || prev.cycleAnalysis?.goalAnalysis,
             },
           } : null);
-          setCyclesLoading(false);
         })
         .catch(error => {
           console.error('❌ Cycle analysis error:', error);
-          setCyclesLoading(false);
           // Don't alert - user already has Goal & Portfolio tabs working
         });
 
@@ -500,7 +554,6 @@ export default function PortfolioDashboard() {
       setAnalysisResult(null);
       setAnalysisComplete(false);
       setIsAnalyzing(false);
-      setCyclesLoading(false);
     }
   };
 
@@ -530,12 +583,12 @@ export default function PortfolioDashboard() {
     setEmailData(null);
     setAnalysisComplete(false);
     setVideoId(null);
-    setCycleAnalysisTab('goal');
     setShowCreatePasswordModal(false);
     setPortfolioSaved(false);
     setSavedPortfolioId(null);
     setIsSavingPortfolio(false);
     setPlayedVideos([]);
+    setReviewVideoIndex(0);
     
     // Clear localStorage
     try {
@@ -551,18 +604,33 @@ export default function PortfolioDashboard() {
     await savePortfolio(userId);
   };
 
-  const handleVideoEnd = () => {
-    // When the personalized analysis video ends, prompt user to finish account
-    // Only show if user is not authenticated and on the analyze tab
-    if (!user && activeTab === 'analyze' && !portfolioSaved) {
-      setShowAnalysisPrompt(true);
-    }
-  };
-
   const handleVideoPlayed = (videoId: string) => {
     // Mark video as played to prevent autoplay on revisit
     if (!playedVideos.includes(videoId)) {
       setPlayedVideos(prev => [...prev, videoId]);
+    }
+  };
+
+  const handleVideoEnd = () => {
+    // When on Review tab, automatically advance to next video in sequence
+    if (activeTab === 'review' && reviewVideoIndex === 0) {
+      // Goal video ended, move to portfolio video
+      setReviewVideoIndex(1);
+    }
+  };
+
+  const handlePersonalizedVideoReady = (videoData: { videoId: string; videoUrl: string; thumbnailUrl?: string }) => {
+    // Store personalized video data in analysis result
+    if (analysisResult) {
+      const updatedResult = {
+        ...analysisResult,
+        personalizedVideo: {
+          ...videoData,
+          createdAt: new Date().toISOString(),
+        },
+      };
+      setAnalysisResult(updatedResult);
+      console.log('✅ Personalized video stored in analysis result:', videoData.videoId);
     }
   };
 
@@ -588,14 +656,13 @@ export default function PortfolioDashboard() {
       });
     }
     // Don't close modal here - let the modal handle its own closing after showing success screen
-    setShowAnalysisPrompt(false);
   };
 
   // Auto-save portfolio for authenticated users when analysis completes
   // NOTE: Removed redundant useEffect - portfolio saving is now handled by the 
   // useEffect at lines 358-373 and by handleFinishAccountSuccess for new accounts
 
-  // Determine current video based on app state and carousel slides
+  // Determine current video based on app state and sequence
   const currentVideo: VideoConfig = useMemo(() => {
     // 1. Intake video
     if (activeTab === 'intake' && !isAnalyzing) {
@@ -615,71 +682,22 @@ export default function PortfolioDashboard() {
       };
     }
 
-    // 3-8. Review tab with carousel slides
+    // 3-4. Review tab with sequential videos
     if (activeTab === 'review') {
-      // Goal Tab Slides
-      if (cycleAnalysisTab === 'goal') {
-        if (goalSlide === 0) {
-          return {
-            id: 'probability-goal',
-            title: 'Probability of Reaching Your Goal',
-            videoSrc: getVideoPath('/kronos-probability-goal.mp4')
-          };
-        }
-        if (goalSlide === 1) {
-          return {
-            id: 'projected-values',
-            title: 'Projected Portfolio Values',
-            videoSrc: getVideoPath('/kronos-projected-values.mp4')
-          };
-        }
+      // Play videos in sequence: Goal first, then Portfolio
+      if (reviewVideoIndex === 0) {
+        return {
+          id: 'probability-goal',
+          title: 'Probability of Reaching Your Goal',
+          videoSrc: getVideoPath('/kronos-probability-goal.mp4')
+        };
+      } else {
+        return {
+          id: 'portfolio-performance',
+          title: 'Portfolio Performance Analysis',
+          videoSrc: getVideoPath('/kronos-portfolio-performance.mp4')
+        };
       }
-      
-      // Portfolio Tab Slides
-      if (cycleAnalysisTab === 'portfolio') {
-        if (portfolioSlide === 0) {
-          return {
-            id: 'portfolio-performance',
-            title: 'Portfolio Performance Analysis',
-            videoSrc: getVideoPath('/kronos-portfolio-performance.mp4')
-          };
-        }
-      }
-      
-      // Market Tab Slides
-      if (cycleAnalysisTab === 'market') {
-        if (marketSlide === 0) {
-          return {
-            id: 'cycle-analysis',
-            title: 'Market Cycle Analysis',
-            videoSrc: getVideoPath('/kronos-cycle-analysis.mp4')
-          };
-        }
-        if (marketSlide === 1) {
-          // Slide 1 (Historical Analog) - No video
-          return {
-            id: 'historical-analog-no-video',
-            title: 'Historical Market Analog'
-          };
-        }
-        if (marketSlide === 2) {
-          // Slide 2 (Performance By Cycle) - No video
-          return {
-            id: 'performance-by-cycle-no-video',
-            title: 'Performance By Cycle'
-          };
-        }
-      }
-    }
-
-    // 9. Analysis video (personalized Kronos)
-    if (activeTab === 'analyze' && videoId) {
-      return {
-        id: 'analysis-personalized',
-        title: 'Your Personalized Portfolio Analysis',
-        videoId: videoId,
-        needsPolling: true
-      };
     }
 
     // Fallback - no video
@@ -687,16 +705,31 @@ export default function PortfolioDashboard() {
       id: 'no-video',
       title: 'Portfolio Dashboard'
     };
-  }, [activeTab, isAnalyzing, cycleAnalysisTab, videoId, goalSlide, portfolioSlide, marketSlide]);
+  }, [activeTab, isAnalyzing, reviewVideoIndex]);
+
+  // Show loading state while auth is loading or state is being restored
+  if (authLoading || !stateLoaded) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Unified Video Player - appears at top on mobile, bottom-right on desktop */}
       <UnifiedVideoPlayer 
         currentVideo={currentVideo} 
-        onVideoEnd={handleVideoEnd}
         playedVideos={playedVideos}
         onVideoPlayed={handleVideoPlayed}
+        onVideoEnd={handleVideoEnd}
+        onPersonalizedVideoReady={handlePersonalizedVideoReady}
+        firstName={intakeData?.firstName || emailData?.firstName}
+        isAuthenticated={!!user}
       />
 
       {/* Create Password Modal (legacy - for backward compatibility) */}
@@ -774,66 +807,6 @@ export default function PortfolioDashboard() {
                   <span className="text-xs sm:text-sm">Review</span>
                 </span>
               </button>
-              
-              <button
-                onClick={() => videoId && setActiveTab('analyze')}
-                disabled={!videoId}
-                className={`
-                  flex-1 px-3 sm:px-6 md:px-8 py-3 md:py-4 text-xs sm:text-sm font-medium border-b-2 transition-colors
-                  ${activeTab === 'analyze'
-                    ? 'border-teal-500 text-teal-400'
-                    : videoId
-                      ? 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                      : 'border-transparent text-gray-600 cursor-not-allowed'
-                  }
-                `}
-              >
-                <span className="flex items-center justify-center gap-1 sm:gap-2">
-                  <span className={`flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full text-xs font-bold ${
-                    videoId ? 'bg-teal-900/30 text-teal-400' : 'bg-gray-700 text-gray-500'
-                  }`}>
-                    3
-                  </span>
-                  <span className="text-xs sm:text-sm">Analysis</span>
-                </span>
-              </button>
-
-              <button
-                onClick={() => {
-                  if (!intakeData) return;
-                  
-                  // Check if user is logged in
-                  if (user) {
-                    // User is logged in: redirect to scenario questions page
-                    if (savedPortfolioId) {
-                      sessionStorage.setItem('scenarioTestPortfolioId', savedPortfolioId);
-                    }
-                    router.push('/scenario-testing/questions');
-                  } else {
-                    // User is not logged in: prompt to finish account
-                    setShowFinishAccountModal(true);
-                  }
-                }}
-                disabled={!intakeData}
-                className={`
-                  flex-1 px-3 sm:px-6 md:px-8 py-3 md:py-4 text-xs sm:text-sm font-medium border-b-2 transition-colors
-                  ${activeTab === 'scenarios'
-                    ? 'border-teal-500 text-teal-400'
-                    : intakeData
-                      ? 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                      : 'border-transparent text-gray-600 cursor-not-allowed'
-                  }
-                `}
-              >
-                <span className="flex items-center justify-center gap-1 sm:gap-2">
-                  <span className={`flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full text-xs font-bold ${
-                    intakeData ? 'bg-teal-900/30 text-teal-400' : 'bg-gray-700 text-gray-500'
-                  }`}>
-                    4
-                  </span>
-                  <span className="text-xs sm:text-sm">Scenarios</span>
-                </span>
-              </button>
             </nav>
           </div>
 
@@ -867,247 +840,13 @@ export default function PortfolioDashboard() {
                 analysisResult={analysisResult}
                 intakeData={intakeData}
                 conversationId={conversationId}
-                videoId={videoId}
                 onReset={handleReset}
                 onBack={() => setActiveTab('intake')}
-                onNavigateToAnalyze={() => setActiveTab('analyze')}
-                cycleAnalysisTab={cycleAnalysisTab}
-                onCycleAnalysisTabChange={setCycleAnalysisTab}
-                onGoalSlideChange={setGoalSlide}
-                onPortfolioSlideChange={setPortfolioSlide}
-                onMarketSlideChange={setMarketSlide}
-                cyclesLoading={cyclesLoading}
                 portfolioId={savedPortfolioId || undefined}
                 user={user}
                 onFinishAccountClick={handleFinishAccountClick}
+                emailData={emailData}
               />
-            )}
-            
-            {activeTab === 'analyze' && videoId && (
-              <div className="space-y-6">
-                {/* Finish Account Prompt (shown after video ends for unauthenticated users) */}
-                {!user && showAnalysisPrompt && emailData && (
-                  <div className="bg-gradient-to-br from-teal-600 to-blue-600 rounded-lg p-6 md:p-8 text-white shadow-xl border-2 border-teal-400 animate-pulse-slow">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-xl md:text-2xl font-bold mb-2">Your Analysis is Complete!</h3>
-                        <p className="text-teal-100 mb-4">
-                          Create an account to save your personalized portfolio analysis and access advanced scenario testing.
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-3">
-                          <button
-                            onClick={handleFinishAccountClick}
-                            className="px-6 py-3 bg-white text-teal-600 font-bold rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                            </svg>
-                            Finish Account Setup
-                          </button>
-                          <a
-                            href="https://calendly.com/clockwisecapital/appointments"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-6 py-3 bg-white text-teal-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors text-center flex items-center justify-center gap-2"
-                          >
-                            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            Schedule a Consultation
-                            <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                          </a>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Portfolio Oversight Suggested - Moved to Top */}
-                {intakeData && (
-                  <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
-                    <div className="border-b border-gray-700 bg-gray-700 px-6 py-4">
-                      <h3 className="text-lg font-semibold text-gray-100">Portfolio Oversight Suggested</h3>
-                      <p className="text-sm text-gray-400 mt-1">Recommended Clockwise Portfolios Based on Your Risk Profile</p>
-                    </div>
-                    <div className="p-6">
-                      <div className="flex items-start gap-3 mb-4">
-                        <svg className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
-                        <div>
-                          <p className="text-sm font-semibold text-blue-300 mb-1">
-                            Based on your {intakeData.riskTolerance === 'high' ? 'Aggressive' : intakeData.riskTolerance === 'medium' ? 'Moderate' : 'Conservative'} risk tolerance, we recommend:
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {/* Portfolio Options */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {(() => {
-                          let portfolio1 = '';
-                          let portfolio2 = '';
-                          
-                          if (intakeData.riskTolerance === 'high') {
-                            portfolio1 = 'Max Growth';
-                            portfolio2 = 'Growth';
-                          } else if (intakeData.riskTolerance === 'medium') {
-                            portfolio1 = 'Growth';
-                            portfolio2 = 'Moderate';
-                          } else {
-                            portfolio1 = 'Moderate';
-                            portfolio2 = 'Income';
-                          }
-                          
-                          return (
-                            <>
-                              <div className="bg-gradient-to-br from-blue-900/40 to-blue-800/40 border border-blue-700 rounded-lg p-5">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                                  </svg>
-                                  <h4 className="text-lg font-bold text-blue-300">{portfolio1}</h4>
-                                </div>
-                                <p className="text-sm text-gray-300">Clockwise {portfolio1} Portfolio</p>
-                              </div>
-                              
-                              <div className="bg-gradient-to-br from-teal-900/40 to-teal-800/40 border border-teal-700 rounded-lg p-5">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                                  </svg>
-                                  <h4 className="text-lg font-bold text-teal-300">{portfolio2}</h4>
-                                </div>
-                                <p className="text-sm text-gray-300">Clockwise {portfolio2} Portfolio</p>
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                      
-                      {/* Action Buttons */}
-                      <div className="mt-6 flex flex-col sm:flex-row gap-3">
-                        <a
-                          href="https://calendly.com/clockwisecapital/appointments"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 px-6 py-3 bg-white hover:bg-gray-50 text-teal-600 border border-teal-400 font-semibold rounded-lg transition-colors duration-300 text-center flex items-center justify-center gap-2 animate-pulse-glow-teal hover:scale-105"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          Schedule a Consultation
-                        </a>
-
-                        {!user && emailData && (
-                          <button
-                            onClick={handleFinishAccountClick}
-                            className="flex-1 px-6 py-3 bg-white hover:bg-gray-50 text-teal-600 border border-teal-400 font-semibold rounded-lg transition-colors duration-300 text-center flex items-center justify-center gap-2 animate-pulse-glow-teal hover:scale-105"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                            </svg>
-                            Finish Account
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Portfolio Intelligence Results */}
-                {analysisResult && (
-                  <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
-                    <div className="border-b border-gray-700 bg-gray-700 px-6 py-4">
-                      <h3 className="text-lg font-semibold text-gray-100">Portfolio Intelligence Results</h3>
-                      <p className="text-sm text-gray-400 mt-1">Impact & Recommendation</p>
-                    </div>
-                    <div className="p-6 space-y-6">
-                      {/* Market Impact */}
-                      <div>
-                        <h4 className="font-semibold text-gray-100 mb-3">Market Impact</h4>
-                        <ul className="space-y-2 text-gray-300">
-                          {(() => {
-                            const processImpactData = (data: string | string[] | undefined): string[] => {
-                              if (Array.isArray(data)) {
-                                return data.map(item => item.startsWith('•') ? item : `• ${item}`);
-                              }
-                              if (typeof data === 'string') {
-                                return data.split('\n')
-                                  .map(line => line.trim())
-                                  .filter(line => line.length > 0)
-                                  .map(line => line.startsWith('•') ? line : `• ${line}`);
-                              }
-                              return ['• No data available'];
-                            };
-                            const marketImpact = processImpactData(analysisResult.marketImpact);
-                            return marketImpact.map((item, idx) => (
-                              <li key={idx} className="pl-4">{item}</li>
-                            ));
-                          })()}
-                        </ul>
-                      </div>
-
-                      {/* Personalized Portfolio Risks */}
-                      <div>
-                        <h4 className="font-semibold text-gray-100 mb-3">Personalized Portfolio Risks</h4>
-                        <ul className="space-y-2 text-gray-300">
-                          {(() => {
-                            const processImpactData = (data: string | string[] | undefined): string[] => {
-                              if (Array.isArray(data)) {
-                                return data.map(item => item.startsWith('•') ? item : `• ${item}`);
-                              }
-                              if (typeof data === 'string') {
-                                return data.split('\n')
-                                  .map(line => line.trim())
-                                  .filter(line => line.length > 0)
-                                  .map(line => line.startsWith('•') ? line : `• ${line}`);
-                              }
-                              return ['• No data available'];
-                            };
-                            const portfolioImpact = processImpactData(analysisResult.portfolioImpact);
-                            return portfolioImpact.map((item, idx) => (
-                              <li key={idx} className="pl-4">{item}</li>
-                            ));
-                          })()}
-                        </ul>
-                      </div>
-
-                      {/* Goal Impact */}
-                      <div>
-                        <h4 className="font-semibold text-gray-100 mb-3">Goal Impact</h4>
-                        <ul className="space-y-2 text-gray-300">
-                          {(() => {
-                            const processImpactData = (data: string | string[] | undefined): string[] => {
-                              if (Array.isArray(data)) {
-                                return data.map(item => item.startsWith('•') ? item : `• ${item}`);
-                              }
-                              if (typeof data === 'string') {
-                                return data.split('\n')
-                                  .map(line => line.trim())
-                                  .filter(line => line.length > 0)
-                                  .map(line => line.startsWith('•') ? line : `• ${line}`);
-                              }
-                              return ['• No data available'];
-                            };
-                            const goalImpact = processImpactData(analysisResult.goalImpact);
-                            return goalImpact.map((item, idx) => (
-                              <li key={idx} className="pl-4">{item}</li>
-                            ));
-                          })()}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-              </div>
             )}
           </div>
         </div>

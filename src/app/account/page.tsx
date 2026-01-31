@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { supabase } from '@/lib/supabase/client';
+import { useKronosNotification } from '@/hooks/useKronosNotification';
 import CorePortfoliosModal from '@/components/features/core-portfolios/CorePortfoliosModal';
+import PortfolioIntelligenceView from '@/components/features/portfolio/PortfolioIntelligenceView';
 import { 
   FiUser, 
   FiMail, 
@@ -57,9 +59,11 @@ interface UserTest {
   };
 }
 
-export default function AccountPage() {
+function AccountPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
+  const { markAsViewed } = useKronosNotification();
   
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [questions, setQuestions] = useState<UserQuestion[]>([]);
@@ -73,8 +77,14 @@ export default function AccountPage() {
   const [editLastName, setEditLastName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   
-  // Tab state
-  const [activeTab, setActiveTab] = useState<'portfolios' | 'questions'>('portfolios');
+  // Tab state - check URL parameter
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState<'portfolios' | 'intelligence' | 'questions'>(
+    tabParam === 'intelligence' ? 'intelligence' : 'portfolios'
+  );
+  
+  // Selected portfolio for intelligence view
+  const [mostRecentPortfolio, setMostRecentPortfolio] = useState<any>(null);
   
   // Expanded portfolio state
   const [expandedPortfolio, setExpandedPortfolio] = useState<string | null>(null);
@@ -92,6 +102,13 @@ export default function AccountPage() {
       fetchUserData();
     }
   }, [user, authLoading, router]);
+
+  // Mark intelligence as viewed when user opens the intelligence tab
+  useEffect(() => {
+    if (activeTab === 'intelligence' && mostRecentPortfolio) {
+      markAsViewed();
+    }
+  }, [activeTab, mostRecentPortfolio, markAsViewed]);
 
   const fetchUserData = async () => {
     if (!user?.id) return;
@@ -155,6 +172,20 @@ export default function AccountPage() {
       
       if (portfoliosResponse.ok && portfoliosData.portfolios) {
         setPortfolios(portfoliosData.portfolios);
+        
+        // Fetch the most recent portfolio with full analysis data
+        if (portfoliosData.portfolios.length > 0) {
+          const mostRecentId = portfoliosData.portfolios[0].id;
+          const { data: fullPortfolio } = await supabase
+            .from('portfolios')
+            .select('*')
+            .eq('id', mostRecentId)
+            .single();
+          
+          if (fullPortfolio) {
+            setMostRecentPortfolio(fullPortfolio);
+          }
+        }
       }
 
     } catch (error) {
@@ -457,27 +488,54 @@ export default function AccountPage() {
         <div className="relative mb-6 sm:mb-8">
           <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
             <button
-              onClick={() => router.push('/scenario-testing/questions')}
-              className="relative flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold transition-all duration-300 whitespace-nowrap text-sm sm:text-base bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-500/25 hover:scale-105"
+              onClick={() => setActiveTab('portfolios')}
+              className={`relative flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold transition-all duration-300 whitespace-nowrap text-sm sm:text-base ${
+                activeTab === 'portfolios'
+                  ? 'bg-teal-600 text-white shadow-lg shadow-teal-500/25'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }`}
             >
               <FiBriefcase className="w-4 h-4" />
-              <span className="hidden sm:inline">Explore Portfolios</span>
-              <span className="sm:hidden">Explore</span>
+              <span>My Portfolios</span>
+            </button>
+
+            <button
+              onClick={() => router.push('/scenario-testing/questions')}
+              className="relative flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold transition-all duration-300 whitespace-nowrap text-sm sm:text-base bg-gray-800 text-gray-300 hover:bg-gray-700"
+            >
+              <FiTrendingUp className="w-4 h-4" />
+              <span className="hidden sm:inline">Explore Scenarios</span>
+              <span className="sm:hidden">Scenarios</span>
             </button>
 
             <button
               onClick={() => setShowCorePortfoliosModal(true)}
-              className="relative flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold transition-all duration-300 whitespace-nowrap text-sm sm:text-base bg-teal-600 hover:bg-teal-700 text-white shadow-lg hover:shadow-teal-500/25"
+              className="relative flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold transition-all duration-300 whitespace-nowrap text-sm sm:text-base bg-gray-800 text-gray-300 hover:bg-gray-700"
             >
               <FiFileText className="w-4 h-4" />
               <span className="hidden sm:inline">Core Portfolios</span>
-              <span className="sm:hidden">Portfolios</span>
+              <span className="sm:hidden">Core</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('intelligence')}
+              className={`relative flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl font-semibold transition-all duration-300 whitespace-nowrap text-sm sm:text-base ${
+                activeTab === 'intelligence'
+                  ? 'bg-teal-600 text-white shadow-lg shadow-teal-500/25'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }`}
+              disabled={!mostRecentPortfolio}
+            >
+              <FiActivity className="w-4 h-4" />
+              <span className="hidden sm:inline">Portfolio Intelligence</span>
+              <span className="sm:hidden">Intelligence</span>
             </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="space-y-2">
+        {activeTab === 'portfolios' && (
+          <div className="space-y-2">
             {portfolios.length > 0 ? (
               portfolios.map((portfolio) => {
                 const isExpanded = expandedPortfolio === portfolio.id;
@@ -603,6 +661,30 @@ export default function AccountPage() {
               </div>
             )}
           </div>
+        )}
+
+        {/* Portfolio Intelligence Tab */}
+        {activeTab === 'intelligence' && mostRecentPortfolio && mostRecentPortfolio.analysis_results?.cycleAnalysis && (
+          <PortfolioIntelligenceView 
+            portfolio={mostRecentPortfolio}
+            analysisResults={mostRecentPortfolio.analysis_results}
+          />
+        )}
+
+        {activeTab === 'intelligence' && (!mostRecentPortfolio || !mostRecentPortfolio.analysis_results?.cycleAnalysis) && (
+          <div className="text-center py-12 sm:py-16 bg-gradient-to-br from-gray-800/90 to-gray-900/90 rounded-xl sm:rounded-2xl border border-gray-700/50 backdrop-blur-sm">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 bg-gradient-to-br from-teal-500/20 to-blue-500/20 rounded-full flex items-center justify-center border-2 border-teal-500/30">
+              <FiActivity className="w-8 h-8 sm:w-10 sm:h-10 text-teal-400" />
+            </div>
+            <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">No portfolio intelligence available yet</p>
+            <button
+              onClick={() => router.push('/kronos')}
+              className="px-6 sm:px-8 py-2.5 sm:py-3 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-teal-500/25 hover:scale-105 text-sm sm:text-base"
+            >
+              Run Kronos Analysis
+            </button>
+          </div>
+        )}
 
       </div>
 
@@ -612,5 +694,21 @@ export default function AccountPage() {
         onClose={() => setShowCorePortfoliosModal(false)}
       />
     </div>
+  );
+}
+
+export default function AccountPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 pt-20 
+        flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Loading your account...</p>
+        </div>
+      </div>
+    }>
+      <AccountPageContent />
+    </Suspense>
   );
 }
