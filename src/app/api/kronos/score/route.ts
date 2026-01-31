@@ -16,6 +16,7 @@ import type { Holding } from '@/lib/kronos/types';
 // HELPER FUNCTIONS
 // =====================================================================================
 
+
 // REMOVED: getAnalogIdFromScenarioId
 // This function was DANGEROUS - it guessed analog IDs from pattern matching
 // Bug example: "Post-COVID Era" matched "covid" → returned COVID_CRASH (WRONG!)
